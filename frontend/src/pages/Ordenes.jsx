@@ -4,16 +4,22 @@ import { supabase } from "../services/supabase";
 function Ordenes() {
 
   const [ordenes, setOrdenes] = useState([]);
+  const [filtroOST, setFiltroOST] = useState("");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [filtrocliente, setFiltroCliente] = useState("");
+  const [estados, setEstados] = useState([]);
   const [formData, setFormData] = useState({
     tipo_registro: "OST",
     numero_ost: "",
     numero_linea: "",
     cliente: "",
+    estado_id: "",
     observaciones: ""
   });
 
   useEffect(() => {
   cargarOrdenes();
+  cargarEstados();
   }, []);
 
   async function guardarOrden() {
@@ -27,7 +33,9 @@ function Ordenes() {
           numero_ost: formData.numero_ost,
           numero_linea: formData.numero_linea,
           cliente: formData.cliente,
-          observaciones: formData.observaciones
+          estado_id: formData.estado_id,
+          observaciones: formData.observaciones,
+          fecha_recepcion: formData.fecha_recepcion
         }
       ]);
 
@@ -41,6 +49,8 @@ function Ordenes() {
     numero_ost: "",
     numero_linea: "",
     cliente: "",
+    estado_id: "",
+    fecha_recepcion: "",
     observaciones: ""
   });
 
@@ -51,27 +61,40 @@ function Ordenes() {
   const { data } =
     await supabase
       .from("ordenes")
-      .select("*")
+      .select('*, estado ( nombre )')
       .order("id", { ascending: false });
 
   setOrdenes(data || []);
   }
 
+  async function cargarEstados() {
+
+  const { data } = await supabase
+    .from("estado")
+    .select("*")
+    .order("nombre");
+
+  setEstados(data || []);
+  }
+
   return (
+    
     <div>
 
       <h1>Órdenes</h1>
 
-      <button>
+      <button onClick={() => setMostrarFormulario(!mostrarFormulario)}>
         Nueva Orden
       </button>
 
-      <br /><br />
+      {mostrarFormulario && (
+        <div>
+          <br /><br />
 
-      <input
-        placeholder="Número OST"
-        value={formData.numero_ost}
-        onChange={(e) =>
+          <input
+            placeholder="Número OST"
+            value={formData.numero_ost}
+            onChange={(e) =>
           setFormData({
             ...formData,
             numero_ost: e.target.value
@@ -107,6 +130,38 @@ function Ordenes() {
 
       <br /><br />
 
+      <select
+        value={formData.estado_id}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            estado_id: e.target.value
+          })
+        }
+      >
+        <option value="">Seleccionar Estado</option>
+        {estados.map((estado) => (
+          <option key={estado.id} value={estado.id}>
+            {estado.nombre}
+          </option>
+        ))}
+      </select>
+
+      <br /><br />
+
+      <input
+        type="date"
+        value={formData.fecha_recepcion}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            fecha_recepcion: e.target.value
+          })
+        }
+      />
+
+      <br /><br />
+
       <textarea
         placeholder="Observaciones"
         value={formData.observaciones}
@@ -126,20 +181,82 @@ function Ordenes() {
         Guardar Orden
       </button>
 
+    </div>
+  )}
+
       <hr />
 
       <h2>Órdenes Registradas</h2>
 
-      {ordenes.map((orden) => (
-        <div key={orden.id}>
-          
-          {orden.numero_ost}
-          {" - "}
-          {orden.cliente}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px"
+        }}
+      >
 
-        </div>
-      ))}
-      
+      <input
+        placeholder="Buscar OST"
+        value={filtroOST}
+        onChange={(e) => setFiltroOST(e.target.value)}
+      />
+
+      <input
+        placeholder="Buscar Cliente"
+        value={filtrocliente}
+        onChange={(e) => setFiltroCliente(e.target.value)}
+      />
+
+      </div>
+
+      <table
+        style={{
+          borderCollapse: "collapse",
+          width: "100%",
+          marginTop: "20px"
+        }}
+      >
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>OST</th>
+            <th>Línea</th>
+            <th>Cliente</th>
+            <th>Estado</th>
+            <th>Fecha de Recepción</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {ordenes.filter((orden) => 
+            orden.numero_ost
+              .toLowerCase().includes(filtroOST.toLowerCase())
+          )
+          .filter((orden) =>
+            orden.cliente
+              .toLowerCase().includes(filtrocliente.toLowerCase())
+          )
+          .map((orden) => (
+            <tr key={orden.id}>
+              <td>{orden.id}</td>
+              <td>{orden.numero_ost}</td>
+              <td>{orden.numero_linea}</td>
+              <td>{orden.cliente}</td>
+              <td>{orden.estado?.nombre}</td>
+              <td>{orden.fecha_recepcion}</td>
+              <td>{orden.observaciones}</td>
+              <td>
+                <button>Editar</button>
+                <button>Borrar</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
     </div>
   );
 

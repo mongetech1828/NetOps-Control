@@ -4,6 +4,7 @@ import { supabase } from "../services/supabase";
 function Dashboard() {
 
   const [perfil, setPerfil] = useState(null);
+  const [totalOrdenes, setTotalOrdenes] = useState(0);
 
   useEffect(() => {
 
@@ -27,8 +28,24 @@ function Dashboard() {
     }
 
     cargarPerfil();
+    cargarKpis();
 
   }, []);
+
+async function cargarKpis() {
+
+  const { count, error } = await supabase
+    .from("ordenes")
+    .select("*", {
+      count: "exact",
+      head: true
+    });
+
+  console.log(count);
+  console.log(error);
+
+  setTotalOrdenes(count || 0);
+}
 
   const cardStyle = {
     backgroundColor: "#ffffff",
@@ -59,8 +76,8 @@ function Dashboard() {
     }}
 >
   <div style={cardStyle}>
-    <h3>OST Pendientes</h3>
-    <h1>0</h1>
+    <h3>OST Registradas</h3>
+    <h1>{totalOrdenes}</h1>
   </div>
 
   <div style={cardStyle}>

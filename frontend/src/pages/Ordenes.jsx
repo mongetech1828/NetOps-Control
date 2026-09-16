@@ -137,10 +137,27 @@ function Ordenes() {
             fecha_recepcion: formData.fecha_recepcion,
             fecha_maxima_atencion: formatearFechaDB(fechaMaxima)
           }
-      ]);
+      ])
+      .select()
+      .single();
 
-  console.log(data);
-  console.log(error);
+      if (!error) {
+        const { data: {user} } = await supabase.auth.getUser();
+
+        await supabase
+          .from("historial_movimientos")
+          .insert([
+            {
+              orden_id: data.id,
+              usuario_id: user.id,
+              estado_anterior : null,
+              estado_nuevo: Number(formData.estado_id),
+              comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
+            }
+          ]);
+        
+        console.log("ERROR HISTORIAL:", historialError);
+      }
     }
 
   await cargarOrdenes();
@@ -157,7 +174,8 @@ function Ordenes() {
 
   setOrdenEditando(null);
 
-  } 
+}
+ 
 
   async function cargarOrdenes() {
 

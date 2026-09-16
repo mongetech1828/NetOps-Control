@@ -5,6 +5,9 @@ function Dashboard() {
 
   const [perfil, setPerfil] = useState(null);
   const [totalOrdenes, setTotalOrdenes] = useState(0);
+  const [dentroSLA, setDentroSLA] = useState(0);
+  const [porVencer, setPorVencer] = useState(0);
+  const [vencidas, setVencidas] = useState(0);
 
   useEffect(() => {
 
@@ -29,6 +32,7 @@ function Dashboard() {
 
     cargarPerfil();
     cargarKpis();
+    cargarSLA();
 
   }, []);
 
@@ -46,6 +50,44 @@ async function cargarKpis() {
 
   setTotalOrdenes(count || 0);
 }
+
+function diasRestantes(fechaMaxima) {
+    const hoy = new Date();
+    const fecha = new Date(fechaMaxima);
+
+    const diffTime = fecha - hoy;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+async function cargarSLA() {
+
+  const { data } = await supabase
+    .from("ordenes")
+    .select("*");
+
+    let contadorDentroSLA = 0;
+    let contadorPorVencer = 0;
+    let contadorVencidas = 0;
+
+    data.forEach((orden) => {
+      const dias = diasRestantes(orden.fecha_maxima_atencion);
+      if (dias > 2) {
+        contadorDentroSLA++;
+      } else if (dias >= 0) {
+        contadorPorVencer++;
+      } else {
+        contadorVencidas++;
+      }
+    });
+
+    setDentroSLA(contadorDentroSLA);
+    setPorVencer(contadorPorVencer);
+    setVencidas(contadorVencidas);
+
+    console.log("Dentro SLA:", contadorDentroSLA);
+    console.log("Por Vencer:", contadorPorVencer);
+    console.log("Vencidas:", contadorVencidas);
+  } 
 
   const cardStyle = {
     backgroundColor: "#ffffff",
@@ -81,17 +123,27 @@ async function cargarKpis() {
   </div>
 
   <div style={cardStyle}>
+    <h3>Dentro SLA</h3>
+    <h1>{dentroSLA}</h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>Por Vencer</h3>
+    <h1>{porVencer}</h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>Vencidas</h3>
+    <h1>{vencidas}</h1>
+  </div>  
+
+  <div style={cardStyle}>
     <h3>SIGA Pendientes</h3>
     <h1>0</h1>
   </div>
 
   <div style={cardStyle}>
     <h3>En Campo</h3>
-    <h1>0</h1>
-  </div>
-
-  <div style={cardStyle}>
-    <h3>Por Vencer</h3>
     <h1>0</h1>
   </div>
   </div>

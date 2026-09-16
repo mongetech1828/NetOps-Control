@@ -8,6 +8,7 @@ function Ordenes() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtrocliente, setFiltroCliente] = useState("");
   const [estados, setEstados] = useState([]);
+  const [ordenEditando, setOrdenEditando] = useState(null);
   const [formData, setFormData] = useState({
     tipo_registro: "OST",
     numero_ost: "",
@@ -22,28 +23,128 @@ function Ordenes() {
   cargarEstados();
   }, []);
 
+  function formatearFechaDB(fecha) {
+
+  const anio = fecha.getFullYear();
+
+  const mes = String(
+    fecha.getMonth() + 1
+  ).padStart(2, "0");
+
+  const dia = String(
+    fecha.getDate()
+  ).padStart(2, "0");
+
+  return `${anio}-${mes}-${dia}`;
+}
+
   async function guardarOrden() {
 
-  const { data, error } =
-    await supabase
+  const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
+
+  const { data: ordenExistente } = await supabase
+  .from("ordenes")
+  .select("id")
+  .eq("numero_ost", formData.numero_ost);
+
+  if (
+    !ordenEditando &&
+    ordenExistente &&
+    ordenExistente.length > 0
+  ) {
+    alert(
+      "La OST ya existe. Utilice Editar o Reingresar."
+    );
+
+    setFormData({
+    tipo_registro: "OST",
+    numero_ost: "",
+    numero_linea: "",
+    cliente: "",
+    estado_id: "",
+    fecha_recepcion: "",
+    observaciones: ""
+  });
+
+    return;
+  }
+
+  if (ordenEditando) {
+
+    const { data:ordenActual } = await supabase
       .from("ordenes")
-      .insert([
-        {
-          tipo_registro: formData.tipo_registro,
-          numero_ost: formData.numero_ost,
-          numero_linea: formData.numero_linea,
-          cliente: formData.cliente,
-          estado_id: formData.estado_id,
-          observaciones: formData.observaciones,
-          fecha_recepcion: formData.fecha_recepcion
+      .select("*")
+      .eq("id", ordenEditando)
+      .single();
+
+    const { data, error } =
+      await supabase
+      .from("ordenes")
+      .update({
+        numero_ost: formData.numero_ost,
+        numero_linea: formData.numero_linea,
+        cliente: formData.cliente,
+        estado_id: formData.estado_id,
+        observaciones: formData.observaciones
+      })
+      .eq("id", ordenEditando);
+
+      //Registrando historial de movimientos
+      if (!error) {
+        if (ordenActual.estado_id !== Number(formData.estado_id)) {
+          const { data: {user} } = await supabase.auth.getUser();
+
+          const { data: estadoAnterior } = await supabase
+            .from("estado")
+            .select("nombre")
+            .eq("id", ordenActual.estado_id)
+            .single();
+
+          const { data: estadoNuevo } = await supabase
+            .from("estado")
+            .select("nombre")
+            .eq("id", formData.estado_id)
+            .single();
+
+          await supabase
+            .from("historial_movimientos")
+            .insert([
+              {
+                orden_id: ordenEditando,
+                usuario_id: user.id,
+                estado_anterior : ordenActual.estado_id,
+                estado_nuevo: Number(formData.estado_id),
+
+                comentario: `Cambio de estado de "${estadoAnterior.nombre}" a "${estadoNuevo.nombre}" por el usuario ${user.email}`
+              }
+            ]);
         }
+      }
+
+    } else {
+
+    const { data, error } =
+      await supabase
+        .from("ordenes")
+        .insert([
+          {
+            tipo_registro: formData.tipo_registro,
+            numero_ost: formData.numero_ost,
+            numero_linea: formData.numero_linea,
+            cliente: formData.cliente,
+            estado_id: formData.estado_id,
+            observaciones: formData.observaciones,
+            fecha_recepcion: formData.fecha_recepcion,
+            fecha_maxima_atencion: formatearFechaDB(fechaMaxima)
+          }
       ]);
 
   console.log(data);
   console.log(error);
+    }
 
   await cargarOrdenes();
-
+  
   setFormData({
     tipo_registro: "OST",
     numero_ost: "",
@@ -54,7 +155,9 @@ function Ordenes() {
     observaciones: ""
   });
 
-  }
+  setOrdenEditando(null);
+
+  } 
 
   async function cargarOrdenes() {
 
@@ -67,6 +170,63 @@ function Ordenes() {
   setOrdenes(data || []);
   }
 
+  function editarOrden(orden) {
+
+  setOrdenEditando(orden.id);
+
+  setFormData({
+    tipo_registro: orden.tipo_registro || "OST",
+    numero_ost: orden.numero_ost || "",
+    numero_linea: orden.numero_linea || "",
+    cliente: orden.cliente || "",
+    observaciones: orden.observaciones || "",
+    estado_id: orden.estado_id || "",
+    fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
+  });
+
+  setMostrarFormulario(true);
+}
+
+async function reingresarOrden(orden) {
+
+  const fechaRecepcion = new Date();
+
+  const fechaMaxima =
+    sumarDiasHabiles(
+      fechaRecepcion,
+      4
+    );
+
+  const confirmar = window.confirm(
+    `¿Está seguro de reingresar la OST: ${orden.numero_ost}?`
+  );
+
+  if (!confirmar) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("ordenes")
+    .update({
+
+      fecha_recepcion:
+        formatearFechaDB(fechaRecepcion),
+
+      fecha_maxima_atencion:
+        formatearFechaDB(fechaMaxima),
+
+      cantidad_reingresos:
+        (orden.cantidad_reingresos || 0) + 1
+
+    })
+    .eq("id", orden.id);
+
+  console.log(error);
+
+  await cargarOrdenes();
+
+}
+
   async function cargarEstados() {
 
   const { data } = await supabase
@@ -76,6 +236,50 @@ function Ordenes() {
 
   setEstados(data || []);
   }
+
+  function sumarDiasHabiles(fecha, diasHabiles) {
+    const resultado = new Date(fecha);
+    let diasAgregados = 0;
+
+    while (diasAgregados < diasHabiles) {
+      resultado.setDate(resultado.getDate() + 1);
+      // Simular días hábiles (omitir fines de semana)
+      const diasSemana = resultado.getDay();
+      if (diasSemana !== 0 && diasSemana !== 6) {
+        diasAgregados++;
+      }
+    }
+
+    return resultado;
+  }
+
+  function formatoFecha(fecha) {
+    return new Date(fecha).toLocaleDateString("es-CR");}
+
+  function diasRestantes(fechaMaxima) {
+    const hoy = new Date();
+    const fecha = new Date(fechaMaxima);
+
+    const diffTime = fecha - hoy;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  function estadoSLA(dias) {
+
+  if (dias > 2) {
+    return "🟢 Dentro SLA";
+  }
+
+  if (dias > 0) {
+    return "🟡 Próximo a vencer";
+  }
+
+  if (dias === 0) {
+    return "🔴 Vence hoy";
+  }
+
+  return "⚫ Vencida";
+}
 
   return (
     
@@ -158,6 +362,8 @@ function Ordenes() {
             fecha_recepcion: e.target.value
           })
         }
+        disabled={ordenEditando !== null}
+        style={{ backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
       />
 
       <br /><br />
@@ -176,10 +382,9 @@ function Ordenes() {
       <br /><br />
 
       <button
-        onClick={guardarOrden}
-      >
-        Guardar Orden
-      </button>
+        onClick={guardarOrden}>
+          {ordenEditando ? "Actualizar Orden" : "Guardar Orden"}
+        </button>
 
     </div>
   )}
@@ -225,6 +430,10 @@ function Ordenes() {
             <th>Cliente</th>
             <th>Estado</th>
             <th>Fecha de Recepción</th>
+            <th>Fecha Máxima</th>
+            <th>Días Restantes</th>
+            <th>SLA</th>
+            <th>Reingresos</th>
             <th>Observaciones</th>
             <th>Acciones</th>
           </tr>
@@ -246,11 +455,24 @@ function Ordenes() {
               <td>{orden.numero_linea}</td>
               <td>{orden.cliente}</td>
               <td>{orden.estado?.nombre}</td>
-              <td>{orden.fecha_recepcion}</td>
+              <td>{formatoFecha(orden.fecha_recepcion)}</td>
+              <td>{formatoFecha(orden.fecha_maxima_atencion)}</td>
+              <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
+              <td>{estadoSLA(diasRestantes(orden.fecha_maxima_atencion))}</td>
+              <td>{orden.cantidad_reingresos}</td>
               <td>{orden.observaciones}</td>
               <td>
-                <button>Editar</button>
+                <button
+                  onClick={() => editarOrden(orden)}
+                  >
+                    Editar
+                </button>
                 <button>Borrar</button>
+                <button
+                  onClick={() => reingresarOrden(orden)}
+                  >
+                    Reingresar
+                </button>
               </td>
             </tr>
           ))}

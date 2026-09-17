@@ -38,6 +38,34 @@ function Ordenes() {
   return `${anio}-${mes}-${dia}`;
 }
 
+function formatearFechaHoraDB(fecha) {
+
+  const anio = fecha.getFullYear();
+
+  const mes = String(
+    fecha.getMonth() + 1
+  ).padStart(2, "0");
+
+  const dia = String(
+    fecha.getDate()
+  ).padStart(2, "0");
+
+  const horas = String(
+    fecha.getHours()
+  ).padStart(2, "0");
+
+  const minutos = String(
+    fecha.getMinutes()
+  ).padStart(2, "0");
+
+  const segundos = String(
+    fecha.getSeconds()
+  ).padStart(2, "0");
+
+  return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
+}
+
+
   async function guardarOrden() {
 
   const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
@@ -207,6 +235,14 @@ function Ordenes() {
 
 async function reingresarOrden(orden) {
 
+  const motivo = window.prompt(
+    `Ingrese el motivo del reingreso OST ${orden.numero_ost}`
+  );
+
+  if (!motivo) {
+    return;
+  }
+
   const fechaRecepcion = new Date();
 
   const fechaMaxima =
@@ -234,12 +270,34 @@ async function reingresarOrden(orden) {
         formatearFechaDB(fechaMaxima),
 
       cantidad_reingresos:
-        (orden.cantidad_reingresos || 0) + 1
+        (orden.cantidad_reingresos || 0) + 1,
+
+      fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
+
+      motivo_reingreso: motivo
 
     })
     .eq("id", orden.id);
 
-  console.log(error);
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const {data: {user}} = await supabase.auth.getUser();
+  const { error:errorHistorial } = await supabase
+    .from("historial_movimientos")
+    .insert({
+        orden_id: orden.id,
+        usuario_id: user.id,
+        estado_anterior : orden.estado_id,
+        estado_nuevo: orden.estado_id,
+        comentario: `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`        
+      })
+
+    .select();
+
+    console.log("error historial: ", errorHistorial);
 
   await cargarOrdenes();
 

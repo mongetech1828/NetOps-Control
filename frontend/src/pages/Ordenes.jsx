@@ -9,6 +9,9 @@ function Ordenes() {
   const [filtrocliente, setFiltroCliente] = useState("");
   const [estados, setEstados] = useState([]);
   const [ordenEditando, setOrdenEditando] = useState(null);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [historialOrden, setHistorialOrden] = useState([]);
+  const [ordenHistorial, setOrdenHistorial] = useState(null);
   const [formData, setFormData] = useState({
     tipo_registro: "OST",
     numero_ost: "",
@@ -19,105 +22,99 @@ function Ordenes() {
   });
 
   useEffect(() => {
-  cargarOrdenes();
-  cargarEstados();
+    cargarOrdenes();
+    cargarEstados();
   }, []);
 
   function formatearFechaDB(fecha) {
 
-  const anio = fecha.getFullYear();
+    const anio = fecha.getFullYear();
 
-  const mes = String(
-    fecha.getMonth() + 1
-  ).padStart(2, "0");
+    const mes = String(
+      fecha.getMonth() + 1
+    ).padStart(2, "0");
 
-  const dia = String(
-    fecha.getDate()
-  ).padStart(2, "0");
+    const dia = String(
+      fecha.getDate()
+    ).padStart(2, "0");
 
-  return `${anio}-${mes}-${dia}`;
-}
+    return `${anio}-${mes}-${dia}`;
+  }
 
-function formatearFechaHoraDB(fecha) {
+  function formatearFechaHoraDB(fecha) {
 
-  const anio = fecha.getFullYear();
+    const anio = fecha.getFullYear();
 
-  const mes = String(
-    fecha.getMonth() + 1
-  ).padStart(2, "0");
+    const mes = String(
+      fecha.getMonth() + 1
+    ).padStart(2, "0");
 
-  const dia = String(
-    fecha.getDate()
-  ).padStart(2, "0");
+    const dia = String(
+      fecha.getDate()
+    ).padStart(2, "0");
 
-  const horas = String(
-    fecha.getHours()
-  ).padStart(2, "0");
+    const horas = String(
+      fecha.getHours()
+    ).padStart(2, "0");
 
-  const minutos = String(
-    fecha.getMinutes()
-  ).padStart(2, "0");
+    const minutos = String(
+      fecha.getMinutes()
+    ).padStart(2, "0");
 
-  const segundos = String(
-    fecha.getSeconds()
-  ).padStart(2, "0");
+    const segundos = String(
+      fecha.getSeconds()
+    ).padStart(2, "0");
 
-  return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
-}
+    return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
+  }
 
 
   async function guardarOrden() {
 
-  const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
-
-  const { data: ordenExistente } = await supabase
-  .from("ordenes")
-  .select("id")
-  .eq("numero_ost", formData.numero_ost);
-
-  if (
-    !ordenEditando &&
-    ordenExistente &&
-    ordenExistente.length > 0
-  ) {
-    alert(
-      "La OST ya existe. Utilice Editar o Reingresar."
-    );
-
-    setFormData({
-    tipo_registro: "OST",
-    numero_ost: "",
-    numero_linea: "",
-    cliente: "",
-    estado_id: "",
-    fecha_recepcion: "",
-    observaciones: ""
-  });
-
-    return;
-  }
-
-  if (ordenEditando) {
-
-    const { data:ordenActual } = await supabase
+    const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
+    const { data: ordenExistente } = await supabase
       .from("ordenes")
-      .select("*")
-      .eq("id", ordenEditando)
-      .single();
+      .select("id")
+      .eq("numero_ost", formData.numero_ost);
 
-    const { data, error } =
-      await supabase
-      .from("ordenes")
-      .update({
-        numero_ost: formData.numero_ost,
-        numero_linea: formData.numero_linea,
-        cliente: formData.cliente,
-        estado_id: formData.estado_id,
-        observaciones: formData.observaciones
-      })
-      .eq("id", ordenEditando);
+    if (!ordenEditando &&
+        ordenExistente &&
+        ordenExistente.length > 0) {
+          alert("La OST ya existe. Utilice Editar o Reingresar.");
 
-      //Registrando historial de movimientos
+          setFormData({
+            tipo_registro: "OST",
+            numero_ost: "",
+            numero_linea: "",
+            cliente: "",
+            estado_id: "",
+            fecha_recepcion: "",
+            observaciones: ""
+          });
+
+          return;
+      }
+
+    if (ordenEditando) {
+
+      const { data:ordenActual } = await supabase
+        .from("ordenes")
+        .select("*")
+        .eq("id", ordenEditando)
+        .single();
+
+      const { data, error } = await supabase
+        .from("ordenes")
+        .update({
+          numero_ost: formData.numero_ost,
+          numero_linea: formData.numero_linea,
+          cliente: formData.cliente,
+          estado_id: formData.estado_id,
+          observaciones: formData.observaciones
+        })
+        .eq("id", ordenEditando);
+
+        //Registrando historial de movimientos
       if (!error) {
         if (ordenActual.estado_id !== Number(formData.estado_id)) {
           const { data: {user} } = await supabase.auth.getUser();
@@ -149,61 +146,59 @@ function formatearFechaHoraDB(fecha) {
         }
       }
 
-    } else {
+      } else {
 
-    const { data, error } =
-      await supabase
-        .from("ordenes")
-        .insert([
-          {
-            tipo_registro: formData.tipo_registro,
-            numero_ost: formData.numero_ost,
-            numero_linea: formData.numero_linea,
-            cliente: formData.cliente,
-            estado_id: formData.estado_id,
-            observaciones: formData.observaciones,
-            fecha_recepcion: formData.fecha_recepcion,
-            fecha_maxima_atencion: formatearFechaDB(fechaMaxima)
-          }
-      ])
-      .select()
-      .single();
-
-      if (!error) {
-        const { data: {user} } = await supabase.auth.getUser();
-
-        await supabase
-          .from("historial_movimientos")
+        const { data, error } = await supabase
+          .from("ordenes")
           .insert([
             {
-              orden_id: data.id,
-              usuario_id: user.id,
-              estado_anterior : null,
-              estado_nuevo: Number(formData.estado_id),
-              comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
+              tipo_registro: formData.tipo_registro,
+              numero_ost: formData.numero_ost,
+              numero_linea: formData.numero_linea,
+              cliente: formData.cliente,
+              estado_id: formData.estado_id,
+              observaciones: formData.observaciones,
+              fecha_recepcion: formData.fecha_recepcion,
+              fecha_maxima_atencion: formatearFechaDB(fechaMaxima)
             }
-          ]);
-        
-        console.log("ERROR HISTORIAL:", historialError);
+          ])
+          .select()
+          .single();
+
+        if (!error) {
+          const { data: {user} } = await supabase.auth.getUser();
+
+          await supabase
+            .from("historial_movimientos")
+            .insert([
+              {
+                orden_id: data.id,
+                usuario_id: user.id,
+                estado_anterior : null,
+                estado_nuevo: Number(formData.estado_id),
+                comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
+              }
+            ]);
+          
+          console.log("ERROR HISTORIAL:", historialError);
+        }
       }
-    }
 
-  await cargarOrdenes();
+    await cargarOrdenes();
   
-  setFormData({
-    tipo_registro: "OST",
-    numero_ost: "",
-    numero_linea: "",
-    cliente: "",
-    estado_id: "",
-    fecha_recepcion: "",
-    observaciones: ""
-  });
+    setFormData({
+      tipo_registro: "OST",
+      numero_ost: "",
+      numero_linea: "",
+      cliente: "",
+      estado_id: "",
+      fecha_recepcion: "",
+      observaciones: ""
+    });
 
-  setOrdenEditando(null);
+    setOrdenEditando(null);
 
-}
- 
+  } 
 
   async function cargarOrdenes() {
 
@@ -218,99 +213,117 @@ function formatearFechaHoraDB(fecha) {
 
   function editarOrden(orden) {
 
-  setOrdenEditando(orden.id);
+    setOrdenEditando(orden.id);
 
-  setFormData({
-    tipo_registro: orden.tipo_registro || "OST",
-    numero_ost: orden.numero_ost || "",
-    numero_linea: orden.numero_linea || "",
-    cliente: orden.cliente || "",
-    observaciones: orden.observaciones || "",
-    estado_id: orden.estado_id || "",
-    fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
-  });
+    setFormData({
+      tipo_registro: orden.tipo_registro || "OST",
+      numero_ost: orden.numero_ost || "",
+      numero_linea: orden.numero_linea || "",
+      cliente: orden.cliente || "",
+      observaciones: orden.observaciones || "",
+      estado_id: orden.estado_id || "",
+      fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
+    });
 
-  setMostrarFormulario(true);
-}
-
-async function reingresarOrden(orden) {
-
-  const motivo = window.prompt(
-    `Ingrese el motivo del reingreso OST ${orden.numero_ost}`
-  );
-
-  if (!motivo) {
-    return;
+    setMostrarFormulario(true);
   }
 
-  const fechaRecepcion = new Date();
+  async function reingresarOrden(orden) {
 
-  const fechaMaxima =
-    sumarDiasHabiles(
-      fechaRecepcion,
-      4
-    );
+    const motivo = window.prompt(`Ingrese el motivo del reingreso OST ${orden.numero_ost}`);
 
-  const confirmar = window.confirm(
-    `¿Está seguro de reingresar la OST: ${orden.numero_ost}?`
-  );
+    if (!motivo) {
+      return;
+    }
 
-  if (!confirmar) {
-    return;
-  }
+    const fechaRecepcion = new Date();
+    const fechaMaxima =
+      sumarDiasHabiles(
+        fechaRecepcion,
+        4
+      );
 
-  const { error } = await supabase
-    .from("ordenes")
-    .update({
+    const confirmar = window.confirm(`¿Está seguro de reingresar la OST: ${orden.numero_ost}?`);
 
-      fecha_recepcion:
-        formatearFechaDB(fechaRecepcion),
+    if (!confirmar) {
+      return;
+    }
 
-      fecha_maxima_atencion:
-        formatearFechaDB(fechaMaxima),
+    const { error } = await supabase
+      .from("ordenes")
+      .update({
 
-      cantidad_reingresos:
-        (orden.cantidad_reingresos || 0) + 1,
+        fecha_recepcion:
+          formatearFechaDB(fechaRecepcion),
 
-      fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
+        fecha_maxima_atencion:
+          formatearFechaDB(fechaMaxima),
 
-      motivo_reingreso: motivo
+        cantidad_reingresos:
+          (orden.cantidad_reingresos || 0) + 1,
 
-    })
+        fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
+
+        motivo_reingreso: motivo
+
+      })
     .eq("id", orden.id);
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-  const {data: {user}} = await supabase.auth.getUser();
-  const { error:errorHistorial } = await supabase
-    .from("historial_movimientos")
-    .insert({
-        orden_id: orden.id,
-        usuario_id: user.id,
-        estado_anterior : orden.estado_id,
-        estado_nuevo: orden.estado_id,
-        comentario: `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`        
-      })
+    const {data: {user}} = await supabase.auth.getUser();
+    const { error:errorHistorial } = await supabase
+      .from("historial_movimientos")
+      .insert({
+          orden_id: orden.id,
+          usuario_id: user.id,
+          estado_anterior : orden.estado_id,
+          estado_nuevo: orden.estado_id,
+          comentario: `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`        
+        })
 
     .select();
 
     console.log("error historial: ", errorHistorial);
 
-  await cargarOrdenes();
+    await cargarOrdenes();
 
-}
+  }
+
+  async function verHistorial(orden) {
+
+    console.log("Entro a verHistorial");
+
+    const { data,error } = await supabase
+      .from("historial_movimientos")
+      .select("*")
+      .eq("orden_id", orden.id)
+      .order("fecha_movimiento", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setHistorialOrden(data);
+    setOrdenHistorial(orden);
+
+    console.log(data);
+    console.log("Mostrando historial");
+    setMostrarHistorial(true);
+  }
 
   async function cargarEstados() {
 
-  const { data } = await supabase
-    .from("estado")
-    .select("*")
-    .order("nombre");
+    const { data } = await supabase
+      .from("estado")
+      .select("*")
+      .order("nombre");
 
-  setEstados(data || []);
+    setEstados(data || []);
   }
 
   function sumarDiasHabiles(fecha, diasHabiles) {
@@ -330,7 +343,8 @@ async function reingresarOrden(orden) {
   }
 
   function formatoFecha(fecha) {
-    return new Date(fecha).toLocaleDateString("es-CR");}
+    return new Date(fecha).toLocaleDateString("es-CR");
+  }
 
   function diasRestantes(fechaMaxima) {
     const hoy = new Date();
@@ -342,20 +356,20 @@ async function reingresarOrden(orden) {
 
   function estadoSLA(dias) {
 
-  if (dias > 2) {
-    return "🟢 Dentro SLA";
-  }
+    if (dias > 2) {
+      return "🟢 Dentro SLA";
+    }
 
-  if (dias > 0) {
-    return "🟡 Próximo a vencer";
-  }
+    if (dias > 0) {
+      return "🟡 Próximo a vencer";
+    }
 
-  if (dias === 0) {
-    return "🔴 Vence hoy";
-  }
+    if (dias === 0) {
+      return "🔴 Vence hoy";
+    }
 
-  return "⚫ Vencida";
-}
+    return "⚫ Vencida";
+  }
 
   return (
     
@@ -377,93 +391,88 @@ async function reingresarOrden(orden) {
             onChange={(e) =>
           setFormData({
             ...formData,
-            numero_ost: e.target.value
-          })
-        }
-      />
+            numero_ost: e.target.value})
+          }
+          />
 
-      <br /><br />
+          <br /><br />
 
-      <input
-        placeholder="Número Línea"
-        value={formData.numero_linea}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            numero_linea: e.target.value
-          })
-        }
-      />
+          <input
+            placeholder="Número Línea"
+            value={formData.numero_linea}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                numero_linea: e.target.value})
+              }
+          />
 
-      <br /><br />
+          <br /><br />
 
-      <input
-        placeholder="Cliente"
-        value={formData.cliente}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            cliente: e.target.value
-          })
-        }
-      />
+          <input
+            placeholder="Cliente"
+            value={formData.cliente}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                cliente: e.target.value})
+            }
+          />
 
-      <br /><br />
+          <br /><br />
 
-      <select
-        value={formData.estado_id}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            estado_id: e.target.value
-          })
-        }
-      >
-        <option value="">Seleccionar Estado</option>
-        {estados.map((estado) => (
-          <option key={estado.id} value={estado.id}>
-            {estado.nombre}
-          </option>
-        ))}
-      </select>
+          <select
+            value={formData.estado_id}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                estado_id: e.target.value})
+              }
+          >
 
-      <br /><br />
+          <option value="">Seleccionar Estado</option>
+            {estados.map((estado) => (
+              <option key={estado.id} value={estado.id}>
+                {estado.nombre}
+              </option>
+            ))}
+          </select>
 
-      <input
-        type="date"
-        value={formData.fecha_recepcion}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            fecha_recepcion: e.target.value
-          })
-        }
-        disabled={ordenEditando !== null}
-        style={{ backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
-      />
+          <br /><br />
 
-      <br /><br />
+          <input
+            type="date"
+            value={formData.fecha_recepcion}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fecha_recepcion: e.target.value})
+            }
+            disabled={ordenEditando !== null}
+            style={{ backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
+          />
 
-      <textarea
-        placeholder="Observaciones"
-        value={formData.observaciones}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            observaciones: e.target.value
-          })
-        }
-      />
+          <br /><br />
 
-      <br /><br />
+          <textarea
+            placeholder="Observaciones"
+            value={formData.observaciones}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                observaciones: e.target.value})
+            }
+          />
 
-      <button
-        onClick={guardarOrden}>
-          {ordenEditando ? "Actualizar Orden" : "Guardar Orden"}
-        </button>
+          <br /><br />
 
-    </div>
-  )}
+          <button
+            onClick={guardarOrden}>
+              {ordenEditando ? "Actualizar Orden" : "Guardar Orden"}
+            </button>
+
+        </div>
+      )}
 
       <hr />
 
@@ -477,17 +486,17 @@ async function reingresarOrden(orden) {
         }}
       >
 
-      <input
-        placeholder="Buscar OST"
-        value={filtroOST}
-        onChange={(e) => setFiltroOST(e.target.value)}
-      />
+        <input
+          placeholder="Buscar OST"
+          value={filtroOST}
+          onChange={(e) => setFiltroOST(e.target.value)}
+        />
 
-      <input
-        placeholder="Buscar Cliente"
-        value={filtrocliente}
-        onChange={(e) => setFiltroCliente(e.target.value)}
-      />
+        <input
+          placeholder="Buscar Cliente"
+          value={filtrocliente}
+          onChange={(e) => setFiltroCliente(e.target.value)}
+        />
 
       </div>
 
@@ -543,21 +552,140 @@ async function reingresarOrden(orden) {
                   >
                     Editar
                 </button>
-                <button>Borrar</button>
                 <button
                   onClick={() => reingresarOrden(orden)}
                   >
                     Reingresar
                 </button>
+                <button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => verHistorial(orden)}
+                  >
+                    Historial
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table> 
+      
+      { 
+        mostrarHistorial && (
+          <div className="modal-overlay">
 
+            <div className="modal-content"
+              style={{
+                background: "#fff",
+                padding: "20px",
+                borderRadius: "8px",
+                border: "1px solid #e5e7eb"
+              }}
+            >
+
+              <h3>
+                Historial OST {ordenHistorial?.numero_ost}
+              </h3>
+
+              <p>
+                Cliente: {ordenHistorial?.cliente}
+              </p>
+
+              <p>
+                Estado Actual: {ordenHistorial?.estado?.nombre}
+              </p>
+
+              <p>
+                Reingresos: {ordenHistorial?.cantidad_reingresos}
+              </p>
+
+              <div>
+
+                {historialOrden.map((item) => {
+
+                  let color ="#2563eb";
+
+                  if (item.comentario.includes("Creación")) {
+                    color = "#22c55e"
+                  }
+
+                  if (item.comentario.includes("Cambio de estado")) {
+                    color = "#3b82f6"
+                  }
+
+                  if (item.comentario.includes("reingresada")) {
+                    color = "#f59e0b"
+                  }
+
+                  return (
+
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        marginBottom: "20px"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "20px",
+                          display: "flex",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            backgroundColor: color,
+                            borderRadius: "50%",
+                            marginTop: "5px"
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          borderLeft: "2px solid #d1d5db",
+                          paddingLeft: "15px",
+                          marginLeft: "-6px"
+                        }}
+                      >
+                        <div>
+                          <strong>
+                            {new Date(
+                              item.fecha_movimiento
+                            ).toLocaleString()}
+                          </strong>
+                        </div>
+
+                        <div>
+                          {item.comentario}
+                        </div>
+
+                      </div>
+                    </div>
+                  );
+                })}
+
+              </div>
+
+              <button
+                onClick={() =>
+                  setMostrarHistorial(false)
+                }
+              >
+                Cerrar
+              </button>
+
+            </div>
+
+          </div>
+        )
+      }
     </div>
   );
-
 
 }
 

@@ -8,22 +8,30 @@ function Ordenes() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtrocliente, setFiltroCliente] = useState("");
   const [estados, setEstados] = useState([]);
+  const [tiposServicio, setTiposServicio] = useState([]);
+  const [transporte, setTransporte] = useState([]);
   const [ordenEditando, setOrdenEditando] = useState(null);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [historialOrden, setHistorialOrden] = useState([]);
-  const [ordenHistorial, setOrdenHistorial] = useState(null);
-  const [formData, setFormData] = useState({
+  const [ordenHistorial, setOrdenHistorial] = useState(null);  
+  const formularioVacio ={
     tipo_registro: "OST",
     numero_ost: "",
     numero_linea: "",
     cliente: "",
+    tipo_servicio_id: "",
+    transporte_id: "",
     estado_id: "",
+    fecha_recepcion: "",
     observaciones: ""
-  });
+  };
+  const [formData, setFormData] = useState(formularioVacio);
 
   useEffect(() => {
     cargarOrdenes();
     cargarEstados();
+    cargarTiposServicio();
+    cargarTransporte();
   }, []);
 
   function formatearFechaDB(fecha) {
@@ -82,15 +90,7 @@ function Ordenes() {
         ordenExistente.length > 0) {
           alert("La OST ya existe. Utilice Editar o Reingresar.");
 
-          setFormData({
-            tipo_registro: "OST",
-            numero_ost: "",
-            numero_linea: "",
-            cliente: "",
-            estado_id: "",
-            fecha_recepcion: "",
-            observaciones: ""
-          });
+          setFormData(formularioVacio);
 
           return;
       }
@@ -109,6 +109,8 @@ function Ordenes() {
           numero_ost: formData.numero_ost,
           numero_linea: formData.numero_linea,
           cliente: formData.cliente,
+          tipo_servicio_id: formData.tipo_servicio_id,
+          transporte_id: formData.transporte_id,
           estado_id: formData.estado_id,
           observaciones: formData.observaciones
         })
@@ -148,6 +150,8 @@ function Ordenes() {
 
       } else {
 
+        console.log(formData);
+
         const { data, error } = await supabase
           .from("ordenes")
           .insert([
@@ -156,6 +160,8 @@ function Ordenes() {
               numero_ost: formData.numero_ost,
               numero_linea: formData.numero_linea,
               cliente: formData.cliente,
+              tipo_servicio_id: formData.tipo_servicio_id,
+              transporte_id: formData.transporte_id,
               estado_id: formData.estado_id,
               observaciones: formData.observaciones,
               fecha_recepcion: formData.fecha_recepcion,
@@ -180,21 +186,18 @@ function Ordenes() {
               }
             ]);
           
-          console.log("ERROR HISTORIAL:", historialError);
+          //console.log("ERROR HISTORIAL:", historialError);
         }
       }
 
+      console.log("Antes cargarOrdenes");
+
     await cargarOrdenes();
+    setMostrarFormulario(false);
+
+    console.log("Despues cargarOrdenes");
   
-    setFormData({
-      tipo_registro: "OST",
-      numero_ost: "",
-      numero_linea: "",
-      cliente: "",
-      estado_id: "",
-      fecha_recepcion: "",
-      observaciones: ""
-    });
+    setFormData(formularioVacio);
 
     setOrdenEditando(null);
 
@@ -202,11 +205,15 @@ function Ordenes() {
 
   async function cargarOrdenes() {
 
+    console.log("Entró cargarOrdenes");
+
   const { data } =
     await supabase
       .from("ordenes")
       .select('*, estado ( nombre )')
       .order("id", { ascending: false });
+
+      console.log(data);
 
   setOrdenes(data || []);
   }
@@ -326,6 +333,28 @@ function Ordenes() {
     setEstados(data || []);
   }
 
+  async function cargarTiposServicio() {
+
+    const { data } = await supabase
+      .from("tipo_servicio")
+      .select("*")
+      .order("nombre");
+
+    setTiposServicio(data || []);
+
+  }
+
+  async function cargarTransporte() {
+
+    const { data } = await supabase
+      .from("transporte")
+      .select("*")
+      .order("nombre");
+
+    setTransporte(data || []);
+
+  }
+
   function sumarDiasHabiles(fecha, diasHabiles) {
     const resultado = new Date(fecha);
     let diasAgregados = 0;
@@ -357,11 +386,11 @@ function Ordenes() {
   function estadoSLA(dias) {
 
     if (dias > 2) {
-      return "🟢 Dentro SLA";
+      return "🟢 En SLA";
     }
 
-    if (dias > 0) {
-      return "🟡 Próximo a vencer";
+    if (dias >= 1 && dias <= 2) {
+      return "🟡 Prox. vencer";
     }
 
     if (dias === 0) {
@@ -377,102 +406,229 @@ function Ordenes() {
 
       <h1>Órdenes</h1>
 
-      <button onClick={() => setMostrarFormulario(!mostrarFormulario)}>
+      <button onClick={() => setMostrarFormulario(true)}>
         Nueva Orden
       </button>
 
-      {mostrarFormulario && (
-        <div>
-          <br /><br />
+      {
+        mostrarFormulario && (
+          <div className="modal-overlay">
+            <div className="modal-content">            
+              <div>
 
-          <input
-            placeholder="Número OST"
-            value={formData.numero_ost}
-            onChange={(e) =>
-          setFormData({
-            ...formData,
-            numero_ost: e.target.value})
-          }
-          />
+                <h3>
+                  {ordenEditando
+                    ? "Editar Orden"
+                    : "Nueva Orden"}
+                </h3>
 
-          <br /><br />
+                <br /><br />
 
-          <input
-            placeholder="Número Línea"
-            value={formData.numero_linea}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                numero_linea: e.target.value})
-              }
-          />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "20px",
+                    justifyContent: "center"
+                  }}
+                >
+                  <input
+                    style={{ width: "45%"}}
+                    placeholder="Número OST"
+                    value={formData.numero_ost || ""}
+                    onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    numero_ost: e.target.value})
+                  }
+                  />
+                  <input
+                    style={{width: "45%"}}
+                    placeholder="Número Línea"
+                    value={formData.numero_linea || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numero_linea: e.target.value})
+                      }
+                  />
+                </div>
 
-          <br /><br />
+                <br />
 
-          <input
-            placeholder="Cliente"
-            value={formData.cliente}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                cliente: e.target.value})
-            }
-          />
+                <input
+                  style={{width: "45%"}}
+                  placeholder="Cliente"
+                  value={formData.cliente}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      cliente: e.target.value})
+                  }
+                />
 
-          <br /><br />
+                <br/><br />
 
-          <select
-            value={formData.estado_id}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                estado_id: e.target.value})
-              }
-          >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "20px",
+                    justifyContent: "center"
+                  }}
+                >
+                  <select
+                    value={formData.estado_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estado_id: e.target.value})
+                      }
+                    style={{width: "180px"}}
+                  >
 
-          <option value="">Seleccionar Estado</option>
-            {estados.map((estado) => (
-              <option key={estado.id} value={estado.id}>
-                {estado.nombre}
-              </option>
-            ))}
-          </select>
+                  <option value="">
+                    Seleccionar Estado
+                  </option>
+                    {estados.map((estado) => (
+                      <option key={estado.id} value={estado.id}>
+                        {estado.nombre}
+                      </option>
+                    ))}
+                  </select>
 
-          <br /><br />
+                  <input                    
+                    type="date"
+                    value={formData.fecha_recepcion || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        fecha_recepcion: e.target.value})
+                    }
+                    disabled={ordenEditando !== null}
+                    style={{width: "180px", backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
+                  />
+                </div>
 
-          <input
-            type="date"
-            value={formData.fecha_recepcion}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                fecha_recepcion: e.target.value})
-            }
-            disabled={ordenEditando !== null}
-            style={{ backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
-          />
+                <br /><br />
 
-          <br /><br />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "20px",
+                    justifyContent: "center"
+                  }}
+                >
 
-          <textarea
-            placeholder="Observaciones"
-            value={formData.observaciones}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                observaciones: e.target.value})
-            }
-          />
+                  <select
+                    value={formData.tipo_servicio_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tipo_servicio_id:
+                          e.target.value
+                      })
+                    }
+                  >
 
-          <br /><br />
+                    <option value="">
+                      Tipo Servicio
+                    </option>
 
-          <button
-            onClick={guardarOrden}>
-              {ordenEditando ? "Actualizar Orden" : "Guardar Orden"}
-            </button>
+                    {tiposServicio.map((tipo) => (
 
-        </div>
-      )}
+                      <option
+                        key={tipo.id}
+                        value={tipo.id}
+                      >
+                        {tipo.nombre}
+                      </option>
+
+                    ))}
+
+                  </select>
+
+                  <select
+                    value={
+                      formData.transporte_id || ""
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        transporte_id:
+                          e.target.value
+                      })
+                    }
+                  >
+
+                    <option value="">
+                      Transporte
+                    </option>
+
+                    {transporte.map((item) => (
+
+                      <option
+                        key={item.id}
+                        value={item.id}
+                      >
+                        {item.nombre}
+                      </option>
+
+                    ))}
+                  </select>
+                </div>
+
+                <br /><br />
+
+                <textarea
+                  style={{width: "45%"}}
+                  placeholder="Observaciones"
+                  value={formData.observaciones}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      observaciones: e.target.value})
+                  }
+                />
+
+                <br /><br />
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    justifyContent: "center",
+                    marginTop: "20px"
+                  }}
+                >
+                  <button
+                    onClick={guardarOrden}
+                  >
+                    {ordenEditando
+                     ? "Actualizar Orden"
+                     : "Guardar Orden"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMostrarFormulario(false);
+                      setOrdenEditando(null);
+                      setFormData({
+                        tipo_registro: "OST",
+                        numero_ost: "",
+                        numero_linea: "",
+                        cliente: "",
+                        estado_id: "",
+                        fecha_recepcion: "",
+                        observaciones: ""
+                      });
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       <hr />
 
@@ -509,17 +665,15 @@ function Ordenes() {
       >
         <thead>
           <tr>
-            <th>ID</th>
             <th>OST</th>
             <th>Línea</th>
             <th>Cliente</th>
+            <th>Servicio</th>
+            <th>Transporte</th>
             <th>Estado</th>
-            <th>Fecha de Recepción</th>
-            <th>Fecha Máxima</th>
-            <th>Días Restantes</th>
+            <th>Días</th>
             <th>SLA</th>
-            <th>Reingresos</th>
-            <th>Observaciones</th>
+            <th>Reing.</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -535,17 +689,15 @@ function Ordenes() {
           )
           .map((orden) => (
             <tr key={orden.id}>
-              <td>{orden.id}</td>
               <td>{orden.numero_ost}</td>
               <td>{orden.numero_linea}</td>
               <td>{orden.cliente}</td>
+              <td>Pendiente</td>
+              <td>Pendiente</td>
               <td>{orden.estado?.nombre}</td>
-              <td>{formatoFecha(orden.fecha_recepcion)}</td>
-              <td>{formatoFecha(orden.fecha_maxima_atencion)}</td>
               <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
               <td>{estadoSLA(diasRestantes(orden.fecha_maxima_atencion))}</td>
               <td>{orden.cantidad_reingresos}</td>
-              <td>{orden.observaciones}</td>
               <td>
                 <button
                   onClick={() => editarOrden(orden)}

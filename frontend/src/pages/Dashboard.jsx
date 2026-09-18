@@ -270,11 +270,14 @@ function Dashboard() {
       const dias = diasRestantes(orden.fecha_maxima_atencion);
       if (dias > 2) {
         contadorDentroSLA++;
-      } else if (dias === 2) {
+      } 
+      else if (dias >= 1 && dias <= 2) {
         contadorPorVencer++;
-      } else if (dias === 0) {
+      } 
+      else if (dias === 0) {
         // Vencen Hoy
-      } else if (dias < 0) { 
+      } 
+      else { 
         contadorVencidas++;
       }
     });

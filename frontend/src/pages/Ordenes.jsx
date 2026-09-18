@@ -76,6 +76,33 @@ function Ordenes() {
     return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
   }
 
+  function formatoFechaHora(fecha) {
+
+    console.log("Original:", fecha);
+
+    console.log(
+      "Convertida:",
+      new Date(fecha)
+      .toLocaleString("es-CR", {
+      timeZone: "America/Costa_Rica"
+      })
+      );
+
+    return new Date(fecha + "Z").toLocaleString(
+      "es-CR",
+      {
+        timeZone: "America/Costa_Rica",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  }
+
 
   async function guardarOrden() {
 
@@ -184,9 +211,7 @@ function Ordenes() {
                 estado_nuevo: Number(formData.estado_id),
                 comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
               }
-            ]);
-          
-          //console.log("ERROR HISTORIAL:", historialError);
+            ]);          
         }
       }
 
@@ -210,7 +235,7 @@ function Ordenes() {
   const { data } =
     await supabase
       .from("ordenes")
-      .select('*, estado ( nombre )')
+      .select('*, estado ( nombre ),tipo_servicio(nombre),transporte(nombre)')
       .order("id", { ascending: false });
 
       console.log(data);
@@ -227,6 +252,8 @@ function Ordenes() {
       numero_ost: orden.numero_ost || "",
       numero_linea: orden.numero_linea || "",
       cliente: orden.cliente || "",
+      tipo_servicio_id: orden.tipo_servicio_id || "",
+      transporte_id: orden.transporte_id || "",
       observaciones: orden.observaciones || "",
       estado_id: orden.estado_id || "",
       fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
@@ -692,8 +719,8 @@ function Ordenes() {
               <td>{orden.numero_ost}</td>
               <td>{orden.numero_linea}</td>
               <td>{orden.cliente}</td>
-              <td>Pendiente</td>
-              <td>Pendiente</td>
+              <td>{orden.tipo_servicio?.nombre || "-"}</td>
+              <td>{orden.transporte?.nombre || "-"}</td>
               <td>{orden.estado?.nombre}</td>
               <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
               <td>{estadoSLA(diasRestantes(orden.fecha_maxima_atencion))}</td>
@@ -799,9 +826,9 @@ function Ordenes() {
                       >
                         <div>
                           <strong>
-                            {new Date(
+                            {formatoFechaHora(
                               item.fecha_movimiento
-                            ).toLocaleString()}
+                            )}
                           </strong>
                         </div>
 

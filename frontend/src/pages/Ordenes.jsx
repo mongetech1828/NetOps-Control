@@ -574,14 +574,7 @@ function Ordenes() {
         mostrarHistorial && (
           <div className="modal-overlay">
 
-            <div className="modal-content"
-              style={{
-                background: "#fff",
-                padding: "20px",
-                borderRadius: "8px",
-                border: "1px solid #e5e7eb"
-              }}
-            >
+            <div className="modal-content">
 
               <h3>
                 Historial OST {ordenHistorial?.numero_ost}

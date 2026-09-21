@@ -436,9 +436,9 @@ function Ordenes() {
       {
         mostrarFormulario && (
           <div className="modal-overlay">
-            <div className="modal-content">            
-              <div>
+            <div className="modal-content">
 
+              <div>
                 <h3>
                   {ordenEditando
                     ? "Editar Orden"
@@ -477,7 +477,7 @@ function Ordenes() {
                     }
                   />
                   <input
-                    placeholder="Evento Ágil"
+                    placeholder="Evento AGIL"
                     value={formData.evento_agil || ""}
                     onChange={(e) =>
                       setFormData({
@@ -645,15 +645,7 @@ function Ordenes() {
                     onClick={() => {
                       setMostrarFormulario(false);
                       setOrdenEditando(null);
-                      setFormData({
-                        tipo_registro: "OST",
-                        numero_ost: "",
-                        numero_linea: "",
-                        cliente: "",
-                        estado_id: "",
-                        fecha_recepcion: "",
-                        observaciones: ""
-                      });
+                      setFormData(formularioVacio);
                     }}
                   >
                     Cancelar
@@ -702,7 +694,7 @@ function Ordenes() {
           <tr>
             <th>OST</th>
             <th>Línea</th>
-            <th>Evento Ágil</th>
+            <th>Evento AGIL</th>
             <th>Cliente</th>
             <th>Servicio</th>
             <th>Transporte</th>

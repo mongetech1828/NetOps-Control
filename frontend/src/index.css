@@ -131,11 +131,10 @@ code {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
 
-  min-width: 600px;
-  max-width: 90%;
-  max-height: 80vh;
+  width: 80%;
+  max-width: 1000px;
+  max-height: 90vh;
 
   overflow-y: auto;
 }

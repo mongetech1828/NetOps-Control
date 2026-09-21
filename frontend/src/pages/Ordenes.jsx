@@ -19,6 +19,7 @@ function Ordenes() {
     numero_ost: "",
     numero_linea: "",
     cliente: "",
+    evento_agil: "",
     tipo_servicio_id: "",
     transporte_id: "",
     estado_id: "",
@@ -135,6 +136,7 @@ function Ordenes() {
         .update({
           numero_ost: formData.numero_ost,
           numero_linea: formData.numero_linea,
+          evento_agil: formData.evento_agil,
           cliente: formData.cliente,
           tipo_servicio_id: formData.tipo_servicio_id,
           transporte_id: formData.transporte_id,
@@ -186,6 +188,7 @@ function Ordenes() {
               tipo_registro: formData.tipo_registro,
               numero_ost: formData.numero_ost,
               numero_linea: formData.numero_linea,
+              evento_agil: formData.evento_agil,
               cliente: formData.cliente,
               tipo_servicio_id: formData.tipo_servicio_id,
               transporte_id: formData.transporte_id,
@@ -215,12 +218,8 @@ function Ordenes() {
         }
       }
 
-      console.log("Antes cargarOrdenes");
-
     await cargarOrdenes();
     setMostrarFormulario(false);
-
-    console.log("Despues cargarOrdenes");
   
     setFormData(formularioVacio);
 
@@ -229,8 +228,6 @@ function Ordenes() {
   } 
 
   async function cargarOrdenes() {
-
-    console.log("Entró cargarOrdenes");
 
   const { data } =
     await supabase
@@ -251,6 +248,7 @@ function Ordenes() {
       tipo_registro: orden.tipo_registro || "OST",
       numero_ost: orden.numero_ost || "",
       numero_linea: orden.numero_linea || "",
+      evento_agil: orden.evento_agil || "",
       cliente: orden.cliente || "",
       tipo_servicio_id: orden.tipo_servicio_id || "",
       transporte_id: orden.transporte_id || "",
@@ -328,8 +326,6 @@ function Ordenes() {
   }
 
   async function verHistorial(orden) {
-
-    console.log("Entro a verHistorial");
 
     const { data,error } = await supabase
       .from("historial_movimientos")
@@ -463,10 +459,11 @@ function Ordenes() {
                     placeholder="Número OST"
                     value={formData.numero_ost || ""}
                     onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    numero_ost: e.target.value})
-                  }
+                      setFormData({
+                        ...formData,
+                        numero_ost: e.target.value
+                      })
+                    }
                   />
                   <input
                     style={{width: "45%"}}
@@ -475,8 +472,19 @@ function Ordenes() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        numero_linea: e.target.value})
-                      }
+                        numero_linea: e.target.value
+                      })
+                    }
+                  />
+                  <input
+                    placeholder="Evento Ágil"
+                    value={formData.evento_agil || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        evento_agil: e.target.value
+                      })
+                    }
                   />
                 </div>
 
@@ -694,6 +702,7 @@ function Ordenes() {
           <tr>
             <th>OST</th>
             <th>Línea</th>
+            <th>Evento Ágil</th>
             <th>Cliente</th>
             <th>Servicio</th>
             <th>Transporte</th>
@@ -718,6 +727,7 @@ function Ordenes() {
             <tr key={orden.id}>
               <td>{orden.numero_ost}</td>
               <td>{orden.numero_linea}</td>
+              <td>{orden.evento_agil}</td>
               <td>{orden.cliente}</td>
               <td>{orden.tipo_servicio?.nombre || "-"}</td>
               <td>{orden.transporte?.nombre || "-"}</td>
@@ -759,17 +769,65 @@ function Ordenes() {
                 Historial OST {ordenHistorial?.numero_ost}
               </h3>
 
-              <p>
-                Cliente: {ordenHistorial?.cliente}
-              </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "15px",
+                  marginBottom: "20px"
+                }}
+              >
+                <div style={{ width: "45%" }}>
+                  <strong>Evento Ágil:</strong><br />
+                  {ordenHistorial?.evento_agil || "-"}
+                </div>
 
-              <p>
-                Estado Actual: {ordenHistorial?.estado?.nombre}
-              </p>
+                <div style={{ width: "45%" }}>
+                  <strong>Cliente:</strong><br />
+                  {ordenHistorial?.cliente}
+                </div>
 
-              <p>
-                Reingresos: {ordenHistorial?.cantidad_reingresos}
-              </p>
+                <div style={{ width: "45%" }}>
+                  <strong>Servicio:</strong><br />
+                  {ordenHistorial?.tipo_servicio?.nombre || "-"}
+                </div>
+
+                <div style={{ width: "45%" }}>
+                  <strong>Transporte:</strong><br />
+                  {ordenHistorial?.transporte?.nombre || "-"}
+                </div>
+
+                <div style={{ width: "45%" }}>
+                  <strong>Estado Actual:</strong><br />
+                  {ordenHistorial?.estado?.nombre}
+                </div>
+
+                <div style={{ width: "45%" }}>
+                  <strong>Reingresos:</strong><br />
+                  {ordenHistorial?.cantidad_reingresos}
+                </div>
+
+                <div style={{ width: "45%" }}>
+                  <strong>Fecha Recepción:</strong><br />
+                  {formatoFecha(
+                    ordenHistorial?.fecha_recepcion
+                  )}
+                </div>
+
+                <div style={{ width: "45%" }}>
+                  <strong>Fecha Máxima:</strong><br />
+                  {formatoFecha(
+                    ordenHistorial?.fecha_maxima_atencion
+                  )}
+                </div>
+              </div>
+
+              <div style={{ width: "100%" }}>
+                <strong>Observaciones:</strong><br />
+                {ordenHistorial?.observaciones || "-"}
+              </div>
+
+              <br/><br/>
 
               <div>
 

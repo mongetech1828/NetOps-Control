@@ -31,13 +31,34 @@ function SIGA() {
   const [formData, setFormData] =
     useState(formularioVacio);
 
+  function calcularFechaMaximaSIGA(
+    fechaRecepcion,
+    horasSLA
+  ) {
+    const fecha = new Date(fechaRecepcion);
+    fecha.setHours(
+      fecha.getHours() + horasSLA
+    );
+    return fecha;
+  }
+
+  function horasRestantesSIGA(fechaMaxima) {
+    const ahora = new Date();
+    const fechaLimite = new Date(
+      fechaMaxima + "Z"
+    );
+    const diferencia =
+      fechaLimite - ahora;
+    return diferencia / (1000 * 60 * 60);
+  }
+
   async function cargarSigas() {
     const { data } = await supabase
       .from("sigas")
       .select(`
         *,
         estados_siga(nombre),
-        prioridades_siga(prioridad),
+        prioridades_siga(prioridad, horas_sla),
         grupos_gestion(nombre),
         tecnicos(nombre),
         tipo_servicio(nombre)
@@ -46,6 +67,20 @@ function SIGA() {
         ascending: false
       });
     setSigas(data || []);
+  }
+
+  function obtenerSLASIGA(fechaMaxima) {
+    const horas =
+      horasRestantesSIGA(
+        fechaMaxima
+      );
+    if (horas < 0) {
+      return "Vencido";
+    }
+    if (horas <= 1) {
+      return "Por Vencer";
+    }
+    return "Dentro SLA";
   }
 
   async function cargarEstadosSIGA() {
@@ -91,7 +126,14 @@ function SIGA() {
 
   async function guardarSIGA() {
 
-    const { error } = await supabase
+    const prioridadSeleccionada = 
+      prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
+    const fechaMaxima = 
+      calcularFechaMaximaSIGA(
+          formData.fecha_recepcion,
+          prioridadSeleccionada.horas_sla
+      );
+    const { data, error } = await supabase
       .from("sigas")
       .insert([
         {
@@ -106,15 +148,43 @@ function SIGA() {
           tecnico_id: formData.tecnico_id ? parseInt(formData.tecnico_id) : null,
           nivel: formData.nivel,
           fecha_recepcion: formData.fecha_recepcion,
+          fecha_maxima_atencion: fechaMaxima,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones
         }
-      ]);
+      ])
+      .select()
+      .single();
 
     if (error) {
       console.error(error);
       return;
     }
+    
+    const { data: {user} } = await supabase.auth.getUser();
+
+    const {error: historialError} =
+      await supabase
+        .from("historial_siga")
+        .insert([
+          {
+            siga_id: data.id,
+            usuario_id: user.id,
+            tipo_movimiento: "Creación",
+            estado_nuevo: Number(
+              formData.estado_siga_id
+            ),
+            comentario:
+              "Creación del reporte SIGA ${formData.numero_siga} por el usuario ${user.email}"
+          }
+        ]);
+
+      if (historialError) {
+        console.error(
+          "ERROR HISTORIAL SIGA: ",
+          historialError
+        );
+      }
 
     await cargarSigas();
     setMostrarFormulario(false);
@@ -171,6 +241,8 @@ function SIGA() {
             <th>Estado</th>
             <th>Nivel</th>
             <th>Grupo</th>
+            <th>Horas</th>
+            <th>SLA</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -225,8 +297,45 @@ function SIGA() {
               </td>
 
               <td>
+                {
+                  siga.fecha_maxima_atencion
+                    ? horasRestantesSIGA(
+                        siga.fecha_maxima_atencion
+                      ).toFixed(1)
+                    : "-"
+                }
+              </td>
+
+              <td>
+                <span
+                  style={{
+                    color:
+                      obtenerSLASIGA(
+                        siga.fecha_maxima_atencion
+                      ) === "Vencido"
+                        ? "red"
+                        : obtenerSLASIGA(
+                            siga.fecha_maxima_atencion
+                          ) === "Por Vencer"
+                        ? "orange"
+                        : "green",
+                    fontWeight: "bold"
+                  }}
+                >
+                  {
+                    obtenerSLASIGA(
+                      siga.fecha_maxima_atencion
+                    )
+                  }
+                </span>
+              </td>
+
+              <td>
                 <button>
                   Editar
+                </button>
+                <button>
+                  Historial
                 </button>
               </td>
 

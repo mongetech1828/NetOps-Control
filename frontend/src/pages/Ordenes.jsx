@@ -219,12 +219,9 @@ function Ordenes() {
       }
 
     await cargarOrdenes();
-    setMostrarFormulario(false);
-  
+    setMostrarFormulario(false);  
     setFormData(formularioVacio);
-
     setOrdenEditando(null);
-
   } 
 
   async function cargarOrdenes() {

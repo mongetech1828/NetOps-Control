@@ -113,6 +113,25 @@ function Ordenes() {
       .select("id")
       .eq("numero_ost", formData.numero_ost);
 
+    if (!formData.numero_ost) {alert("Debe indicar el número OST");
+      return;
+    }
+    if (!formData.numero_linea) {alert("Debe indicar el número línea");
+      return;
+    }
+    if (!formData.cliente) {alert("Debe indicar el Cliente");
+      return;
+    }
+    if (!formData.tipo_servicio_id) {alert("Debe indicar el Tipo de Servicio");
+      return;
+    }
+    if (!formData.transporte_id) {alert("Debe indicar el trasnporte");
+      return;
+    }
+    if (!formData.estado_id) {alert("Debe indicar el estado");
+      return;
+    }
+
     if (!ordenEditando &&
         ordenExistente &&
         ordenExistente.length > 0) {
@@ -124,13 +143,11 @@ function Ordenes() {
       }
 
     if (ordenEditando) {
-
       const { data:ordenActual } = await supabase
         .from("ordenes")
         .select("*")
         .eq("id", ordenEditando)
         .single();
-
       const { data, error } = await supabase
         .from("ordenes")
         .update({
@@ -760,63 +777,71 @@ function Ordenes() {
 
               <div
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "15px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "20px",
                   marginBottom: "20px"
                 }}
               >
-                <div style={{ width: "45%" }}>
-                  <strong>Evento Ágil:</strong><br />
-                  {ordenHistorial?.evento_agil || "-"}
-                </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Cliente:</strong><br />
                   {ordenHistorial?.cliente}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
+                  <strong>Evento Ágil:</strong><br />
+                  {ordenHistorial?.evento_agil || "-"}
+                </div>                
+
+                <div>
                   <strong>Servicio:</strong><br />
                   {ordenHistorial?.tipo_servicio?.nombre || "-"}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Transporte:</strong><br />
                   {ordenHistorial?.transporte?.nombre || "-"}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Estado Actual:</strong><br />
                   {ordenHistorial?.estado?.nombre}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Reingresos:</strong><br />
                   {ordenHistorial?.cantidad_reingresos}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Fecha Recepción:</strong><br />
                   {formatoFecha(
                     ordenHistorial?.fecha_recepcion
                   )}
                 </div>
 
-                <div style={{ width: "45%" }}>
+                <div>
                   <strong>Fecha Máxima:</strong><br />
                   {formatoFecha(
                     ordenHistorial?.fecha_maxima_atencion
                   )}
                 </div>
+
+                <div>
+                  <strong>Técnicos:</strong><br />
+                  Pendiente
+                </div>
               </div>
 
-              <div style={{ width: "100%" }}>
+              <div style={{ marginTop: "20px" }}>
                 <strong>Observaciones:</strong><br />
                 {ordenHistorial?.observaciones || "-"}
               </div>
 
-              <br/><br/>
+              <hr style={{ margin: "20px 0"}} />
+
+              <h3>Timeline OST</h3>
 
               <div>
 

@@ -9,6 +9,12 @@ function SIGA() {
   const [gruposGestion, setGruposGestion] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
+  const [historialSIGA, setHistorialSIGA] =
+    useState([]);
+  const [sigaHistorial, setSigaHistorial] =
+    useState(null);
+  const [mostrarHistorial, setMostrarHistorial] =
+  useState(false);
   const [mostrarFormulario, setMostrarFormulario] =
     useState(false);
   const [sigaEditando, setSigaEditando] =
@@ -45,11 +51,44 @@ function SIGA() {
   function horasRestantesSIGA(fechaMaxima) {
     const ahora = new Date();
     const fechaLimite = new Date(
-      fechaMaxima + "Z"
+      fechaMaxima
     );
     const diferencia =
       fechaLimite - ahora;
     return diferencia / (1000 * 60 * 60);
+  }
+
+  function formatoFechaHora(fecha) {
+
+    console.log("Original:", fecha);
+
+    console.log(
+      "Convertida:",
+      new Date(fecha)
+      .toLocaleString("es-CR", {
+      timeZone: "America/Costa_Rica"
+      })
+      );
+
+    return new Date(fecha).toLocaleString(
+      "es-CR",
+      {
+        timeZone: "America/Costa_Rica",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  }
+
+  function cerrarFormularioSIGA() {
+    setMostrarFormulario(false);
+    setFormData(formularioVacio);
+    setSigaEditando(null);
   }
 
   async function cargarSigas() {
@@ -125,7 +164,6 @@ function SIGA() {
   }
 
   async function guardarSIGA() {
-
     const prioridadSeleccionada = 
       prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
     const fechaMaxima = 
@@ -133,38 +171,87 @@ function SIGA() {
           formData.fecha_recepcion,
           prioridadSeleccionada.horas_sla
       );
-    const { data, error } = await supabase
-      .from("sigas")
-      .insert([
-        {
-          numero_siga: formData.numero_siga,
+    const nivelCalculado =
+      formData.tecnico_id
+        ? "ST"
+        : "GT";
+
+    if (!formData.numero_siga) {alert("Debe indicar el número SIGA");
+      return;
+    }
+    if (!formData.numero_linea) {alert("Debe indicar el número de línea");
+      return;
+    }
+    if (!formData.cliente) {alert("Debe indicar el cliente");
+      return;
+    }
+    if (!formData.tipo_servicio_id) {alert("Debe seleccionar el tipo de servicio");
+      return;
+    }
+    if (!formData.prioridad_id) {alert("Debe seleccionar una prioridad");
+      return;
+    }
+    if (!formData.estado_siga_id) {alert("Debe seleccionar un estado");
+      return;
+    }
+    if (!formData.fecha_recepcion) {alert("Debe indicar la fecha y hora de recepción");
+      return;
+    }
+
+    if (sigaEditando){
+      const sigaActual = sigas.find(s => s.id ===sigaEditando);
+      const {error} = await supabase
+        .from ("sigas")
+        .update({
           numero_linea: formData.numero_linea,
           evento_agil: formData.evento_agil,
           cliente: formData.cliente,
-          tipo_servicio_id: formData.tipo_servicio_id ? parseInt(formData.tipo_servicio_id) : null,
-          prioridad_id: formData.prioridad_id ? parseInt(formData.prioridad_id) : null,
-          estado_siga_id: formData.estado_siga_id ? parseInt(formData.estado_siga_id) : null,
-          grupo_gestion_id: formData.grupo_gestion_id ? parseInt(formData.grupo_gestion_id) : null,
-          tecnico_id: formData.tecnico_id ? parseInt(formData.tecnico_id) : null,
-          nivel: formData.nivel,
-          fecha_recepcion: formData.fecha_recepcion,
-          fecha_maxima_atencion: fechaMaxima,
+          tipo_servicio_id: formData.tipo_servicio_id? parseInt(formData.tipo_servicio_id): null,
+          prioridad_id: formData.prioridad_id? parseInt(formData.prioridad_id): null,
+          estado_siga_id: formData.estado_siga_id? parseInt (formData.estado_siga_id): null,
+          grupo_gestion_id: formData.grupo_gestion_id? parseInt(formData.grupo_gestion_id) : null,
+          tecnico_id: formData.tecnico_id? parseInt(formData.tecnico_id) : null,
+          nivel: nivelCalculado,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      return;
+        })
+        .eq("id", sigaEditando);
+      if (error) {
+        console.error(error);
+        return;
+      }
     }
-    
-    const { data: {user} } = await supabase.auth.getUser();
+    else {
+      const {data, error} = await supabase      
+        .from("sigas")
+        .insert([
+          {
+            numero_siga: formData.numero_siga,
+            numero_linea: formData.numero_linea,
+            evento_agil: formData.evento_agil,
+            cliente: formData.cliente,
+            tipo_servicio_id: formData.tipo_servicio_id ? parseInt(formData.tipo_servicio_id) : null,
+            prioridad_id: formData.prioridad_id ? parseInt(formData.prioridad_id) : null,
+            estado_siga_id: formData.estado_siga_id ? parseInt(formData.estado_siga_id) : null,
+            grupo_gestion_id: formData.grupo_gestion_id ? parseInt(formData.grupo_gestion_id) : null,
+            tecnico_id: formData.tecnico_id ? parseInt(formData.tecnico_id) : null,
+            nivel: nivelCalculado,
+            fecha_recepcion: formData.fecha_recepcion,
+            fecha_maxima_atencion: fechaMaxima,
+            descripcion: formData.descripcion,
+            observaciones: formData.observaciones
+          }
+        ])
+        .select()
+        .single();
+      if (error){
+        console.error(error);
+        return;
+      }
 
-    const {error: historialError} =
-      await supabase
+      const { data: {user} } = await supabase.auth.getUser();
+
+      const {error: historialError} = await supabase
         .from("historial_siga")
         .insert([
           {
@@ -175,7 +262,7 @@ function SIGA() {
               formData.estado_siga_id
             ),
             comentario:
-              "Creación del reporte SIGA ${formData.numero_siga} por el usuario ${user.email}"
+              `Creación del reporte SIGA ${formData.numero_siga} por el usuario ${user.email}`
           }
         ]);
 
@@ -185,10 +272,55 @@ function SIGA() {
           historialError
         );
       }
+    }
 
     await cargarSigas();
-    setMostrarFormulario(false);
-    setFormData(formularioVacio);
+    cerrarFormularioSIGA();
+  }
+
+  function editarSIGA(siga) {
+
+    setSigaEditando(siga.id);
+    setFormData({
+      numero_siga: siga.numero_siga || "",
+      numero_linea: siga.numero_linea || "",
+      evento_agil: siga.evento_agil || "",
+      cliente: siga.cliente || "",
+      tipo_servicio_id:
+        siga.tipo_servicio_id || "",
+      prioridad_id:
+        siga.prioridad_id || "",
+      estado_siga_id:
+        siga.estado_siga_id || "",
+      grupo_gestion_id:
+        siga.grupo_gestion_id || "",
+      tecnico_id:
+        siga.tecnico_id || "",
+      fecha_recepcion:
+        siga.fecha_recepcion? siga.fecha_recepcion.substring(0,16): "",
+      descripcion:
+        siga.descripcion || "",
+      observaciones:
+        siga.observaciones || ""
+    });
+
+    setMostrarFormulario(true);
+  }
+
+  async function cargarHistorialSIGA(siga) {
+    setSigaHistorial(siga);
+    const { data } = await supabase
+      .from("historial_siga")
+      .select(`
+        *,
+        estados_siga!estado_nuevo(nombre)
+      `)
+      .eq("siga_id", siga.id)
+      .order("fecha_movimiento", {
+        ascending: false
+      });
+    setHistorialSIGA(data || []);
+    setMostrarHistorial(true);
   }
 
   useEffect(() => {
@@ -207,9 +339,11 @@ function SIGA() {
       <h1>SIGA</h1>
 
       <button
-        onClick={() =>
-          setMostrarFormulario(true)
-        }
+        onClick={() => {
+          setSigaEditando(null);
+          setFormData(formularioVacio);
+          setMostrarFormulario(true);
+        }}
       >
         Nuevo SIGA
       </button>
@@ -239,7 +373,6 @@ function SIGA() {
             <th>Servicio</th>
             <th>Prioridad</th>
             <th>Estado</th>
-            <th>Nivel</th>
             <th>Grupo</th>
             <th>Horas</th>
             <th>SLA</th>
@@ -251,61 +384,15 @@ function SIGA() {
           {sigas.map((siga) => (
             <tr key={siga.id}>
 
-              <td>
-                {siga.numero_siga}
-              </td>
-
-              <td>
-                {siga.numero_linea}
-              </td>
-
-              <td>
-                {siga.evento_agil}
-              </td>
-
-              <td>
-                {siga.cliente}
-              </td>
-
-              <td>
-                {siga.tipo_servicio?.nombre || "-"}
-              </td>
-
-              <td>
-                {
-                  siga.prioridades_siga
-                    ?.prioridad
-                }
-              </td>
-
-              <td>
-                {
-                  siga.estados_siga
-                    ?.nombre
-                }
-              </td>
-
-              <td>
-                {siga.nivel}
-              </td>
-
-              <td>
-                {
-                  siga.grupos_gestion
-                    ?.nombre
-                }
-              </td>
-
-              <td>
-                {
-                  siga.fecha_maxima_atencion
-                    ? horasRestantesSIGA(
-                        siga.fecha_maxima_atencion
-                      ).toFixed(1)
-                    : "-"
-                }
-              </td>
-
+              <td>{siga.numero_siga}</td>
+              <td>{siga.numero_linea}</td>
+              <td>{siga.evento_agil}</td>
+              <td>{siga.cliente}</td>
+              <td>{siga.tipo_servicio?.nombre || "-"}</td>
+              <td>{siga.prioridades_siga?.prioridad}</td>
+              <td>{siga.estados_siga?.nombre}</td>
+              <td>{siga.grupos_gestion?.nombre}</td>
+              <td>{siga.fecha_maxima_atencion? horasRestantesSIGA(siga.fecha_maxima_atencion).toFixed(1): "-"}</td>
               <td>
                 <span
                   style={{
@@ -329,16 +416,20 @@ function SIGA() {
                   }
                 </span>
               </td>
-
               <td>
-                <button>
+                <button
+                  onClick={() => editarSIGA(siga)}
+                >
                   Editar
                 </button>
-                <button>
+                <button
+                  onClick ={() =>
+                    cargarHistorialSIGA(siga)
+                  }
+                >
                   Historial
                 </button>
               </td>
-
             </tr>
           ))}
         </tbody>
@@ -500,20 +591,6 @@ function SIGA() {
                     </option>
                   ))}
                 </select>
-
-                <select
-                  value={formData.nivel || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      nivel: e.target.value
-                    })
-                  }
-                >
-                  <option value="GT">GT</option>
-                  <option value="ST">ST</option>
-                  <option value="CO">CO</option>
-                </select>
               </div>
 
               <div
@@ -578,7 +655,7 @@ function SIGA() {
               <br/>
 
               <input                    
-                type="date"
+                type="datetime-local"
                 value={formData.fecha_recepcion || ""}
                 onChange={(e) =>
                   setFormData({
@@ -641,13 +718,161 @@ function SIGA() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    setMostrarFormulario(false)
-                  }
+                  onClick={cerrarFormularioSIGA}
                 >
                   Cancelar
                 </button>
               </div>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        mostrarHistorial && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3>
+                Historial SIGA {sigaHistorial?.numero_siga}
+              </h3>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "20px",
+                  marginBottom: "20px"
+                }}
+              >
+                <div>
+                  <strong>Cliente:</strong><br />
+                  {sigaHistorial?.cliente || "-"}
+                </div>
+
+                <div>
+                  <strong>Evento AGIL:</strong><br />
+                  {sigaHistorial?.evento_agil || "-"}
+                </div>
+
+                <div>
+                  <strong>Prioridad:</strong><br />
+                  {sigaHistorial?.prioridades_siga?.prioridad}
+                </div>
+
+                <div>
+                  <strong>Línea:</strong><br />
+                  {sigaHistorial?.numero_linea}
+                </div>
+
+                <div>
+                  <strong>Tipo Servicio:</strong><br />
+                  {sigaHistorial?.tipo_servicio?.nombre}
+                </div>                
+
+                <div>
+                  <strong>Estado:</strong><br />
+                  {sigaHistorial?.estados_siga?.nombre}
+                </div>
+
+                <div>
+                  <strong>Nivel:</strong><br />
+                  {sigaHistorial?.nivel}
+                </div>
+
+                <div>
+                  <strong>Grupo de gestión:</strong><br />
+                  {sigaHistorial?.grupos_gestion?.nombre || "-"}
+                </div>
+
+                <div>
+                  <strong>Técnico:</strong><br />
+                  {sigaHistorial?.tecnicos?.nombre || "-"}
+                </div>
+
+                <div>
+                  <strong>Fecha Recpeción:</strong><br />
+                  {formatoFechaHora(sigaHistorial?.fecha_recepcion)}
+                </div>
+
+                <div>
+                  <strong>F. Máxima Atención:</strong><br />
+                  {formatoFechaHora(sigaHistorial?.fecha_maxima_atencion)}
+                </div>
+
+                <div>
+                  <strong>SLA:</strong><br />
+                  {obtenerSLASIGA(sigaHistorial?.fecha_maxima_atencion)}
+                </div>
+
+                <div>
+                  <strong>Tiempo Consumido:</strong><br />
+                  Pendiente
+                </div>
+
+                <div>
+                  <strong>Tiempo Diferido:</strong><br />
+                  Pendiente
+                </div>
+
+                <div>
+                  <strong>Cumplimiento SLA:</strong><br />
+                  Pendiente
+                </div>
+              </div>
+
+              <div style={{ marginTop: "20px" }}>
+                <strong>Descripción:</strong><br />
+                {sigaHistorial?.descripcion || "-"}
+              </div>
+
+              <br/>
+
+              <div>
+                <strong>Observaciones:</strong><br />
+                {sigaHistorial?.observaciones || "-"}
+              </div>
+
+              <hr style={{ margin: "20px 0"}} />
+
+              <h3>Timeline SIGA</h3>
+
+              {historialSIGA.map((mov) => (
+
+                <div
+                  key={mov.id}
+                  style={{
+                    borderLeft: "3px solid #6366f1",
+                    paddingLeft: "15px",
+                    marginBottom: "15px"
+                  }}
+                >
+
+                  <strong>
+                    {mov.tipo_movimiento}
+                  </strong>
+
+                  <br />
+
+                  <small>
+                    {formatoFechaHora(
+                      mov.fecha_movimiento
+                    )}
+                  </small>
+
+                  <br />
+
+                  {mov.comentario}
+
+                </div>
+              ))}
+
+              <button
+                onClick={() =>
+                  setMostrarHistorial(false)
+                }
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         )

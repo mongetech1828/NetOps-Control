@@ -21,6 +21,11 @@ function Dashboard() {
   const [ordenesPorVencer, setOrdenesPorVencer] = useState([]);
   const [mostrarVencidas, setMostrarVencidas] = useState(false);
   const [ordenesVencidas, setOrdenesVencidas] = useState([]);
+  const [sigas, setSigas] = useState([]);
+  const [sigasDentroSLA, setSigasDentroSLA] = useState(0);
+  const [sigasEnCampo, setSigasEnCampo] = useState(0);
+  const [sigasPorVencer, setSigasPorVencer] = useState(0);
+  const [sigasVencidos, setSigasVencidos] = useState(0);
 
   useEffect(() => {
 
@@ -46,6 +51,7 @@ function Dashboard() {
     cargarPerfil();
     cargarKpis();
     cargarSLA();
+    cargarSigasDashboard();
 
   }, []);
 
@@ -62,6 +68,16 @@ function Dashboard() {
     ).padStart(2, "0");
 
     return `${anio}-${mes}-${dia}`;
+  }
+
+  function horasRestantesSIGA(fechaMaxima) {
+    const ahora = new Date();
+    const fechaLimite = new Date(
+      fechaMaxima
+    );
+    const diferencia =
+      fechaLimite - ahora;
+    return diferencia / (1000 * 60 * 60);
   }
 
   async function cargarKpis() {
@@ -140,6 +156,60 @@ function Dashboard() {
       console.error(errorEnCampo);
     } else {
       setEnCampo(totalEnCampo || 0);
+    }
+
+    const { data: sigasData, error: errorSigas } =
+      await supabase
+        .from("sigas")
+        .select(`*,estados_siga(nombre)`);
+
+    if (errorSigas) {
+      console.error(errorSigas);
+    }
+    else {
+
+      console.log("SIGAS DATA:", sigasData);
+
+      const dentroSLA =
+        sigasData.filter((siga) =>
+          siga.estados_siga?.nombre !== "Cerrado" &&
+          siga.estados_siga?.nombre !== "Diferido" &&
+          horasRestantesSIGA(
+            siga.fecha_maxima_atencion
+          ) > 1
+        ).length;
+
+      const porVencer =
+        sigasData.filter((siga) => {
+          const horas =
+            horasRestantesSIGA(
+              siga.fecha_maxima_atencion
+            );
+          return (
+            siga.estados_siga?.nombre !== "Cerrado" &&
+            siga.estados_siga?.nombre !== "Diferido" &&
+            horas <= 1 &&
+            horas > 0
+          );
+        }).length;
+
+      const vencidos =
+        sigasData.filter((siga) =>
+          siga.estados_siga?.nombre !== "Cerrado" &&
+          horasRestantesSIGA(
+            siga.fecha_maxima_atencion
+          ) < 0
+        ).length;
+
+      const enCampo =
+        sigasData.filter((siga) =>
+          siga.tecnico_id
+        ).length;
+
+      setSigasDentroSLA(dentroSLA);
+      setSigasPorVencer(porVencer);
+      setSigasVencidos(vencidos);
+      setSigasEnCampo(enCampo);
     }
   }
 
@@ -291,6 +361,16 @@ function Dashboard() {
     console.log("Vencidas:", contadorVencidas);
   }
 
+  async function cargarSigasDashboard() {
+    const { data } = await supabase
+      .from("sigas")
+      .select(`
+        *,
+        estados_siga(nombre)
+      `);
+    setSigas(data || []);
+  }
+
   const cardStyle = {
     backgroundColor: "#ffffff",
     borderRadius: "10px",
@@ -367,11 +447,6 @@ function Dashboard() {
         >
           <h3>Órdenes Reingresadas</h3>
           <h1>{totalReingresadas}</h1>
-        </div>        
-
-        <div style={cardStyle}>
-          <h3>SIGA Pendientes</h3>
-          <h1>0</h1>
         </div>
 
         <div style={{
@@ -382,6 +457,49 @@ function Dashboard() {
         >
           <h3>En Campo</h3>
           <h1>{enCampo}</h1>
+        </div>
+      </div>
+
+      <hr
+        style={{
+          margin: "40px 0"
+        }}
+      />
+
+      <h2
+        style={{
+          textAlign: "center"
+        }}
+      >
+        SIGA
+      </h2>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "20px",
+          marginTop: "30px",
+        }}
+      >
+        <div style={cardStyle}>
+          <h3>Dentro SLA</h3>
+          <h1>{sigasDentroSLA}</h1>
+        </div>
+
+        <div style={cardStyle}>
+          <h3>En Campo</h3>
+          <h1>{sigasEnCampo}</h1>
+        </div>
+
+        <div style={cardStyle}>
+          <h3>Por Vencer</h3>
+          <h1>{sigasPorVencer}</h1>
+        </div>
+
+        <div style={cardStyle}>
+          <h3>Vencidos</h3>
+          <h1>{sigasVencidos}</h1>
         </div>
       </div>
 

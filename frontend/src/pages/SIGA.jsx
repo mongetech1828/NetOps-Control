@@ -85,6 +85,27 @@ function SIGA() {
 
   }
 
+  function formatoFechaHistorial(fecha) {
+
+    const fechaUtc = new Date(fecha);
+
+    fechaUtc.setHours(
+      fechaUtc.getHours() - 6
+    );
+
+    return fechaUtc.toLocaleString(
+      "es-CR",
+      {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+  }
+
   function cerrarFormularioSIGA() {
     setMostrarFormulario(false);
     setFormData(formularioVacio);
@@ -216,9 +237,56 @@ function SIGA() {
           observaciones: formData.observaciones
         })
         .eq("id", sigaEditando);
+        
       if (error) {
         console.error(error);
         return;
+      }
+
+      const {data: {user}} = await supabase.auth.getUser();      
+
+      if (
+        sigaActual.estado_siga_id !==
+        Number(formData.estado_siga_id)
+      ){
+        const estadoAnterior =
+          estadosSIGA.find(
+            e =>
+              e.id ===
+              sigaActual.estado_siga_id
+          );
+        const estadoNuevo =
+          estadosSIGA.find(
+            e =>
+              e.id ===
+              Number(formData.estado_siga_id)
+          );
+        const { error: historialError } =
+          await supabase
+            .from("historial_siga")
+            .insert([
+              {
+                siga_id: sigaEditando,
+                usuario_id: user.id,
+                tipo_movimiento:
+                  "Cambio Estado",
+                estado_anterior:
+                  sigaActual.estado_siga_id,
+                estado_nuevo:
+                  Number(
+                    formData.estado_siga_id
+                  ),
+                comentario:
+                  `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
+              }
+            ]);
+
+        if (historialError) {
+          console.error(
+            "ERROR HISTORIAL:",
+            historialError
+          );
+        }
       }
     }
     else {
@@ -319,6 +387,12 @@ function SIGA() {
       .order("fecha_movimiento", {
         ascending: false
       });
+
+    console.log(
+      "HISTORIAL SIGA:",
+      data
+    );
+
     setHistorialSIGA(data || []);
     setMostrarHistorial(true);
   }
@@ -854,16 +928,17 @@ function SIGA() {
                   <br />
 
                   <small>
-                    {formatoFechaHora(
+                    {formatoFechaHistorial(
                       mov.fecha_movimiento
                     )}
-                  </small>
+                  </small>                 
 
                   <br />
 
                   {mov.comentario}
 
                 </div>
+                
               ))}
 
               <button

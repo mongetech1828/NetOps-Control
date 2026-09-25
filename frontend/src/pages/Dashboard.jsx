@@ -391,6 +391,20 @@ function Dashboard() {
         Bienvenido {perfil?.nombre}
       </p>
 
+      <hr
+        style={{
+          margin: "40px 0"
+        }}
+      />
+
+      <h2
+        style={{
+          textAlign: "center"
+        }}
+      >
+        Órdenes
+      </h2>
+
       <div
         style={{
           display: "grid",

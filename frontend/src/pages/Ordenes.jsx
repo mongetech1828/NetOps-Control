@@ -6,7 +6,7 @@ function Ordenes() {
   const [ordenes, setOrdenes] = useState([]);
   const [filtroOST, setFiltroOST] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [filtrocliente, setFiltroCliente] = useState("");
+  const [filtroLinea, setFiltroLinea] = useState("");
   const [estados, setEstados] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
   const [transporte, setTransporte] = useState([]);
@@ -690,9 +690,9 @@ function Ordenes() {
         />
 
         <input
-          placeholder="Buscar Cliente"
-          value={filtrocliente}
-          onChange={(e) => setFiltroCliente(e.target.value)}
+          placeholder="Buscar Línea"
+          value={filtroLinea}
+          onChange={(e) => setFiltroLinea(e.target.value)}
         />
 
       </div>
@@ -722,12 +722,12 @@ function Ordenes() {
 
         <tbody>
           {ordenes.filter((orden) => 
-            orden.numero_ost
+            String(orden.numero_ost || "")
               .toLowerCase().includes(filtroOST.toLowerCase())
           )
           .filter((orden) =>
-            orden.cliente
-              .toLowerCase().includes(filtrocliente.toLowerCase())
+            (orden.numero_linea || "")
+              .toLowerCase().includes(filtroLinea.toLowerCase())
           )
           .map((orden) => (
             <tr key={orden.id}>

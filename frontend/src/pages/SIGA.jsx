@@ -4,6 +4,8 @@ import { supabase } from "../services/supabase";
 function SIGA() {
 
   const [sigas, setSigas] = useState([]);
+  const [filtroSIGA, setFiltroSIGA] = useState("");
+  const [filtroLinea, setFiltroLinea] = useState("");
   const [estadosSIGA, setEstadosSIGA] = useState([]);
   const [prioridadesSIGA, setPrioridadesSIGA] = useState([]);
   const [gruposGestion, setGruposGestion] = useState([]);
@@ -268,16 +270,13 @@ function SIGA() {
               {
                 siga_id: sigaEditando,
                 usuario_id: user.id,
-                tipo_movimiento:
-                  "Cambio Estado",
-                estado_anterior:
-                  sigaActual.estado_siga_id,
+                tipo_movimiento: "Cambio Estado",
+                estado_anterior: sigaActual.estado_siga_id,
                 estado_nuevo:
                   Number(
                     formData.estado_siga_id
                   ),
-                comentario:
-                  `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
+                comentario: `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
               }
             ]);
 
@@ -288,6 +287,92 @@ function SIGA() {
           );
         }
       }
+
+      if (
+        sigaActual.tecnico_id !==
+        ( formData.tecnico_id
+            ? Number(formData.tecnico_id)
+            : null
+        )
+      ){
+        const tecnicoAnterior = tecnicos.find(
+          t =>
+            t.id ===
+          sigaActual.tecnico_id
+        );
+        const tecnicoNuevo = tecnicos.find(
+          t =>
+            t.id ===
+            Number(formData.tecnico_id)
+        );
+
+        const {error: historialTecnicoError} = await supabase
+        .from("historial_siga")
+        .insert([
+          {
+            siga_id: sigaEditando,
+            usuario_id: user.id,
+            tipo_movimiento:
+              "Asignación Técnico",
+            comentario:
+              `Técnico cambiado de ${
+                tecnicoAnterior?.nombre || "Sin asignar"
+              } a ${
+                tecnicoNuevo?.nombre || "Sin asignar"
+              }`
+          }
+        ]);
+
+        if (historialTecnicoError) {
+          console.error(
+          historialTecnicoError
+          );
+        }
+      }
+
+      if (
+        sigaActual.grupo_gestion_id !==
+        (
+          formData.grupo_gestion_id
+            ? Number(formData.grupo_gestion_id)
+            : null
+        )
+      ){
+        const grupoAnterior = gruposGestion.find(
+          g =>
+            g.id ===
+            sigaActual.grupo_gestion_id
+        );
+        const grupoNuevo = gruposGestion.find(
+          g =>
+            g.id ===
+            Number(formData.grupo_gestion_id)
+        );
+
+        const {error: historialGrupoError} = await supabase
+        .from("historial_siga")
+        .insert([
+          {
+            siga_id: sigaEditando,
+            usuario_id: user.id,
+            tipo_movimiento:
+              "Cambio Grupo Gestión",
+            comentario:
+              `Grupo cambiado de ${
+                grupoAnterior?.nombre || "-"
+              } a ${
+                grupoNuevo?.nombre || "-"
+              }`
+          }
+        ]);
+
+        if (historialGrupoError) {
+          console.error(
+          historialGrupoError
+          );
+        }
+      }
+
     }
     else {
       const {data, error} = await supabase      
@@ -430,6 +515,28 @@ function SIGA() {
 
       <h2>SIGAs Registrados</h2>
 
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px"
+        }}
+      >
+
+        <input
+          placeholder="Buscar SIGA"
+          value={filtroSIGA}
+          onChange={(e) => setFiltroSIGA(e.target.value)}
+        />
+
+        <input
+          placeholder="Buscar Linea"
+          value={filtroLinea}
+          onChange={(e) => setFiltroLinea(e.target.value)}
+        />
+
+      </div>
+
       <table
         style={{
           width: "100%",
@@ -455,7 +562,15 @@ function SIGA() {
         </thead>
 
         <tbody>
-          {sigas.map((siga) => (
+          {sigas.filter((siga) => 
+            String(siga.numero_siga || "")
+              .toLowerCase().includes(filtroSIGA.toLowerCase())
+          )
+          .filter((siga) =>
+            (siga.numero_linea || "")
+              .toLowerCase().includes(filtroLinea.toLowerCase())
+          )
+          .map((siga) => (
             <tr key={siga.id}>
 
               <td>{siga.numero_siga}</td>

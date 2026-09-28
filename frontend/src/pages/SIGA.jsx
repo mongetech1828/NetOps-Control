@@ -1327,36 +1327,97 @@ function SIGA() {
 
               <h3>Timeline SIGA</h3>
 
-              {historialSIGA.map((mov) => (
+              <div
+                style={{
+                width: "700px",
+                margin: "0 auto"
+                }}
+              >
 
-                <div
-                  key={mov.id}
-                  style={{
-                    borderLeft: "3px solid #6366f1",
-                    paddingLeft: "15px",
-                    marginBottom: "15px"
-                  }}
-                >
+                {historialSIGA.map((mov) => {
 
-                  <strong>
-                    {mov.tipo_movimiento}
-                  </strong>
+                  let color = "#2563eb";
 
-                  <br />
+                  if (mov.tipo_movimiento.includes("Creación")) {
+                    color = "#22c55e"
+                  }
+                  if (mov.tipo_movimiento.includes("Cambio de estado")) {
+                    color = "#3b82f6"
+                  }
+                  if (mov.tipo_movimiento.includes("Cierre")) {
+                    color = "#64748b"
+                  }
+                  if (mov.tipo_movimiento.includes("Asignación Técnico")) {
+                    color = "#06b6d4"
+                  }
+                  if (mov.tipo_movimiento.includes("Inicio Diferido")) {
+                    color = "#f59e0b"
+                  }
+                  if (mov.tipo_movimiento.includes("Fin diferido")) {
+                    color = "#84cc16"
+                  }
+                  if (mov.tipo_movimiento.includes("Restablecimiento")) {
+                    color = "#0ea5e9"
+                  }
+                  if (mov.tipo_movimiento.includes("Cambio Grupo Gestión")) {
+                    color = "#8b5cf6"
+                  }              
 
-                  <small>
-                    {formatoFechaHistorial(
-                      mov.fecha_movimiento
-                    )}
-                  </small>                 
+                  return (
+                    <div
+                      key={mov.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        marginBottom: "20px"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "40px",
+                          display: "flex",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            backgroundColor: color,
+                            borderRadius: "50%",
+                            marginTop: "5px"
+                          }}
+                        />
+                      </div>
 
-                  <br />
+                      <div
+                        style={{
+                          borderLeft: "2px solid #d1d5db",
+                          paddingLeft: "20px",
+                          marginLeft: "-6px",
+                          textAlign: "left",
+                          width: "500px"
+                        }}
+                      >
+                        <div>
+                          {mov.tipo_movimiento}
+                        </div>
+                        <div>
+                          <strong>
+                            {formatoFechaHistorial(
+                              mov.fecha_movimiento
+                            )}
+                          </strong>
+                        </div>
+                        <div>
+                          {mov.comentario}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
 
-                  {mov.comentario}
-
-                </div>
-                
-              ))}
+              </div>
 
               <button
                 onClick={() =>

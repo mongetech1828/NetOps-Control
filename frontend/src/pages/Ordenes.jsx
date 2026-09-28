@@ -921,7 +921,12 @@ function Ordenes() {
 
               <h3>Timeline OST</h3>
 
-              <div>
+              <div
+                style={{
+                width: "700px",
+                margin: "0 auto"
+                }}
+              >
 
                 {historialOrden.map((item) => {
 
@@ -951,7 +956,7 @@ function Ordenes() {
                     >
                       <div
                         style={{
-                          width: "20px",
+                          width: "40px",
                           display: "flex",
                           justifyContent: "center"
                         }}
@@ -970,8 +975,10 @@ function Ordenes() {
                       <div
                         style={{
                           borderLeft: "2px solid #d1d5db",
-                          paddingLeft: "15px",
-                          marginLeft: "-6px"
+                          paddingLeft: "20px",
+                          marginLeft: "-6px",
+                          textAlign: "left",
+                          width: "500px"
                         }}
                       >
                         <div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
 
@@ -26,6 +27,7 @@ function Dashboard() {
   const [sigasEnCampo, setSigasEnCampo] = useState(0);
   const [sigasPorVencer, setSigasPorVencer] = useState(0);
   const [sigasVencidos, setSigasVencidos] = useState(0);
+  const [filtroDashboard, setFiltroDashboard] = useState("");
 
   useEffect(() => {
 
@@ -203,7 +205,9 @@ function Dashboard() {
 
       const enCampo =
         sigasData.filter((siga) =>
-          siga.tecnico_id
+          siga.tecnico_id &&
+          siga.estados_siga?.nombre !== "Cerrado" &&
+          siga.estados_siga?.nombre !== "Abierto - Verificación"
         ).length;
 
       setSigasDentroSLA(dentroSLA);
@@ -383,6 +387,8 @@ function Dashboard() {
     await supabase.auth.signOut();
   }
 
+  const navigate = useNavigate();  
+
   return (
     <div>
       <h1>Dashboard</h1>
@@ -418,7 +424,18 @@ function Dashboard() {
           <h1>{totalOrdenes}</h1>
         </div>
 
-        <div style={cardStyle}>
+        <div style={{
+            ...cardStyle,
+            cursor: "pointer"
+          }}
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Dentro SLA"
+              }
+            })
+          }
+        >
           <h3>Dentro SLA</h3>
           <h1>{dentroSLA}</h1>
         </div>
@@ -427,7 +444,13 @@ function Dashboard() {
             ...cardStyle,
             cursor: "pointer"
           }}
-          onClick={mostrarOrdenesPorVencer}
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Por vencer"
+              }
+            })
+          }
         >
           <h3>Por Vencer</h3>
           <h1>{porVencer}</h1>
@@ -437,7 +460,13 @@ function Dashboard() {
             ...cardStyle, 
             cursor: "pointer"
           }} 
-          onClick={mostrarOrdenesHoy}
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Vencen hoy"
+              }
+            })
+          }
         >
           <h3>Vencen Hoy</h3>
           <h1>{vencenHoy}</h1>
@@ -447,7 +476,13 @@ function Dashboard() {
             ...cardStyle,
             cursor: "pointer"
           }}
-          onClick={mostrarOrdenesVencidas}
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Vencidas"
+              }
+            })
+          }
         >
           <h3>Vencidas</h3>
           <h1>{vencidas}</h1>
@@ -457,7 +492,13 @@ function Dashboard() {
             ...cardStyle,
             cursor: "pointer"
           }}
-          onClick={mostrarReingresos}
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Reingresadas"
+              }
+            })
+          }
         >
           <h3>Órdenes Reingresadas</h3>
           <h1>{totalReingresadas}</h1>
@@ -467,7 +508,13 @@ function Dashboard() {
             ...cardStyle,
             cursor: "pointer"
           }}
-            onClick={mostrarOrdenesEnCampo}
+            onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "En Campo"
+              }
+            })
+          }
         >
           <h3>En Campo</h3>
           <h1>{enCampo}</h1>
@@ -496,23 +543,69 @@ function Dashboard() {
           marginTop: "30px",
         }}
       >
-        <div style={cardStyle}>
+        <div style={{
+            ...cardStyle,
+            cursor: "pointer"
+          }}
+          onClick={() =>
+            navigate("/siga", {
+              state: {
+                filtroDashboard: "SIGAs Dentro SLA"
+              }
+            })
+          }
+        >
           <h3>Dentro SLA</h3>
           <h1>{sigasDentroSLA}</h1>
         </div>
 
-        <div style={cardStyle}>
+        <div style={{
+            ...cardStyle,
+            cursor: "pointer"
+          }}
+          onClick={() =>
+            navigate("/siga", {
+              state: {
+                filtroDashboard: "SIGAs En campo"
+              }
+            })
+          }
+        >
           <h3>En Campo</h3>
           <h1>{sigasEnCampo}</h1>
         </div>
 
-        <div style={cardStyle}>
+        <div style={{
+            ...cardStyle,
+            cursor: "pointer"
+          }}
+          onClick={() =>
+            navigate("/siga", {
+              state: {
+                filtroDashboard: "SIGAs Por vencer"
+              }
+            })
+          }
+        >
           <h3>Por Vencer</h3>
           <h1>{sigasPorVencer}</h1>
         </div>
 
-        <div style={cardStyle}>
+        <div
+          style={{
+            ...cardStyle,
+            cursor: "pointer"
+          }}
+          onClick={() =>
+            navigate("/siga", {
+              state: {
+                filtroDashboard: "Vencidos"
+              }
+            })
+          }
+        >
           <h3>Vencidos</h3>
+
           <h1>{sigasVencidos}</h1>
         </div>
       </div>

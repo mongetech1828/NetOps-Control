@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
 
+const menuLinkStyle = {
+  color: "#ffffff",
+  textDecoration: "none",
+  fontSize: "18px",
+  fontWeight: "500"
+};
+
 function MainLayout({
   perfil,
   children,
@@ -29,20 +36,43 @@ function MainLayout({
 
         <hr />
 
-        <div>
-          <Link to="/">Dashboard</Link>
-          <br /><br />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "25px",
+            alignItems: "center"
+          }}
+        >
+          <Link to="/"
+            style={menuLinkStyle}
+          >
+            Dashboard
+          </Link>
           
-          <Link to="/ordenes">Órdenes</Link>
-          <br /><br />
+          <Link to="/ordenes"
+            style={menuLinkStyle}
+          >
+            Órdenes
+          </Link>
           
-          <Link to="/siga">SIGA</Link>
-          <br /><br />
+          <Link to="/siga"
+            style={menuLinkStyle}
+          >
+            SIGA
+          </Link>
           
-          <Link to="/tecnicos">Técnicos</Link>
-          <br /><br />
+          <Link to="/tecnicos"
+            style={menuLinkStyle}
+          >
+            Técnicos
+          </Link>
           
-          <Link to="/reportes">Reportes</Link>
+          <Link to="/reportes"
+            style={menuLinkStyle}
+          >
+            Reportes
+          </Link>
         </div>
 
         <hr />

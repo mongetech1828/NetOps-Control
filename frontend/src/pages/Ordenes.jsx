@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
+import { useLocation } from "react-router-dom";
 
 function Ordenes() {
 
@@ -14,6 +15,7 @@ function Ordenes() {
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [historialOrden, setHistorialOrden] = useState([]);
   const [ordenHistorial, setOrdenHistorial] = useState(null);  
+  const [filtroDashboard, setFiltroDashboard] = useState("");
   const formularioVacio ={
     tipo_registro: "OST",
     numero_ost: "",
@@ -423,19 +425,31 @@ function Ordenes() {
   function estadoSLA(dias) {
 
     if (dias > 2) {
-      return "🟢 En SLA";
+      return "En SLA";
     }
 
     if (dias >= 1 && dias <= 2) {
-      return "🟡 Prox. vencer";
+      return "Prox. vencer";
     }
 
     if (dias === 0) {
-      return "🔴 Vence hoy";
+      return "Vence hoy";
     }
 
-    return "⚫ Vencida";
+    return "Vencida";
   }
+
+  const location = useLocation();
+
+  useEffect(() => {
+    if (
+      location.state?.filtroDashboard
+    ) {
+      setFiltroDashboard(
+        location.state.filtroDashboard
+      );
+    }
+  }, [location]);
 
   return (
     
@@ -697,6 +711,36 @@ function Ordenes() {
 
       </div>
 
+      {
+        filtroDashboard && (
+          <div
+            style={{
+              backgroundColor: "#eef2ff",
+              padding: "10px",
+              borderRadius: "8px",
+              marginBottom: "15px"
+            }}
+          >
+            Mostrando filtro:
+            <strong
+              style = {{
+                marginLeft: "5px",
+                marginRight: "15px"
+              }}
+            > {filtroDashboard}
+            </strong>
+
+            <button
+              onClick={() =>
+                setFiltroDashboard("")
+              }
+            >
+              Limpiar
+            </button>
+          </div>
+        )
+      }
+
       <table
         style={{
           borderCollapse: "collapse",
@@ -729,6 +773,40 @@ function Ordenes() {
             (orden.numero_linea || "")
               .toLowerCase().includes(filtroLinea.toLowerCase())
           )
+          .filter((orden) => {
+            if (
+              filtroDashboard === "Vencidas"
+            ) {
+              return (diasRestantes(orden.fecha_maxima_atencion) < 0);
+            }
+            if (
+              filtroDashboard === "Dentro SLA"
+            ) {
+              return (diasRestantes(orden.fecha_maxima_atencion) > 2);
+            }
+            if (
+              filtroDashboard === "En Campo"
+            ) {
+              return (orden.estado?.nombre === "En campo");
+            }
+            if (
+              filtroDashboard === "Reingresadas"
+            ) {
+              return (orden.cantidad_reingresos > 0);
+            }
+            if (
+              filtroDashboard === "Por vencer"
+            ) {
+              const dias = diasRestantes(orden.fecha_maxima_atencion);
+              return dias >= 1 && dias <= 2;
+            }
+            if (
+              filtroDashboard === "Vencen hoy"
+            ) {
+              return (diasRestantes(orden.fecha_maxima_atencion) === 0);
+            }
+            return true;
+          })
           .map((orden) => (
             <tr key={orden.id}>
               <td>{orden.numero_ost}</td>

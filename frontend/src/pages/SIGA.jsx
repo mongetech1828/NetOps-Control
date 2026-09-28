@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 function SIGA() {
@@ -7,6 +8,7 @@ function SIGA() {
   const [filtroSIGA, setFiltroSIGA] = useState("");
   const [filtroLinea, setFiltroLinea] = useState("");
   const [estadosSIGA, setEstadosSIGA] = useState([]);
+  const [filtroDashboard, setFiltroDashboard] = useState("");
   const [prioridadesSIGA, setPrioridadesSIGA] = useState([]);
   const [gruposGestion, setGruposGestion] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
@@ -280,13 +282,78 @@ function SIGA() {
               }
             ]);
 
+            if (
+              estadoNuevo?.nombre === "Diferido"
+            ) {
+              await supabase
+                .from("historial_siga")
+                .insert([
+                  {
+                    siga_id: sigaEditando,
+                    usuario_id: user.id,
+                    tipo_movimiento:"Inicio Diferido",
+                    comentario:"El reporte fue colocado en estado Diferido"
+                  }
+                ]);
+            }
+
+            if (
+              estadoAnterior?.nombre === "Diferido" &&
+              estadoNuevo?.nombre !== "Diferido"
+            ) {
+              await supabase
+                .from("historial_siga")
+                .insert([
+                  {
+                    siga_id: sigaEditando,
+                    usuario_id: user.id,
+                    tipo_movimiento:"Fin Diferido",
+                    comentario:"El reporte salió del estado Diferido"
+                  }
+                ]);
+            }
+            
+            if (
+              estadoNuevo?.nombre === "Restablecimiento"
+            ) {
+
+              await supabase
+                .from("historial_siga")
+                .insert([
+                  {
+                    siga_id: sigaEditando,
+                    usuario_id: user.id,
+                    tipo_movimiento:"Restablecimiento",
+                    comentario:"Servicio restablecido"
+                  }
+                ]);
+
+            }
+
+            if (
+              estadoNuevo?.nombre === "Cerrado"
+            ) {
+
+              await supabase
+                .from("historial_siga")
+                .insert([
+                  {
+                    siga_id: sigaEditando,
+                    usuario_id: user.id,
+                    tipo_movimiento:"Cierre",
+                    comentario:"Reporte cerrado"
+                  }
+                ]);
+
+            }
+        
         if (historialError) {
-          console.error(
-            "ERROR HISTORIAL:",
-            historialError
+        console.error(
+          "ERROR HISTORIAL:",
+          historialError
           );
         }
-      }
+      }      
 
       if (
         sigaActual.tecnico_id !==
@@ -371,7 +438,7 @@ function SIGA() {
           historialGrupoError
           );
         }
-      }
+      }      
 
     }
     else {
@@ -429,7 +496,7 @@ function SIGA() {
 
     await cargarSigas();
     cerrarFormularioSIGA();
-  }
+  }  
 
   function editarSIGA(siga) {
 
@@ -482,6 +549,113 @@ function SIGA() {
     setMostrarHistorial(true);
   }
 
+  function calcularMetricasSIGA(
+    historialSIGA,
+    horasSLA
+  ) {
+    if (!historialSIGA?.length) {
+      return {
+        tiempoConsumidoHoras: 0,
+        tiempoDiferidoHoras: 0,
+        tiempoTotalHoras: 0,
+        cumpleSLA: true
+      };
+    }
+
+    const movimientos = [...historialSIGA]
+      .sort(
+        (a, b) =>
+          new Date(a.fecha_movimiento)
+          - new Date(b.fecha_movimiento)
+      );
+    let tiempoConsumido = 0;
+    let tiempoDiferido = 0;
+
+    let inicioActivo = null;
+    let inicioDiferido = null;
+
+    let finalizado = false;
+
+    movimientos.forEach((mov) => {
+      const fecha = new Date(
+        mov.fecha_movimiento
+      );
+      switch (mov.tipo_movimiento) {
+        case "Creación":
+          inicioActivo = fecha;
+          break;
+
+        case "Inicio Diferido":
+          if (inicioActivo) {
+            tiempoConsumido +=
+              fecha - inicioActivo;
+            inicioActivo = null;
+          }
+          inicioDiferido = fecha;
+          break;
+
+        case "Fin Diferido":
+          if (inicioDiferido) {
+            tiempoDiferido +=
+              fecha - inicioDiferido;
+            inicioDiferido = null;
+          }
+          inicioActivo = fecha;
+          break;
+
+        case "Restablecimiento":
+
+        case "Cierre":
+          if (
+            inicioActivo &&
+            !finalizado
+          ) {
+            tiempoConsumido +=
+              fecha - inicioActivo;
+            inicioActivo = null;
+          }
+
+          finalizado = true;
+          break;
+        default:
+          break;
+      }
+    });
+
+    const tiempoConsumidoHoras =
+      tiempoConsumido /
+      (1000 * 60 * 60);
+    const tiempoDiferidoHoras =
+      tiempoDiferido /
+      (1000 * 60 * 60);
+    const tiempoTotalHoras =
+      tiempoConsumidoHoras +
+      tiempoDiferidoHoras;
+    const cumpleSLA =
+      tiempoConsumidoHoras <=
+      horasSLA;
+
+    return {
+      tiempoConsumidoHoras,
+      tiempoDiferidoHoras,
+      tiempoTotalHoras,
+      cumpleSLA
+    };
+  }
+
+  function formatearHoras(
+    horas
+  ) {
+    const horasEnteras =
+      Math.floor(horas);
+    const minutos =
+      Math.round(
+        (horas - horasEnteras) * 60
+      );
+
+    return `${horasEnteras}h ${minutos}m`;
+  }
+
   useEffect(() => {
     cargarSigas();
     cargarEstadosSIGA();
@@ -491,7 +665,25 @@ function SIGA() {
     cargarTiposServicio();
   }, []);
 
+  const location = useLocation();
 
+  useEffect(() => {
+    if (
+      location.state?.filtroDashboard
+    ) {
+      setFiltroDashboard(
+        location.state.filtroDashboard
+      );
+    }
+  }, [location]);
+
+  const metricas =
+    mostrarHistorial
+      ? calcularMetricasSIGA(
+          historialSIGA,
+          sigaHistorial?.prioridades_siga?.horas_sla || 0
+        ) 
+      : null;
 
   return (
     <div>
@@ -537,6 +729,37 @@ function SIGA() {
 
       </div>
 
+      {
+        filtroDashboard && (
+          <div
+            style={{
+              backgroundColor: "#eef2ff",
+              padding: "10px",
+              borderRadius: "8px",
+              marginBottom: "15px",
+              textAlign: "center"
+            }}
+          >
+            Mostrando filtro:
+            <strong
+              style = {{
+                marginLeft: "5px",
+                marginRight: "15px"
+              }}
+            > {filtroDashboard}
+            </strong>
+
+            <button
+              onClick={() =>
+                setFiltroDashboard("")
+              }
+            >
+              Limpiar
+            </button>
+          </div>
+        )
+      }
+
       <table
         style={{
           width: "100%",
@@ -570,6 +793,40 @@ function SIGA() {
             (siga.numero_linea || "")
               .toLowerCase().includes(filtroLinea.toLowerCase())
           )
+          .filter ((siga) => {
+            if (
+              filtroDashboard === "Vencidos"
+            ){
+              return (horasRestantesSIGA(siga.fecha_maxima_atencion) < 0 &&siga.estados_siga?.nombre !=="Cerrado");
+            }
+            if (
+              filtroDashboard === "SIGAs En campo"
+            ){
+              return (
+                siga.tecnico_id &&
+                siga.estados_siga?.nombre !== "Cerrado" &&
+                siga.estados_siga?.nombre !== "Abierto - Verificación"
+              );
+            }
+            if (
+              filtroDashboard === "SIGAs Por vencer"
+            ){
+              return (siga.fecha_maxima_atencion === "Por vencer");
+            }
+            if (
+              filtroDashboard === "SIGAs Dentro SLA"
+            ){
+              return (
+                siga.estados_siga?.nombre !== "Cerrado" &&
+                siga.estados_siga?.nombre !== "Diferido" &&
+                horasRestantesSIGA(
+                  siga.fecha_maxima_atencion
+                ) > 1
+              );
+            }
+            return true;
+          })
+
           .map((siga) => (
             <tr key={siga.id}>
 
@@ -995,17 +1252,62 @@ function SIGA() {
 
                 <div>
                   <strong>Tiempo Consumido:</strong><br />
-                  Pendiente
+                  {formatearHoras(
+                    metricas?.tiempoConsumidoHoras || 0
+                  )}
                 </div>
 
                 <div>
                   <strong>Tiempo Diferido:</strong><br />
-                  Pendiente
+                  {formatearHoras(
+                    metricas?.tiempoDiferidoHoras || 0
+                  )}
                 </div>
 
                 <div>
-                  <strong>Cumplimiento SLA:</strong><br />
-                  Pendiente
+                  <strong>Tiempo Total:</strong><br />
+                  {formatearHoras(
+                    metricas?.tiempoTotalHoras || 0
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    gridColumn: "1 / span 3",
+                    textAlign: "center",
+                    marginTop: "10px",
+                    padding: "15px",
+                    borderRadius: "8px",
+                    backgroundColor: metricas?.cumpleSLA
+                      ? "#ecfdf5"
+                      : "#fef2f2"
+                  }}
+                >
+                  <strong
+                    style={{
+                      display: "block",
+                      marginBottom: "10px"
+                    }}
+                  >
+                    Cumplimiento SLA
+                  </strong>
+
+                  <span
+                    style={{
+                      color:
+                        metricas?.cumpleSLA
+                          ? "#16a34a"
+                          : "#dc2626",
+                      fontWeight: "bold",
+                      fontSize: "1.3rem"
+                    }}
+                  >
+                    {
+                      metricas?.cumpleSLA
+                        ? "✅ CUMPLE"
+                        : "❌ INCUMPLE"
+                    }
+                  </span>
                 </div>
               </div>
 

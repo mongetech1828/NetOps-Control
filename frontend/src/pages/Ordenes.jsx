@@ -16,6 +16,12 @@ function Ordenes() {
   const [historialOrden, setHistorialOrden] = useState([]);
   const [ordenHistorial, setOrdenHistorial] = useState(null);  
   const [filtroDashboard, setFiltroDashboard] = useState("");
+  const [tecnicos, setTecnicos] = useState([]);
+  const [
+    tecnicosSeleccionados,
+    setTecnicosSeleccionados
+  ] = useState([]);
+  const [mostrarTecnicos, setMostrarTecnicos] = useState(false);
   const formularioVacio ={
     tipo_registro: "OST",
     numero_ost: "",
@@ -35,6 +41,7 @@ function Ordenes() {
     cargarEstados();
     cargarTiposServicio();
     cargarTransporte();
+    cargarTecnicos();
   }, []);
 
   function formatearFechaDB(fecha) {
@@ -140,6 +147,7 @@ function Ordenes() {
           alert("La OST ya existe. Utilice Editar o Reingresar.");
 
           setFormData(formularioVacio);
+          setTecnicosSeleccionados([]);
 
           return;
       }
@@ -164,7 +172,31 @@ function Ordenes() {
         })
         .eq("id", ordenEditando);
 
-        //Registrando historial de movimientos
+        const {error: deleteError} = await supabase
+        .from("orden_tecnicos")
+        .delete()
+        .eq("orden_id",ordenEditando);
+
+        if (
+          tecnicosSeleccionados.length > 0
+        ) {
+          const asignaciones =
+            tecnicosSeleccionados.map(
+              tecnicoId => ({
+                orden_id:
+                  ordenEditando,
+                tecnico_id:
+                  tecnicoId,
+                activo: true
+              })
+            );
+
+          const { error: tecnicosError } = await supabase
+            .from("orden_tecnicos")
+            .insert(asignaciones);
+        }
+
+        //Registrando historial de estados
       if (!error) {
         if (ordenActual.estado_id !== Number(formData.estado_id)) {
           const { data: {user} } = await supabase.auth.getUser();
@@ -181,7 +213,7 @@ function Ordenes() {
             .eq("id", formData.estado_id)
             .single();
 
-          await supabase
+          const { data, error } = await supabase
             .from("historial_movimientos")
             .insert([
               {
@@ -197,8 +229,6 @@ function Ordenes() {
       }
 
       } else {
-
-        console.log(formData);
 
         const { data, error } = await supabase
           .from("ordenes")
@@ -219,6 +249,23 @@ function Ordenes() {
           ])
           .select()
           .single();
+
+        if (
+          tecnicosSeleccionados.length > 0
+        ) {
+          const asignaciones =
+            tecnicosSeleccionados.map(
+              tecnicoId => ({
+                orden_id: data.id,
+                tecnico_id: tecnicoId,
+                activo: true
+              })
+            );
+
+          const { error: tecnicosError } = await supabase
+            .from("orden_tecnicos")
+            .insert(asignaciones);
+        }
 
         if (!error) {
           const { data: {user} } = await supabase.auth.getUser();
@@ -241,6 +288,7 @@ function Ordenes() {
     setMostrarFormulario(false);  
     setFormData(formularioVacio);
     setOrdenEditando(null);
+    setTecnicosSeleccionados([]);
   } 
 
   async function cargarOrdenes() {
@@ -248,10 +296,14 @@ function Ordenes() {
   const { data } =
     await supabase
       .from("ordenes")
-      .select('*, estado ( nombre ),tipo_servicio(nombre),transporte(nombre)')
+      .select(`
+        *,
+        estado ( nombre ),
+        tipo_servicio(nombre),
+        transporte(nombre),
+        orden_tecnicos(tecnico_id, tecnicos(id,nombre))
+      `)
       .order("id", { ascending: false });
-
-      console.log(data);
 
   setOrdenes(data || []);
   }
@@ -273,6 +325,11 @@ function Ordenes() {
       fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
     });
 
+    setTecnicosSeleccionados(
+      orden.orden_tecnicos?.map(
+        ot => ot.tecnico_id
+      ) || []
+    );
     setMostrarFormulario(true);
   }
 
@@ -335,8 +392,6 @@ function Ordenes() {
 
     .select();
 
-    console.log("error historial: ", errorHistorial);
-
     await cargarOrdenes();
 
   }
@@ -356,9 +411,6 @@ function Ordenes() {
 
     setHistorialOrden(data);
     setOrdenHistorial(orden);
-
-    console.log(data);
-    console.log("Mostrando historial");
     setMostrarHistorial(true);
   }
 
@@ -392,6 +444,16 @@ function Ordenes() {
 
     setTransporte(data || []);
 
+  }
+
+  async function cargarTecnicos() {
+    const { data } =
+      await supabase
+        .from("tecnicos")
+        .select("*")
+        .order("nombre");
+
+    setTecnicos(data || []);
   }
 
   function sumarDiasHabiles(fecha, diasHabiles) {
@@ -637,6 +699,107 @@ function Ordenes() {
 
                     ))}
                   </select>
+
+                  <div style = {{ position: "relative"}}>
+                    <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
+                  >
+                    {tecnicosSeleccionados.length > 0
+                      ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                      : "Sin técnicos asignados"
+                    }
+                    </button>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
+                        marginTop: "8px",
+                        maxWidth: "500px"
+                      }}
+                    >
+                      {tecnicos
+                        .filter(t =>
+                          tecnicosSeleccionados.includes(t.id)
+                        )
+                        .map(t => (
+                          <span
+                            key={t.id}
+                            style={{
+                              backgroundColor: "#dbeafe",
+                              color: "#1e40af",
+                              padding: "4px 8px",
+                              borderRadius: "12px",
+                              fontSize: "12px",
+                              fontWeight: "500"
+                            }}
+                          >
+                            {t.nombre}
+                          </span>
+                        ))
+                      }
+                    </div>
+
+                    {mostrarTecnicos && (                  
+                      <div
+                        style={{
+                          position: "absolute",
+                          background: "white",
+                          maxHeight: "200px",
+                          width: "280px",
+                          overflowY: "auto",
+                          zIndex: 1000,
+                          border: "1px solid #ccc",
+                          padding: "6px",
+                          fontSize: "14px",
+                          borderRadius: "5px"
+                        }}
+                      >
+
+                        {tecnicos.map((tecnico) => (
+
+                          <label
+                            key={tecnico.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              textAlign: "left",
+                              justifyContent: "flex-start"
+                            }}
+                          >
+
+                            <input
+                              type="checkbox"
+                              checked={
+                                tecnicosSeleccionados.includes(
+                                  tecnico.id
+                                )
+                              }
+                              onChange={(e) => {
+
+                                if (e.target.checked) {
+                                  setTecnicosSeleccionados([
+                                    ...tecnicosSeleccionados,
+                                    tecnico.id
+                                  ]);
+                                }
+                                else {
+                                  setTecnicosSeleccionados(
+                                    tecnicosSeleccionados.filter(
+                                      id => id !== tecnico.id
+                                    )
+                                  );
+                                }
+                              }}
+                            />
+                            {" "}
+                            {tecnico.nombre}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <br /><br />
@@ -674,6 +837,7 @@ function Ordenes() {
                       setMostrarFormulario(false);
                       setOrdenEditando(null);
                       setFormData(formularioVacio);
+                      setTecnicosSeleccionados([]);
                     }}
                   >
                     Cancelar
@@ -907,8 +1071,31 @@ function Ordenes() {
                 </div>
 
                 <div>
-                  <strong>Técnicos:</strong><br />
-                  Pendiente
+                  <strong>Técnico:</strong><br />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                      marginTop: "5px"
+                    }}
+                  >
+                    {ordenHistorial?.orden_tecnicos
+                      ?.map((ot) => (
+                        <span
+                          key={ot.tecnico_id}
+                          style={{
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            fontSize: "12px"
+                          }}
+                        >
+                          {ot.tecnicos?.nombre}
+                        </span>
+                      ))}
+                  </div>
                 </div>
               </div>
 

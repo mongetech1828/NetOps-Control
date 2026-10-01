@@ -13,6 +13,11 @@ function SIGA() {
   const [gruposGestion, setGruposGestion] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
+  const [mostrarTecnicos, setMostrarTecnicos] = useState(false);
+  const [
+    tecnicosSeleccionados,
+    setTecnicosSeleccionados
+  ] = useState([]);
   const [historialSIGA, setHistorialSIGA] =
     useState([]);
   const [sigaHistorial, setSigaHistorial] =
@@ -113,6 +118,7 @@ function SIGA() {
   function cerrarFormularioSIGA() {
     setMostrarFormulario(false);
     setFormData(formularioVacio);
+    setTecnicosSeleccionados([]);
     setSigaEditando(null);
   }
 
@@ -124,13 +130,14 @@ function SIGA() {
         estados_siga(nombre),
         prioridades_siga(prioridad, horas_sla),
         grupos_gestion(nombre),
-        tecnicos(nombre),
+        siga_tecnicos(tecnico_id,tecnicos(id, nombre)),
         tipo_servicio(nombre)
       `)
       .order("id", {
         ascending: false
       });
     setSigas(data || []);
+    console.log(data);
   }
 
   function obtenerSLASIGA(fechaMaxima) {
@@ -235,7 +242,7 @@ function SIGA() {
           prioridad_id: formData.prioridad_id? parseInt(formData.prioridad_id): null,
           estado_siga_id: formData.estado_siga_id? parseInt (formData.estado_siga_id): null,
           grupo_gestion_id: formData.grupo_gestion_id? parseInt(formData.grupo_gestion_id) : null,
-          tecnico_id: formData.tecnico_id? parseInt(formData.tecnico_id) : null,
+          tecnico_id: tecnicosSeleccionados.length > 0 ? tecnicosSeleccionados[0] : null,
           nivel: nivelCalculado,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones
@@ -353,48 +360,26 @@ function SIGA() {
           historialError
           );
         }
-      }      
+      }
 
+      await supabase
+      .from("siga_tecnicos")
+      .delete()
+      .eq("siga_id",sigaEditando);
       if (
-        sigaActual.tecnico_id !==
-        ( formData.tecnico_id
-            ? Number(formData.tecnico_id)
-            : null
-        )
-      ){
-        const tecnicoAnterior = tecnicos.find(
-          t =>
-            t.id ===
-          sigaActual.tecnico_id
-        );
-        const tecnicoNuevo = tecnicos.find(
-          t =>
-            t.id ===
-            Number(formData.tecnico_id)
-        );
-
-        const {error: historialTecnicoError} = await supabase
-        .from("historial_siga")
-        .insert([
-          {
+        tecnicosSeleccionados.length > 0          
+      ) {
+        const asignaciones = tecnicosSeleccionados.map(
+          tecnicoId => ({
             siga_id: sigaEditando,
-            usuario_id: user.id,
-            tipo_movimiento:
-              "Asignación Técnico",
-            comentario:
-              `Técnico cambiado de ${
-                tecnicoAnterior?.nombre || "Sin asignar"
-              } a ${
-                tecnicoNuevo?.nombre || "Sin asignar"
-              }`
-          }
-        ]);
+            tecnico_id: tecnicoId,
+            activo: true
+          })
+        );
 
-        if (historialTecnicoError) {
-          console.error(
-          historialTecnicoError
-          );
-        }
+        await supabase
+        .from("siga_tecnicos")
+        .insert(asignaciones);
       }
 
       if (
@@ -454,7 +439,7 @@ function SIGA() {
             prioridad_id: formData.prioridad_id ? parseInt(formData.prioridad_id) : null,
             estado_siga_id: formData.estado_siga_id ? parseInt(formData.estado_siga_id) : null,
             grupo_gestion_id: formData.grupo_gestion_id ? parseInt(formData.grupo_gestion_id) : null,
-            tecnico_id: formData.tecnico_id ? parseInt(formData.tecnico_id) : null,
+            tecnico_id: tecnicosSeleccionados.length > 0 ? tecnicosSeleccionados[0] : null,
             nivel: nivelCalculado,
             fecha_recepcion: formData.fecha_recepcion,
             fecha_maxima_atencion: fechaMaxima,
@@ -492,7 +477,41 @@ function SIGA() {
           historialError
         );
       }
+
+      if (tecnicosSeleccionados.length > 0) {
+        const asignaciones =
+          tecnicosSeleccionados.map(
+            tecnicoId => ({
+              siga_id: data.id,
+              tecnico_id: tecnicoId,
+              activo: true
+            })
+          );
+
+        console.log(
+          "ASIGNACIONES:",
+          asignaciones
+        );
+
+        const {
+          error: tecnicosError
+        } = await supabase
+          .from("siga_tecnicos")
+          .insert(asignaciones);
+
+        if (tecnicosError) {
+          console.error(
+            "ERROR TECNICOS:",
+            tecnicosError
+          );
+        }
+      }
     }
+
+    console.log(
+      "TECNICOS SELECCIONADOS:",
+      tecnicosSeleccionados
+    );    
 
     await cargarSigas();
     cerrarFormularioSIGA();
@@ -524,6 +543,11 @@ function SIGA() {
         siga.observaciones || ""
     });
 
+    setTecnicosSeleccionados(
+      siga.siga_tecnicos?.map(
+        st => st.tecnico_id
+      ) || []
+    );
     setMostrarFormulario(true);
   }
 
@@ -533,7 +557,8 @@ function SIGA() {
       .from("historial_siga")
       .select(`
         *,
-        estados_siga!estado_nuevo(nombre)
+        estados_siga!estado_nuevo(nombre),
+        perfiles!usuario_id(nombre, correo)
       `)
       .eq("siga_id", siga.id)
       .order("fecha_movimiento", {
@@ -694,6 +719,7 @@ function SIGA() {
           setSigaEditando(null);
           setFormData(formularioVacio);
           setMostrarFormulario(true);
+          setTecnicosSeleccionados([]);
         }}
       >
         Nuevo SIGA
@@ -936,6 +962,18 @@ function SIGA() {
                     })
                   }
                 />
+
+                <input                    
+                  type="datetime-local"
+                  value={formData.fecha_recepcion || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fecha_recepcion: e.target.value})
+                  }
+                  disabled={sigaEditando !== null}
+                  style={{width: "180px", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
+                />
               </div>
 
               <input
@@ -1005,16 +1043,7 @@ function SIGA() {
                     </option>
                   ))}
                 </select>
-              </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "20px",
-                  justifyContent: "center",
-                  marginBottom: "15px"
-                }}
-              >
                 <select
                   value={formData.estado_siga_id || ""}
                   onChange={(e) =>
@@ -1070,49 +1099,109 @@ function SIGA() {
                   ))}
                 </select>
 
-                <select
-                  value={formData.tecnico_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tecnico_id: e.target.value
-                    })
-                  }
+                <div style = {{ position: "relative"}}>
+                  <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
                 >
+                  {tecnicosSeleccionados.length > 0
+                    ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                    : "Sin técnicos asignados"
+                  }
+                  </button>
 
-                  <option value="">
-                    Técnico
-                  </option>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                      marginTop: "8px",
+                      maxWidth: "500px"
+                    }}
+                  >
+                    {tecnicos
+                      .filter(t =>
+                        tecnicosSeleccionados.includes(t.id)
+                      )
+                      .map(t => (
+                        <span
+                          key={t.id}
+                          style={{
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: "500"
+                          }}
+                        >
+                          {t.nombre}
+                        </span>
+                      ))
+                    }
+                  </div>
 
-                  {tecnicos.map((tecnico) => (
-
-                    <option
-                      key={tecnico.id}
-                      value={tecnico.id}
+                  {mostrarTecnicos && (                  
+                    <div
+                      style={{
+                        position: "absolute",
+                        background: "white",
+                        maxHeight: "200px",
+                        width: "280px",
+                        overflowY: "auto",
+                        zIndex: 1000,
+                        border: "1px solid #ccc",
+                        padding: "6px",
+                        fontSize: "14px",
+                        borderRadius: "5px"
+                      }}
                     >
-                      {tecnico.nombre}
-                    </option>
 
-                  ))}
+                      {tecnicos.map((tecnico) => (
 
-                </select>
+                        <label
+                          key={tecnico.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            textAlign: "left",
+                            justifyContent: "flex-start"
+                          }}
+                        >
+
+                          <input
+                            type="checkbox"
+                            checked={
+                              tecnicosSeleccionados.includes(
+                                tecnico.id
+                              )
+                            }
+                            onChange={(e) => {
+
+                              if (e.target.checked) {
+                                setTecnicosSeleccionados([
+                                  ...tecnicosSeleccionados,
+                                  tecnico.id
+                                ]);
+                              }
+                              else {
+                                setTecnicosSeleccionados(
+                                  tecnicosSeleccionados.filter(
+                                    id => id !== tecnico.id
+                                  )
+                                );
+                              }
+                            }}
+                          />
+                          {" "}
+                          {tecnico.nombre}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <br/>
-
-              <input                    
-                type="datetime-local"
-                value={formData.fecha_recepcion || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    fecha_recepcion: e.target.value})
-                }
-                disabled={sigaEditando !== null}
-                style={{width: "180px", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
-              />
-
-              <br/><br/>
 
               <textarea
                 placeholder="Descripción"
@@ -1232,7 +1321,30 @@ function SIGA() {
 
                 <div>
                   <strong>Técnico:</strong><br />
-                  {sigaHistorial?.tecnicos?.nombre || "-"}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                      marginTop: "5px"
+                    }}
+                  >
+                    {sigaHistorial?.siga_tecnicos
+                      ?.map((st) => (
+                        <span
+                          key={st.tecnico_id}
+                          style={{
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            fontSize: "12px"
+                          }}
+                        >
+                          {st.tecnicos?.nombre}
+                        </span>
+                      ))}
+                  </div>
                 </div>
 
                 <div>
@@ -1399,8 +1511,16 @@ function SIGA() {
                           width: "500px"
                         }}
                       >
-                        <div>
+                        <div className="text-sm font-medium">
                           {mov.tipo_movimiento}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          Usuario: {mov.perfiles?.nombre}
+                        </div>
+
+                        <div className="text-xs text-gray-400">
+                          {mov.perfiles?.correo}
                         </div>
                         <div>
                           <strong>

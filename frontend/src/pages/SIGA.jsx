@@ -7,6 +7,7 @@ function SIGA() {
   const [sigas, setSigas] = useState([]);
   const [filtroSIGA, setFiltroSIGA] = useState("");
   const [filtroLinea, setFiltroLinea] = useState("");
+  const [filtroEvento, setFiltroEvento] = useState("");
   const [estadosSIGA, setEstadosSIGA] = useState([]);
   const [filtroDashboard, setFiltroDashboard] = useState("");
   const [prioridadesSIGA, setPrioridadesSIGA] = useState([]);
@@ -141,17 +142,13 @@ function SIGA() {
   }
 
   function obtenerSLASIGA(fechaMaxima) {
-    const horas =
-      horasRestantesSIGA(
-        fechaMaxima
-      );
+    const horas = horasRestantesSIGA(fechaMaxima);
+
     if (horas < 0) {
-      return "Vencido";
-    }
+      return {texto: "⚫Vencido",color: "#dc2626",};}
     if (horas <= 1) {
-      return "Por Vencer";
-    }
-    return "Dentro SLA";
+      return {texto: "🟡Prox. vencer",color: "#eab308",};}
+    return {texto: "🟢Dentro SLA",color: "#16a34a",};
   }
 
   async function cargarEstadosSIGA() {
@@ -207,6 +204,12 @@ function SIGA() {
       formData.tecnico_id
         ? "ST"
         : "GT";
+      
+    const {data: sigaExistente} = await supabase
+      .from("sigas")
+      .select("id")
+      .eq("numero_siga", formData.numero_siga.trim())
+      .single();
 
     if (!formData.numero_siga) {alert("Debe indicar el número SIGA");
       return;
@@ -227,6 +230,15 @@ function SIGA() {
       return;
     }
     if (!formData.fecha_recepcion) {alert("Debe indicar la fecha y hora de recepción");
+      return;
+    }
+
+    if (!sigaEditando && sigaExistente) {
+      alert("Ya existe un SIGA con ese número. Utilice Editar para modificarlo.");
+
+      setFormData(formularioVacio);
+      setTecnicosSeleccionados([]);
+
       return;
     }
 
@@ -467,7 +479,7 @@ function SIGA() {
               formData.estado_siga_id
             ),
             comentario:
-              `Creación del reporte SIGA ${formData.numero_siga} por el usuario ${user.email}`
+              `Creación del reporte SIGA ${formData.numero_siga}`
           }
         ]);
 
@@ -753,6 +765,12 @@ function SIGA() {
           onChange={(e) => setFiltroLinea(e.target.value)}
         />
 
+        <input
+          placeholder="Buscar Evento AGIL"
+          value={filtroEvento}
+          onChange={(e) => setFiltroEvento(e.target.value)}
+        />
+
       </div>
 
       {
@@ -819,6 +837,10 @@ function SIGA() {
             (siga.numero_linea || "")
               .toLowerCase().includes(filtroLinea.toLowerCase())
           )
+          .filter((siga) =>
+            (siga.evento_agil || "")
+              .toLowerCase().includes(filtroEvento.toLowerCase())
+          )
           .filter ((siga) => {
             if (
               filtroDashboard === "Vencidos"
@@ -853,9 +875,10 @@ function SIGA() {
             return true;
           })
 
-          .map((siga) => (
+          .map((siga) => {
+            const sla = obtenerSLASIGA(siga.fecha_maxima_atencion);
+            return (
             <tr key={siga.id}>
-
               <td>{siga.numero_siga}</td>
               <td>{siga.numero_linea}</td>
               <td>{siga.evento_agil}</td>
@@ -867,25 +890,8 @@ function SIGA() {
               <td>{siga.fecha_maxima_atencion? horasRestantesSIGA(siga.fecha_maxima_atencion).toFixed(1): "-"}</td>
               <td>
                 <span
-                  style={{
-                    color:
-                      obtenerSLASIGA(
-                        siga.fecha_maxima_atencion
-                      ) === "Vencido"
-                        ? "red"
-                        : obtenerSLASIGA(
-                            siga.fecha_maxima_atencion
-                          ) === "Por Vencer"
-                        ? "orange"
-                        : "green",
-                    fontWeight: "bold"
-                  }}
-                >
-                  {
-                    obtenerSLASIGA(
-                      siga.fecha_maxima_atencion
-                    )
-                  }
+                  style={{color: sla.color, fontWeight: 600,}}>
+                  {sla.texto}
                 </span>
               </td>
               <td>
@@ -903,7 +909,8 @@ function SIGA() {
                 </button>
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
 
@@ -1511,27 +1518,24 @@ function SIGA() {
                           width: "500px"
                         }}
                       >
-                        <div className="text-sm font-medium">
-                          {mov.tipo_movimiento}
+                        
+                        <div
+                          style={{
+                            fontWeight: "600",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {formatoFechaHistorial(
+                            mov.fecha_movimiento
+                          )}
                         </div>
 
-                        <div className="text-xs text-gray-500">
-                          Usuario: {mov.perfiles?.nombre}
-                        </div>
-
-                        <div className="text-xs text-gray-400">
-                          {mov.perfiles?.correo}
-                        </div>
-                        <div>
-                          <strong>
-                            {formatoFechaHistorial(
-                              mov.fecha_movimiento
-                            )}
-                          </strong>
-                        </div>
                         <div>
                           {mov.comentario}
+                          {mov.perfiles?.correo &&
+                            ` por ${mov.perfiles.correo}`}
                         </div>
+
                       </div>
                     </div>
                   );

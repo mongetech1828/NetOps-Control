@@ -8,6 +8,7 @@ function Ordenes() {
   const [filtroOST, setFiltroOST] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroLinea, setFiltroLinea] = useState("");
+  const [filtroEvento, setFiltroEvento] = useState("");
   const [estados, setEstados] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
   const [transporte, setTransporte] = useState([]);
@@ -485,20 +486,13 @@ function Ordenes() {
   }
 
   function estadoSLA(dias) {
-
-    if (dias > 2) {
-      return "En SLA";
-    }
-
-    if (dias >= 1 && dias <= 2) {
-      return "Prox. vencer";
-    }
-
-    if (dias === 0) {
-      return "Vence hoy";
-    }
-
-    return "Vencida";
+    if (dias > 2)
+      return { texto: "🟢En SLA", color: "#16a34a" };
+    if (dias >= 1 && dias <= 2)
+      return { texto: "🟡Prox. vencer", color: "#eab308" };
+    if (dias === 0)
+      return { texto: "🔴Vence hoy", color: "#f97316" };
+    return { texto: "⚫Vencida", color: "#dc2626" };
   }
 
   const location = useLocation();
@@ -873,6 +867,12 @@ function Ordenes() {
           onChange={(e) => setFiltroLinea(e.target.value)}
         />
 
+        <input
+          placeholder="Buscar Evento AGIL"
+          value={filtroEvento}
+          onChange={(e) => setFiltroEvento(e.target.value)}
+        />
+
       </div>
 
       {
@@ -937,6 +937,10 @@ function Ordenes() {
             (orden.numero_linea || "")
               .toLowerCase().includes(filtroLinea.toLowerCase())
           )
+          .filter((orden) =>
+            (orden.evento_agil || "")
+              .toLowerCase().includes(filtroEvento.toLowerCase())
+          )
           .filter((orden) => {
             if (
               filtroDashboard === "Vencidas"
@@ -971,39 +975,46 @@ function Ordenes() {
             }
             return true;
           })
-          .map((orden) => (
-            <tr key={orden.id}>
-              <td>{orden.numero_ost}</td>
-              <td>{orden.numero_linea}</td>
-              <td>{orden.evento_agil}</td>
-              <td>{orden.cliente}</td>
-              <td>{orden.tipo_servicio?.nombre || "-"}</td>
-              <td>{orden.transporte?.nombre || "-"}</td>
-              <td>{orden.estado?.nombre}</td>
-              <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
-              <td>{estadoSLA(diasRestantes(orden.fecha_maxima_atencion))}</td>
-              <td>{orden.cantidad_reingresos}</td>
-              <td>
-                <button
-                  onClick={() => editarOrden(orden)}
-                  >
-                    Editar
-                </button>
-                <button
-                  onClick={() => reingresarOrden(orden)}
-                  >
-                    Reingresar
-                </button>
-                <button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => verHistorial(orden)}
-                  >
-                    Historial
-                </button>
-              </td>
-            </tr>
-          ))}
+          .map((orden) => {
+            const sla = estadoSLA(diasRestantes(orden.fecha_maxima_atencion));
+            return (
+              <tr key={orden.id}>
+                <td>{orden.numero_ost}</td>
+                <td>{orden.numero_linea}</td>
+                <td>{orden.evento_agil}</td>
+                <td>{orden.cliente}</td>
+                <td>{orden.tipo_servicio?.nombre || "-"}</td>
+                <td>{orden.transporte?.nombre || "-"}</td>
+                <td>{orden.estado?.nombre}</td>
+                <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
+                <td>                
+                  <span style={{ color: sla.color, fontWeight: 600 }}>
+                    {sla.texto}
+                  </span>
+                </td>
+                <td>{orden.cantidad_reingresos}</td>
+                <td>
+                  <button
+                    onClick={() => editarOrden(orden)}
+                    >
+                      Editar
+                  </button>
+                  <button
+                    onClick={() => reingresarOrden(orden)}
+                    >
+                      Reingresar
+                  </button>
+                  <button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => verHistorial(orden)}
+                    >
+                      Historial
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table> 
       

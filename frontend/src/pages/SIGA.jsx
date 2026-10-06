@@ -920,350 +920,371 @@ function SIGA() {
           <div className="modal-overlay">
             <div className="modal-content">
 
-              <h3>
-                {sigaEditando
-                  ? "Editar SIGA"
-                  : "Nuevo SIGA"}
-              </h3>
+              <div>
+                <h3>
+                  {sigaEditando
+                    ? "Editar SIGA"
+                    : "Nuevo SIGA"}
+                </h3>
 
-              <br/><br/>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "20px",
-                  marginBottom: "15px",
-                  justifyContent: "center"
-                }}
-              >
-
-                <input
-                  placeholder="Número SIGA"
-                  value={formData.numero_siga || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      numero_siga: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  placeholder="Número Línea"
-                  value={formData.numero_linea || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      numero_linea: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  placeholder="Evento AGIL"
-                  value={formData.evento_agil || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      evento_agil: e.target.value
-                    })
-                  }
-                />
-
-                <input                    
-                  type="datetime-local"
-                  value={formData.fecha_recepcion || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      fecha_recepcion: e.target.value})
-                  }
-                  disabled={sigaEditando !== null}
-                  style={{width: "180px", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
-                />
-              </div>
-
-              <input
-                style={{
-                  width: "100%",
-                  marginBottom: "15px",
-                  justifyContent: "center"
-                }}
-                placeholder="Cliente"
-                value={formData.cliente || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    cliente: e.target.value
-                  })
-                }
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "20px",
-                  marginBottom: "15px",
-                  justifyContent: "center"
-                }}
-              >
-                <select
-                  value={formData.tipo_servicio_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tipo_servicio_id: e.target.value
-                    })
-                  }
+                {/* DATOS OPERATIVOS */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "15px",
+                    marginBottom: "15px"
+                  }}
                 >
-                  <option value="">
-                    Tipo Servicio
-                  </option>
-                  {tiposServicio.map((tipo) => (
-                    <option
-                      key={tipo.id}
-                      value={tipo.id}
-                    >
-                      {tipo.nombre}
-                    </option>
-                  ))}
-                </select>
 
-                <select
-                  value={formData.prioridad_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      prioridad_id: e.target.value
-                    })
-                  }
-                >
-                  <option value="">
-                    Prioridad
-                  </option>
-                  {prioridadesSIGA.map((prioridad) => (
-                    <option
-                      key={prioridad.id}
-                      value={prioridad.id}
-                    >
-                      {prioridad.prioridad}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={formData.estado_siga_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      estado_siga_id: e.target.value
-                    })
-                  }
-                >
-                  <option value="">
-                    Estado
-                  </option>
-
-                  {estadosSIGA.map((estado) => (
-                    <option
-                      key={estado.id}
-                      value={estado.id}
-                    >
-                      {estado.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "20px",
-                  justifyContent: "center",
-                  marginBottom: "15px"
-                }}
-              >
-                <select
-                  value={formData.grupo_gestion_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      grupo_gestion_id: e.target.value
-                    })
-                  }
-                >
-                  <option value="">
-                    Grupo Gestión
-                  </option>
-
-                  {gruposGestion.map((grupo) => (
-                    <option
-                      key={grupo.id}
-                      value={grupo.id}
-                    >
-                      {grupo.nombre}
-                    </option>
-                  ))}
-                </select>
-
-                <div style = {{ position: "relative"}}>
-                  <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
-                >
-                  {tecnicosSeleccionados.length > 0
-                    ? `👷 Técnicos (${tecnicosSeleccionados.length})`
-                    : "Sin técnicos asignados"
-                  }
-                  </button>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                      marginTop: "8px",
-                      maxWidth: "500px"
-                    }}
-                  >
-                    {tecnicos
-                      .filter(t =>
-                        tecnicosSeleccionados.includes(t.id)
-                      )
-                      .map(t => (
-                        <span
-                          key={t.id}
-                          style={{
-                            backgroundColor: "#dbeafe",
-                            color: "#1e40af",
-                            padding: "4px 8px",
-                            borderRadius: "12px",
-                            fontSize: "12px",
-                            fontWeight: "500"
-                          }}
-                        >
-                          {t.nombre}
-                        </span>
-                      ))
+                  {/* SIGA */}
+                  <input
+                    type="text"
+                    placeholder="Número SIGA"
+                    value={formData.numero_siga || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numero_siga: e.target.value
+                      })
                     }
-                  </div>
+                  />
 
-                  {mostrarTecnicos && (                  
-                    <div
-                      style={{
-                        position: "absolute",
-                        background: "white",
-                        maxHeight: "200px",
-                        width: "280px",
-                        overflowY: "auto",
-                        zIndex: 1000,
-                        border: "1px solid #ccc",
-                        padding: "6px",
-                        fontSize: "14px",
-                        borderRadius: "5px"
+                  {/* FECHA */}
+                  <input                    
+                    type="datetime-local"
+                    value={formData.fecha_recepcion || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        fecha_recepcion: e.target.value})
+                    }
+                    disabled={sigaEditando !== null}
+                    style={{width: "180px", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
+                  />
+
+                  {/* LÍNEA */}
+                  <input
+                    type="text"
+                    placeholder="Número Línea"
+                    value={formData.numero_linea || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numero_linea: e.target.value
+                      })
+                    }
+                  />
+
+                  {/* TÉCNICOS */}
+                  <div style = {{ position: "relative", width: "100%" }}>
+                    <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
+                    style={{
+                        width: "100%",
+                        padding: "8px",
+                        cursor: "pointer"
                       }}
                     >
+                      {tecnicosSeleccionados.length > 0
+                        ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                        : "👷 Sin técnicos asignados"
+                      }
+                    </button>
 
-                      {tecnicos.map((tecnico) => (
+                    {/* CHIPS */}
+                    {tecnicosSeleccionados.length > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginTop: "8px"
+                        }}
+                      >
+                        {tecnicos
+                          .filter(t =>
+                            tecnicosSeleccionados.includes(t.id)
+                          )
+                          .map(t => (
+                            <span
+                              key={t.id}
+                              style={{
+                                backgroundColor: "#dbeafe",
+                                color: "#1e40af",
+                                padding: "4px 8px",
+                                borderRadius: "12px",
+                                fontSize: "12px",
+                                fontWeight: "500"
+                              }}
+                            >
+                              {t.nombre}
+                            </span>
+                          ))
+                        }
+                      </div>
+                    )}
 
-                        <label
-                          key={tecnico.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            textAlign: "left",
-                            justifyContent: "flex-start"
-                          }}
-                        >
+                    {/* DESPLEGABLE */}
+                    {mostrarTecnicos && (                  
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          marginTop: "5px",
+                          background: "white",
+                          width: "320px",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          zIndex: 1000,
+                          border: "1px solid #ccc",
+                          padding: "10px",
+                          borderRadius: "8px",
+                          boxShadow:
+                              "0 2px 8px rgba(0,0,0,0.15)"
+                        }}
+                      >
 
-                          <input
-                            type="checkbox"
-                            checked={
-                              tecnicosSeleccionados.includes(
-                                tecnico.id
-                              )
-                            }
-                            onChange={(e) => {
+                        {tecnicos.map((tecnico) => (
 
-                              if (e.target.checked) {
-                                setTecnicosSeleccionados([
-                                  ...tecnicosSeleccionados,
-                                  tecnico.id
-                                ]);
-                              }
-                              else {
-                                setTecnicosSeleccionados(
-                                  tecnicosSeleccionados.filter(
-                                    id => id !== tecnico.id
-                                  )
-                                );
-                              }
+                          <label
+                            key={tecnico.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              textAlign: "left",
+                              fontSize: "14px",
+                              cursor: "pointer",
                             }}
-                          />
-                          {" "}
-                          {tecnico.nombre}
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                          >
+
+                            <input
+                              type="checkbox"
+                              checked={
+                                tecnicosSeleccionados.includes(
+                                  tecnico.id
+                                )
+                              }
+                              onChange={(e) => {
+
+                                if (e.target.checked) {
+                                  setTecnicosSeleccionados([
+                                    ...tecnicosSeleccionados,
+                                    tecnico.id
+                                  ]);
+                                }
+                                else {
+                                  setTecnicosSeleccionados(
+                                    tecnicosSeleccionados.filter(
+                                      id => id !== tecnico.id
+                                    )
+                                  );
+                                }
+                              }}
+                            />
+                            {" "}
+                            {tecnico.nombre}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <br/>
-
-              <textarea
-                placeholder="Descripción"
-                value={formData.descripcion || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    descripcion: e.target.value
-                  })
-                }
-                rows={3}
-                style={{
-                  width: "80%",
-                  marginBottom: "15px"
-                }}
-              />
-
-              <br/><br/>
-
-              <textarea
-                placeholder="Observaciones"
-                value={formData.observaciones || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    observaciones: e.target.value
-                  })
-                }
-                rows={3}
-                style={{
-                  width: "80%",
-                  marginBottom: "15px"
-                }}
-              />
-
-              <br/><br/>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "10px"
-                }}
-              >
-
-                <button
-                  onClick={guardarSIGA}>
-                  Guardar SIGA
-                </button>
-
-                <button
-                  onClick={cerrarFormularioSIGA}
+                {/* EVENTO AGIL */}
+                <div
+                  style={{
+                    marginTop: "15px"
+                  }}
                 >
-                  Cancelar
-                </button>
+                  <input
+                    type="text"
+                    style={{width: "100%"}}
+                    placeholder="Evento AGIL"
+                    value={formData.evento_agil || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        evento_agil: e.target.value
+                      })
+                    }
+                  />
+                </div>
+
+                {/* CLIENTE */}
+                <div
+                  style={{
+                    marginTop: "15px"
+                  }}
+                >
+                  <input
+                    type="text"
+                    style={{width: "100%"}}
+                    placeholder="Cliente"
+                    value={formData.cliente || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cliente: e.target.value
+                      })
+                    }
+                  />
+                </div>
+
+                {/* ESTADO, TIPO SERVICIO + PRIORIDAD */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "15px",
+                    marginTop: "15px"
+                  }}
+                >
+
+                  <select
+                    value={formData.estado_siga_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estado_siga_id: e.target.value
+                      })
+                    }
+                  >
+                    <option value="">
+                      Estado
+                    </option>
+
+                    {estadosSIGA.map((estado) => (
+                      <option
+                        key={estado.id}
+                        value={estado.id}
+                      >
+                        {estado.nombre}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={formData.tipo_servicio_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tipo_servicio_id: e.target.value
+                      })
+                    }
+                  >
+                    <option value="">
+                      Tipo Servicio
+                    </option>
+                    {tiposServicio.map((tipo) => (
+                      <option
+                        key={tipo.id}
+                        value={tipo.id}
+                      >
+                        {tipo.nombre}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={formData.prioridad_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        prioridad_id: e.target.value
+                      })
+                    }
+                  >
+                    <option value="">
+                      Prioridad
+                    </option>
+                    {prioridadesSIGA.map((prioridad) => (
+                      <option
+                        key={prioridad.id}
+                        value={prioridad.id}
+                      >
+                        {prioridad.prioridad}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    style={{width: "100%", marginTop: "10px"}}
+                    value={formData.grupo_gestion_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        grupo_gestion_id: e.target.value
+                      })
+                    }
+                  >
+                    <option value="">
+                      Grupo Gestión
+                    </option>
+
+                    {gruposGestion.map((grupo) => (
+                      <option
+                        key={grupo.id}
+                        value={grupo.id}
+                      >
+                        {grupo.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginTop: "15px" }}>
+                  <textarea
+                    rows={3}
+                    style={{width: "100%", marginTop: "15px"}}
+                    placeholder="Descripción"
+                    value={formData.descripcion || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descripcion: e.target.value
+                      })
+                    }                  
+                  />
+                </div>
+
+                <div style={{ marginTop: "15px" }}>
+                  <textarea
+                    rows={3}
+                    style={{width: "100%", marginTop: "15px"}}
+                    placeholder="Observaciones"
+                    value={formData.observaciones || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        observaciones: e.target.value
+                      })
+                    }                  
+                  />                  
+                </div>
+
+                <br/>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "10px"
+                  }}
+                >
+
+                  <button
+                    onClick={guardarSIGA}>
+                    Guardar SIGA
+                  </button>
+
+                  <button
+                    onClick={cerrarFormularioSIGA}
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1366,7 +1387,7 @@ function SIGA() {
 
                 <div>
                   <strong>SLA:</strong><br />
-                  {obtenerSLASIGA(sigaHistorial?.fecha_maxima_atencion)}
+                  {obtenerSLASIGA(sigaHistorial?.fecha_maxima_atencion).texto}
                 </div>
 
                 <div>

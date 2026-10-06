@@ -21,7 +21,7 @@ function MainLayout({
     >
       <aside
         style={{
-          width: "250px",
+          width: "180px",
           backgroundColor: "#1e293b",
           color: "white",
           padding: "20px"

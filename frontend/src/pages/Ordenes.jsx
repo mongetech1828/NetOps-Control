@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../services/supabase";
 import { useLocation } from "react-router-dom";
 
@@ -22,7 +22,7 @@ function Ordenes() {
     tecnicosSeleccionados,
     setTecnicosSeleccionados
   ] = useState([]);
-  const [mostrarTecnicos, setMostrarTecnicos] = useState(false);
+  const [mostrarTecnicos, setMostrarTecnicos] = useState(false);  
   const formularioVacio ={
     tipo_registro: "OST",
     numero_ost: "",
@@ -33,9 +33,21 @@ function Ordenes() {
     transporte_id: "",
     estado_id: "",
     fecha_recepcion: "",
-    observaciones: ""
+    observaciones: "",
+    ivc: "",
+    uc: "",
+    fo: "",
+    crc: ""
   };
   const [formData, setFormData] = useState(formularioVacio);
+  const prioridadCalculada = useMemo(() => calcularPrioridad(),
+    [
+      formData.ivc,
+      formData.uc,
+      formData.fo,
+      formData.crc
+    ]
+  ); 
 
   useEffect(() => {
     cargarOrdenes();
@@ -114,7 +126,6 @@ function Ordenes() {
 
   }
 
-
   async function guardarOrden() {
 
     const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
@@ -169,7 +180,13 @@ function Ordenes() {
           tipo_servicio_id: formData.tipo_servicio_id,
           transporte_id: formData.transporte_id,
           estado_id: formData.estado_id,
-          observaciones: formData.observaciones
+          observaciones: formData.observaciones,
+          ivc: formData.ivc,
+          uc: formData.uc,
+          fo: formData.fo,
+          crc: formData.crc,
+          prioridad_calculada: prioridadCalculada.prioridad,
+          puntaje_prioridad: prioridadCalculada.puntaje
         })
         .eq("id", ordenEditando);
 
@@ -245,7 +262,13 @@ function Ordenes() {
               estado_id: formData.estado_id,
               observaciones: formData.observaciones,
               fecha_recepcion: formData.fecha_recepcion,
-              fecha_maxima_atencion: formatearFechaDB(fechaMaxima)
+              fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
+              ivc: formData.ivc,
+              uc: formData.uc,
+              fo: formData.fo,
+              crc: formData.crc,
+              prioridad_calculada: prioridadCalculada.prioridad,
+              puntaje_prioridad: prioridadCalculada.puntaje
             }
           ])
           .select()
@@ -323,7 +346,11 @@ function Ordenes() {
       transporte_id: orden.transporte_id || "",
       observaciones: orden.observaciones || "",
       estado_id: orden.estado_id || "",
-      fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || ""
+      fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || "",
+      ivc: orden.ivc || "",
+      uc: orden.uc || "",
+      fo: orden.fo || "",
+      crc: orden.crc || ""
     });
 
     setTecnicosSeleccionados(
@@ -335,7 +362,6 @@ function Ordenes() {
   }
 
   async function reingresarOrden(orden) {
-
     const motivo = window.prompt(`Ingrese el motivo del reingreso OST ${orden.numero_ost}`);
 
     if (!motivo) {
@@ -348,7 +374,6 @@ function Ordenes() {
         fechaRecepcion,
         4
       );
-
     const confirmar = window.confirm(`¿Está seguro de reingresar la OST: ${orden.numero_ost}?`);
 
     if (!confirmar) {
@@ -358,20 +383,14 @@ function Ordenes() {
     const { error } = await supabase
       .from("ordenes")
       .update({
-
         fecha_recepcion:
           formatearFechaDB(fechaRecepcion),
-
         fecha_maxima_atencion:
           formatearFechaDB(fechaMaxima),
-
         cantidad_reingresos:
           (orden.cantidad_reingresos || 0) + 1,
-
         fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
-
         motivo_reingreso: motivo
-
       })
     .eq("id", orden.id);
 
@@ -485,14 +504,63 @@ function Ordenes() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  function estadoSLA(dias) {
-    if (dias > 2)
-      return { texto: "🟢En SLA", color: "#16a34a" };
-    if (dias >= 1 && dias <= 2)
-      return { texto: "🟡Prox. vencer", color: "#eab308" };
-    if (dias === 0)
-      return { texto: "🔴Vence hoy", color: "#f97316" };
-    return { texto: "⚫Vencida", color: "#dc2626" };
+  function obtenerPuntaje(
+    nivel
+  ) {
+    switch (nivel) {
+      case "ALTO":
+        return 3;
+      case "MEDIO":
+        return 2;
+      case "BAJO":
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  function calcularPrioridad() {
+    const puntaje =
+      (obtenerPuntaje(formData.ivc) * 0.40) +
+      (obtenerPuntaje(formData.uc) * 0.30) +
+      (obtenerPuntaje(formData.fo) * 0.15) +
+      (obtenerPuntaje(formData.crc) * 0.15);
+    let prioridad = "BAJA";
+    if (puntaje >= 2.5) {
+      prioridad = "ALTA";
+    }
+    else if (puntaje >= 1.5) {
+      prioridad = "MEDIA";
+    }
+
+    return {
+      prioridad,
+      puntaje:
+        Number(
+          puntaje.toFixed(2)
+        )
+    };
+  }
+
+  function estadoPrioridad(
+    prioridad
+  ) {
+    if (prioridad === "ALTA") {
+      return {
+        texto: "🔴 Alta",
+        color: "#dc2626"
+      };
+    }
+    if (prioridad === "MEDIA") {
+      return {
+        texto: "🟡 Media",
+        color: "#eab308"
+      };
+    }
+    return {
+      texto: "🟢 Baja",
+      color: "#16a34a"
+    };
   }
 
   const location = useLocation();
@@ -529,17 +597,329 @@ function Ordenes() {
                     : "Nueva Orden"}
                 </h3>
 
-                <br /><br />
-
                 <div
                   style={{
-                    display: "flex",
-                    gap: "20px",
-                    justifyContent: "center"
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    padding: "15px",
+                    marginBottom: "15px"
                   }}
                 >
+                  <h4>Clasificación de Prioridad</h4>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 1fr",
+                      gap: "15px"
+                    }}
+                  >
+                    <div>
+                      {/* IVC */}
+                      <div>
+                        <strong
+                          title= "Impacto y Valor Comercal"
+                          style= {{ cursor: "help", textDecoration: "underline" }}
+                        >
+                          IVC: 
+                        </strong>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="ivc"
+                            value="ALTO"
+                            checked={formData.ivc === "ALTO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                ivc: e.target.value
+                              })
+                            }
+                          />
+                          Alto
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="ivc"
+                            value="MEDIO"
+                            checked={formData.ivc === "MEDIO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                ivc: e.target.value
+                              })
+                            } 
+                          />
+                          Medio
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="ivc"
+                            value="BAJO"
+                            checked={formData.ivc === "BAJO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                ivc: e.target.value
+                              })
+                            }
+                          />
+                          Bajo
+                        </label>
+                      </div>
+
+                      {/* UC */}
+                      <div>
+                        <strong
+                          title="Urgencia Comercial"
+                          style={{ cursor: "help", textDecoration: "underline" }}
+                        >
+                          UC: 
+                        </strong>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="uc"
+                            value="ALTO"
+                            checked={formData.uc === "ALTO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                uc: e.target.value
+                              })
+                            }
+                          />
+                          Alto
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="uc"
+                            value="MEDIO"
+                            checked={formData.uc === "MEDIO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                uc: e.target.value
+                              })
+                            } 
+                          />
+                          Medio
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="uc"
+                            value="BAJO"
+                            checked={formData.uc === "BAJO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                uc: e.target.value
+                              })
+                            }
+                          />
+                          Bajo
+                        </label>
+                      </div>
+
+                      {/* FO */}
+                      <div>
+                        <strong
+                          title="Factibilidad Operativa"
+                          style={{ cursor: "help", textDecoration: "underline" }}
+                        >
+                          FO: 
+                        </strong>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="fo"
+                            value="ALTO"
+                            checked={formData.fo === "ALTO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fo: e.target.value
+                              })
+                            }
+                          />
+                          Alto
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="fo"
+                            value="MEDIO"
+                            checked={formData.fo === "MEDIO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fo: e.target.value
+                              })
+                            } 
+                          />
+                          Medio
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="fo"
+                            value="BAJO"
+                            checked={formData.fo === "BAJO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fo: e.target.value
+                              })
+                            }
+                          />
+                          Bajo
+                        </label>
+                      </div>
+
+                      {/* CRC */}
+                      <div>
+                        <strong
+                          title="Compromiso Regulatorio y Contractual"
+                          style={{ cursor: "help", textDecoration: "underline" }}
+                        >
+                          CRC: 
+                        </strong>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="crc"
+                            value="ALTO"
+                            checked={formData.crc === "ALTO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                crc: e.target.value
+                              })
+                            }
+                          />
+                          Alto
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="crc"
+                            value="MEDIO"
+                            checked={formData.crc === "MEDIO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                crc: e.target.value
+                              })
+                            } 
+                          />
+                          Medio
+                        </label>
+
+                        <label
+                          style={{ marginRight: "20px" }}
+                        >
+                          <input
+                            type="radio"
+                            name="crc"
+                            value="BAJO"
+                            checked={formData.crc === "BAJO"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                crc: e.target.value
+                              })
+                            }
+                          />
+                          Bajo
+                        </label>
+                      </div>
+
+                    </div>
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <strong>Prioridad:</strong>{" "}
+                      <span
+                        style={{
+                          color:
+                            prioridadCalculada.prioridad === "ALTA"
+                              ? "#dc2626"
+                              : prioridadCalculada.prioridad === "MEDIA"
+                              ? "#f59e0b"
+                              : "#16a34a",
+                          fontWeight: "bold",
+                          fontSize: "1.15rem"
+                        }}
+                      >
+                        {prioridadCalculada.prioridad}
+                      </span>
+
+                      <br />
+                      
+                      <strong>Puntaje:</strong>{" "}
+                      <span
+                        style={{
+                          fontWeight: "bold",
+                          fontSize: "1.1rem"
+                        }}
+                      >
+                        {prioridadCalculada.puntaje}
+                      </span>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* DATOS OPERATIVOS */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "15px",
+                    marginTop: "20px",
+                  }}
+                >
+
+                  {/* OST */}
                   <input
-                    style={{ width: "45%"}}
+                    type="text"
                     placeholder="Número OST"
                     value={formData.numero_ost || ""}
                     onChange={(e) =>
@@ -549,71 +929,8 @@ function Ordenes() {
                       })
                     }
                   />
-                  <input
-                    style={{width: "45%"}}
-                    placeholder="Número Línea"
-                    value={formData.numero_linea || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        numero_linea: e.target.value
-                      })
-                    }
-                  />
-                  <input
-                    placeholder="Evento AGIL"
-                    value={formData.evento_agil || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        evento_agil: e.target.value
-                      })
-                    }
-                  />
-                </div>
 
-                <br />
-
-                <input
-                  style={{width: "45%"}}
-                  placeholder="Cliente"
-                  value={formData.cliente}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cliente: e.target.value})
-                  }
-                />
-
-                <br/><br />
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "20px",
-                    justifyContent: "center"
-                  }}
-                >
-                  <select
-                    value={formData.estado_id || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        estado_id: e.target.value})
-                      }
-                    style={{width: "180px"}}
-                  >
-
-                  <option value="">
-                    Seleccionar Estado
-                  </option>
-                    {estados.map((estado) => (
-                      <option key={estado.id} value={estado.id}>
-                        {estado.nombre}
-                      </option>
-                    ))}
-                  </select>
-
+                  {/* FECHA */}
                   <input                    
                     type="date"
                     value={formData.fecha_recepcion || ""}
@@ -625,19 +942,222 @@ function Ordenes() {
                     disabled={ordenEditando !== null}
                     style={{width: "180px", backgroundColor: ordenEditando !== null ? "#f3f4f6" : "white" }}
                   />
+
+                  {/* LÍNEA */}
+                  <input
+                    type="text"
+                    placeholder="Número Línea"
+                    value={formData.numero_linea || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numero_linea: e.target.value
+                      })
+                    }
+                  />
+
+                  {/* TÉCNICOS */}
+                  <div style = {{position: "relative", width: "100%"}}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMostrarTecnicos(
+                          !mostrarTecnicos
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        cursor: "pointer"
+                      }}
+                    >
+
+                      {tecnicosSeleccionados.length > 0
+                        ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                        : "👷 Sin técnicos asignados"}
+
+                    </button>
+
+                    {/* CHIPS */}
+                    {tecnicosSeleccionados.length > 0 && (
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginTop: "8px"
+                        }}
+                      >
+
+                        {tecnicos
+                          .filter((t) =>
+                            tecnicosSeleccionados.includes(
+                              t.id
+                            )
+                          )
+                          .map((t) => (
+
+                            <span
+                              key={t.id}
+                              style={{
+                                backgroundColor: "#dbeafe",
+                                color: "#1e40af",
+                                padding: "4px 8px",
+                                borderRadius: "12px",
+                                fontSize: "12px",
+                                fontWeight: "500"
+                              }}
+                            >
+                              {t.nombre}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* DESPLEGABLE */}
+                    {mostrarTecnicos && (
+
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          marginTop: "5px",
+                          background: "white",
+                          width: "320px",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          zIndex: 1000,
+                          border: "1px solid #ccc",
+                          borderRadius: "8px",
+                          padding: "10px",
+                          boxShadow:
+                            "0 2px 8px rgba(0,0,0,0.15)"
+                        }}
+                      >
+
+                        {tecnicos.map((tecnico) => (
+
+                          <label
+                            key={tecnico.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "4px 0",
+                              textAlign: "left",
+                              fontSize: "14px",
+                              cursor: "pointer"
+                            }}
+                          >
+
+                            <input
+                              type="checkbox"
+                              checked={
+                                tecnicosSeleccionados.includes(
+                                  tecnico.id
+                                )
+                              }
+                              onChange={(e) => {
+
+                                if (e.target.checked) {
+
+                                  setTecnicosSeleccionados([
+                                    ...tecnicosSeleccionados,
+                                    tecnico.id
+                                  ]);
+
+                                } else {
+
+                                  setTecnicosSeleccionados(
+                                    tecnicosSeleccionados.filter(
+                                      (id) =>
+                                        id !== tecnico.id
+                                    )
+                                  );
+                                }
+                              }}
+                            />
+
+                            {tecnico.nombre}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <br /><br />
-
+                {/* EVENTO AGIL */}
                 <div
                   style={{
-                    display: "flex",
-                    gap: "20px",
-                    justifyContent: "center"
+                    marginTop: "15px"
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Evento AGIL"
+                    style={{width: "100%"}}
+                    value={formData.evento_agil || ""}
+                      onChange={(e) =>
+                        setFormData({
+                        ...formData,
+                        evento_agil: e.target.value
+                      })
+                    }
+                  />
+                </div>
+
+                {/* CLIENTE */}
+                <div 
+                  style={{
+                    marginTop: "15px"
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Cliente"
+                    style={{width: "100%"}}
+                    value={formData.cliente}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cliente: e.target.value})
+                    }
+                  />
+                </div>
+
+                {/* ESTADO, TIPO SERVICIO Y TRANSPORTE */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "15px",
+                    marginTop: "15px"
                   }}
                 >
 
                   <select
+                    style={{width: "100%"}}
+                    value={formData.estado_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estado_id: e.target.value})
+                      }
+                  >
+                  <option value="">
+                    Seleccionar Estado
+                  </option>
+                    {estados.map((estado) => (
+                      <option key={estado.id} value={estado.id}>
+                        {estado.nombre}
+                      </option>
+                    ))}
+                  </select>  
+
+                  <select
+                    style={{width: "100%"}}
                     value={formData.tipo_servicio_id || ""}
                     onChange={(e) =>
                       setFormData({
@@ -666,6 +1186,7 @@ function Ordenes() {
                   </select>
 
                   <select
+                    style={{width: "100%"}}
                     value={
                       formData.transporte_id || ""
                     }
@@ -693,123 +1214,23 @@ function Ordenes() {
 
                     ))}
                   </select>
-
-                  <div style = {{ position: "relative"}}>
-                    <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
-                  >
-                    {tecnicosSeleccionados.length > 0
-                      ? `👷 Técnicos (${tecnicosSeleccionados.length})`
-                      : "Sin técnicos asignados"
-                    }
-                    </button>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                        marginTop: "8px",
-                        maxWidth: "500px"
-                      }}
-                    >
-                      {tecnicos
-                        .filter(t =>
-                          tecnicosSeleccionados.includes(t.id)
-                        )
-                        .map(t => (
-                          <span
-                            key={t.id}
-                            style={{
-                              backgroundColor: "#dbeafe",
-                              color: "#1e40af",
-                              padding: "4px 8px",
-                              borderRadius: "12px",
-                              fontSize: "12px",
-                              fontWeight: "500"
-                            }}
-                          >
-                            {t.nombre}
-                          </span>
-                        ))
-                      }
-                    </div>
-
-                    {mostrarTecnicos && (                  
-                      <div
-                        style={{
-                          position: "absolute",
-                          background: "white",
-                          maxHeight: "200px",
-                          width: "280px",
-                          overflowY: "auto",
-                          zIndex: 1000,
-                          border: "1px solid #ccc",
-                          padding: "6px",
-                          fontSize: "14px",
-                          borderRadius: "5px"
-                        }}
-                      >
-
-                        {tecnicos.map((tecnico) => (
-
-                          <label
-                            key={tecnico.id}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              textAlign: "left",
-                              justifyContent: "flex-start"
-                            }}
-                          >
-
-                            <input
-                              type="checkbox"
-                              checked={
-                                tecnicosSeleccionados.includes(
-                                  tecnico.id
-                                )
-                              }
-                              onChange={(e) => {
-
-                                if (e.target.checked) {
-                                  setTecnicosSeleccionados([
-                                    ...tecnicosSeleccionados,
-                                    tecnico.id
-                                  ]);
-                                }
-                                else {
-                                  setTecnicosSeleccionados(
-                                    tecnicosSeleccionados.filter(
-                                      id => id !== tecnico.id
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                            {" "}
-                            {tecnico.nombre}
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  
                 </div>
 
-                <br /><br />
-
-                <textarea
-                  style={{width: "45%"}}
-                  placeholder="Observaciones"
-                  value={formData.observaciones}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      observaciones: e.target.value})
-                  }
-                />
-
-                <br /><br />
+                {/* OBSERVACIONES */}
+                <div style={{ marginTop: "15px" }}>
+                  <textarea
+                    rows={4}
+                    style={{width: "100%"}}
+                    placeholder="Observaciones"
+                    value={formData.observaciones}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        observaciones: e.target.value})
+                    }
+                  />
+                </div>
 
                 <div
                   style={{
@@ -976,7 +1397,7 @@ function Ordenes() {
             return true;
           })
           .map((orden) => {
-            const sla = estadoSLA(diasRestantes(orden.fecha_maxima_atencion));
+            const prioridad = estadoPrioridad(orden.prioridad_calculada);
             return (
               <tr key={orden.id}>
                 <td>{orden.numero_ost}</td>
@@ -987,10 +1408,13 @@ function Ordenes() {
                 <td>{orden.transporte?.nombre || "-"}</td>
                 <td>{orden.estado?.nombre}</td>
                 <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
-                <td>                
-                  <span style={{ color: sla.color, fontWeight: 600 }}>
-                    {sla.texto}
-                  </span>
+                <td
+                  style={{
+                    color: prioridad.color,
+                    fontWeight: "bold"
+                  }}
+                >
+                  {prioridad.texto}
                 </td>
                 <td>{orden.cantidad_reingresos}</td>
                 <td>
@@ -1110,9 +1534,60 @@ function Ordenes() {
                 </div>
               </div>
 
-              <div style={{ marginTop: "20px" }}>
-                <strong>Observaciones:</strong><br />
-                {ordenHistorial?.observaciones || "-"}
+              <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginTop: "20px" }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    textAlign: "left",
+                  }}
+                >                      
+                  <strong>Observaciones:</strong><br />
+                  {ordenHistorial?.observaciones || "-"}
+
+                </div>
+
+                {/* Prioridad */}                
+                <div
+                  style={{
+                    minWidth: "180px",
+                    textAlign: "left",
+                    marginLeft: "30px"
+                  }}
+                >
+                  <strong>
+                    {
+                      ordenHistorial
+                        ?.prioridad_calculada
+                    }
+                  </strong>
+
+                  {" "}
+                  (
+                  {
+                    ordenHistorial
+                      ?.puntaje_prioridad
+                  }
+                  )
+
+                  <br />
+
+                  IVC: {ordenHistorial?.ivc?.[0]}
+                  {" | "}
+
+                  UC: {ordenHistorial?.uc?.[0]}
+
+                  <br />
+
+                  FO: {ordenHistorial?.fo?.[0]}
+                  {" | "}
+
+                  CRC: {ordenHistorial?.crc?.[0]}
+                </div>
               </div>
 
               <hr style={{ margin: "20px 0"}} />

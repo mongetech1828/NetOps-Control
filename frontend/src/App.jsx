@@ -6,20 +6,21 @@ import AppRoutes from "./routes/AppRoutes";
 function App() {
 
   const [session, setSession] = useState(null);
+  const [loadingSession, setLoadingSession] = useState(true);
   const [perfil, setPerfil] = useState(null);
 
   useEffect(() => {
 
-     async function cargarPerfil(userId) {
+    async function cargarPerfil(userId) {
 
-        const { data } = await supabase
-          .from("perfiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
+      const { data } = await supabase
+        .from("perfiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-        setPerfil(data);
-      }
+      setPerfil(data);
+    }
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
@@ -29,11 +30,11 @@ function App() {
         if (session?.user?.id) {
           cargarPerfil(session.user.id);
         }
-      });
 
+        setLoadingSession(false);        
+      });       
      
-    const {
-      data: listener
+    const {data: { subscription }
     } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         
@@ -46,7 +47,7 @@ function App() {
     );
 
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
 
   }, []);
@@ -55,9 +56,13 @@ function App() {
     await supabase.auth.signOut();
   }
 
+  if (loadingSession) {
+    return <div>Cargando...</div>;
+  }
+
   if (!session) {
     return <Login />;
-  }
+  }  
 
   return (
     <AppRoutes

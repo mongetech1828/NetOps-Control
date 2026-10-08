@@ -22,7 +22,7 @@ function MainLayout({
       <aside
         style={{
           width: "180px",
-          backgroundColor: "#4CA450",
+          background: "linear-gradient(135deg, #1e3a8a, #0f172a)",
           color: "white",
           padding: "20px"
         }}
@@ -78,13 +78,16 @@ function MainLayout({
         <hr />
 
         <button 
-          style= {{
-            backgroundColor: "#e6d1b3",
-            color: "black",
+          style={{
+            width: "100%",
+            padding: "12px",
             border: "none",
-            padding: "10px 20px",
-            borderRadius: "6px",
-            cursor: "pointer"
+            borderRadius: "8px",
+            background: "#2563eb",
+            color: "white",
+            fontWeight: "600",
+            cursor: "pointer",
+            fontSize: "15px"
           }}
           onClick={onLogout}>
           Cerrar Sesión

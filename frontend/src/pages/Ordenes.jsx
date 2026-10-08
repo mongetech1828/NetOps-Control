@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../services/supabase";
 import { useLocation } from "react-router-dom";
 import HistorialOrdenModal from "../components/HistorialOrdenModal";
+import * as XLSX from "xlsx";
 
 function Ordenes() {
 
@@ -531,6 +532,53 @@ function Ordenes() {
       texto: "🟢 Baja",
       color: "#16a34a"
     };
+  }
+
+  function exportarExcel() {
+
+    const datos = ordenes.map(
+      (orden) => ({
+
+        OST: orden.numero_ost,        
+        Linea: orden.numero_linea,
+        Evento_agil: orden.evento_agil,
+        Cliente: orden.cliente,
+        Servicio: orden.tipo_servicio?.nombre,
+        Transporte: orden.transporte?.nombre,
+        Estado: orden.estado?.nombre,
+        Dias: diasRestantes(orden.fecha_maxima_atencion),
+        Tecnicos:
+          orden.orden_tecnicos
+            ?.map(
+              (t) =>
+                t.tecnicos?.nombre
+            )
+            .join(", "),
+        Prioridad:
+          orden.prioridad_calculada,
+        Puntaje:
+          orden.puntaje_prioridad,
+        Reingresos: orden.cantidad_reingresos
+      })
+    );
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    const wb = XLSX.utils.book_new();
+    const fecha = new Date()
+      .toISOString()
+      .slice(0,10)
+      .replaceAll("-","");
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      "Ordenes"
+    );
+
+    XLSX.writeFile(
+      wb,
+      `Ordenes_${fecha}.xlsx`
+    );
   }
 
   const location = useLocation();
@@ -1377,6 +1425,17 @@ function Ordenes() {
             onChange={(e) => setFiltroEvento(e.target.value)}
           />
 
+          <button 
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              cursor: "pointer"
+            }}
+            onClick={exportarExcel}>
+              📊 Exportar Excel
+        </button>
+
         </div>
 
         {
@@ -1407,7 +1466,7 @@ function Ordenes() {
               </button>
             </div>
           )
-        }
+        }        
 
         <table
           style={{

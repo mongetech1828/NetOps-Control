@@ -27,7 +27,8 @@ function Dashboard() {
   const [sigasEnCampo, setSigasEnCampo] = useState(0);
   const [sigasPorVencer, setSigasPorVencer] = useState(0);
   const [sigasVencidos, setSigasVencidos] = useState(0);
-  const [filtroDashboard, setFiltroDashboard] = useState("");
+  const [busquedaGlobal, setBusquedaGlobal] = useState("");
+  const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
   useEffect(() => {
 
@@ -387,7 +388,58 @@ function Dashboard() {
     await supabase.auth.signOut();
   }
 
-  const navigate = useNavigate();  
+  const navigate = useNavigate();
+
+  async function buscarGlobal() {
+
+    if (!busquedaGlobal.trim()) {
+      setResultadosBusqueda([]);
+
+      return;
+    }
+
+    const texto = busquedaGlobal.trim();
+    
+    const { data: ordenes } =
+      await supabase
+        .from("ordenes")
+        .select(`id,numero_ost,cliente,estado(nombre)`)
+        .or(`numero_ost.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
+
+    const { data: sigas } =
+      await supabase
+        .from("sigas")
+        .select(`id,numero_siga,cliente,estados_siga(nombre)`)
+        .or(`numero_siga.ilike.%${texto}%,cliente.ilike.%${texto}%`);
+
+    setResultadosBusqueda([
+
+      ...(ordenes || []).map(
+        (o) => ({
+          tipo: "ORDEN",
+          numero: o.numero_ost,
+          cliente: o.cliente,
+          estado: o.estado?.nombre,
+          id: o.id
+        })
+      ),
+
+      ...(sigas || []).map(
+        (s) => ({
+          tipo: "SIGA",
+          numero: s.numero_siga,
+          cliente: s.cliente,
+          estado: s.estados_siga?.nombre,
+          id: s.id
+        })
+      )
+
+    ]);
+  }
+
+  useEffect(() => {
+    buscarGlobal();
+  }, [busquedaGlobal]);
 
   return (
     <div>
@@ -396,6 +448,83 @@ function Dashboard() {
       <p>
         Bienvenido {perfil?.nombre}
       </p>
+
+      <br/>
+
+      <div
+        style={{
+          marginBottom: "20px"
+        }}
+      >
+        <input
+          type="text"
+          placeholder="🔍 Buscar OST, SIGA o Cliente..."
+          value={busquedaGlobal}
+          onChange={(e) =>
+            setBusquedaGlobal(
+              e.target.value
+            )
+          }
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: "8px",
+            border: "1px solid #d1d5db",
+            boxSizing: "border-box"
+          }}
+        />
+      </div>
+
+      {
+        busquedaGlobal.trim() !== "" && (
+
+          <div>
+
+            <h3>Resultados de busqueda</h3>
+
+            {        
+              resultadosBusqueda.length > 0 
+                ? resultadosBusqueda.map((item) => (
+
+                  <div
+                    key={`${item.tipo}-${item.id}`}
+                    style={{
+                      background: "#fff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      marginBottom: "10px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <strong>
+                      {item.tipo === "SIGA"
+                        ? "📡 SIGA"
+                        : "📄 OST"}
+                    </strong>
+
+                    {" "}
+                    {item.numero}
+
+                    <div>
+                      Cliente: {item.cliente}
+                    </div>
+
+                    <div>
+                      Estado: {item.estado}
+                    </div>
+
+                  </div>
+                ))
+               : (
+                    <p>
+                      No se encontraron resultados
+                    </p>
+                  )
+            }
+          </div>
+        )
+      }
 
       <hr
         style={{

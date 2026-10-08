@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../services/supabase";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
+import * as XLSX from "xlsx";
 
 function SIGA() {
 
@@ -20,7 +21,6 @@ function SIGA() {
   const [historialSIGA, setHistorialSIGA] = useState([]);
   const [sigaHistorial, setSigaHistorial] = useState(null);
   const [mostrarHistorialSIGA, setMostrarHistorialSIGA] = useState(false);
-  /*const [mostrarHistorial, setMostrarHistorial] = useState(false);*/
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [sigaEditando, setSigaEditando] = useState(null);
   const formularioVacio = {
@@ -626,17 +626,45 @@ function SIGA() {
     };
   }
 
-  function formatearHoras(
-    horas
-  ) {
-    const horasEnteras =
-      Math.floor(horas);
-    const minutos =
-      Math.round(
-        (horas - horasEnteras) * 60
-      );
+  function exportarSIGAs() {
 
-    return `${horasEnteras}h ${minutos}m`;
+    const datos = sigas.map(
+      (siga) => ({
+
+        SIGA: siga.numero_siga,
+        Linea: siga.numero_linea,
+        Evento_agil: siga.evento_agil,
+        Cliente: siga.cliente,
+        Servicio: siga.tipo_servicio?.nombre,        
+        Prioridad: siga.prioridades_siga?.prioridad,
+        Estado: siga.estados_siga?.nombre,
+        Grupo: siga.grupos_gestion?.nombre,
+        Tecnicos:
+          siga.siga_tecnicos
+            ?.map(
+              (t) =>
+                t.tecnicos?.nombre
+            )
+            .join(", ")
+      })
+    );
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    const wb =XLSX.utils.book_new();
+    const fecha = new Date()
+      .toISOString()
+      .slice(0,10)
+      .replaceAll("-","");
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      "SIGAs"
+    );
+    XLSX.writeFile(
+      wb,
+      `SIGAs_${fecha}.xlsx`
+    );
   }
 
   useEffect(() => {
@@ -667,14 +695,6 @@ function SIGA() {
     );
 
   }, [mostrarHistorialSIGA]);
-
-  /*const metricas =
-    mostrarHistorial
-      ? calcularMetricasSIGA(
-          historialSIGA,
-          sigaHistorial?.prioridades_siga?.horas_sla || 0
-        ) 
-      : null;*/
 
   return (
 
@@ -778,6 +798,17 @@ function SIGA() {
             onChange={(e) => setFiltroEvento(e.target.value)}
           />
 
+          <button 
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              cursor: "pointer"
+            }}
+            onClick={exportarSIGAs}>
+              📊 Exportar Excel
+          </button>
+
         </div>
 
         {
@@ -809,7 +840,7 @@ function SIGA() {
               </button>
             </div>
           )
-        }
+        }        
 
         <table
           style={{

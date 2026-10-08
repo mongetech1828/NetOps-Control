@@ -22,7 +22,7 @@ function MainLayout({
       <aside
         style={{
           width: "180px",
-          backgroundColor: "#1e293b",
+          backgroundColor: "#4CA450",
           color: "white",
           padding: "20px"
         }}
@@ -77,7 +77,16 @@ function MainLayout({
 
         <hr />
 
-        <button onClick={onLogout}>
+        <button 
+          style= {{
+            backgroundColor: "#e6d1b3",
+            color: "black",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "6px",
+            cursor: "pointer"
+          }}
+          onClick={onLogout}>
           Cerrar Sesión
         </button>
       </aside>

@@ -398,8 +398,7 @@ function HistorialSIGAModal({
                 borderRadius: "6px",
                 cursor: "pointer"
             }}
-            onClick={onClose
-            }
+            onClick={onClose}
         >
             Cerrar
         </button>              

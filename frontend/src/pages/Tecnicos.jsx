@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
+import HistorialOrdenModal from "../components/HistorialOrdenModal";
+import HistorialSIGAModal from "../components/HistorialSIGAModal";
 
 function Tecnicos() {
 
@@ -10,6 +12,12 @@ function Tecnicos() {
   const [ordenesTecnico, setOrdenesTecnico] = useState([]);
   const [mostrarFormularioTecnico,  setMostrarFormularioTecnico] = useState(false);
   const [tecnicoEditando, setTecnicoEditando] = useState(null);
+  const [historialSIGA, setHistorialSIGA] = useState(null);
+  const [sigaHistorial, setSigaHistorial] = useState(null);
+  const [mostrarHistorialSIGA, setMostrarHistorialSIGA] = useState(false);
+  const [historialOrden, setHistorialOrden] = useState([]);
+  const [ordenHistorial, setOrdenHistorial] = useState(null);
+  const [mostrarHistorialOrden, setMostrarHistorialOrden] = useState(false);
   const tecnicoVacio = {
     nombre: "",
     correo: "",
@@ -168,29 +176,82 @@ function Tecnicos() {
     await cargarTecnicos();
   }
 
-  function abrirOrdenDesdeTecnico(id) {
-    console.log("Orden:", id);
+  async function abrirOrdenDesdeTecnico(idOrden) {
+    const { data, error } =
+      await supabase
+        .from("ordenes")
+        .select(`
+          *,
+          estado(nombre),
+          tipo_servicio(nombre),
+          transporte(nombre),
+          orden_tecnicos(tecnico_id,tecnicos(nombre))
+        `)
+        .eq("id", idOrden)
+        .single();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    console.log(data);
+    setOrdenHistorial(data);
+
+    const { data: historial } =
+      await supabase
+        .from("historial_movimientos")
+        .select(`
+          *,
+          estado!estado_nuevo(nombre),
+          perfiles!usuario_id(nombre,correo)
+        `)
+        .eq("orden_id", idOrden)
+        .order("fecha_movimiento", {
+          ascending: false
+        });
+    
+    setHistorialOrden(historial || []);
+    setMostrarHistorialOrden(true);
   }
 
   async function abrirSIGADesdeTecnico(idSIGA) {
+    const { data, error } =
+      await supabase
+        .from("sigas")
+        .select(`
+          *,
+          estados_siga(nombre),
+          prioridades_siga(prioridad, horas_sla),
+          grupos_gestion(nombre),
+          tipo_servicio(nombre),
+          siga_tecnicos(tecnico_id, tecnicos(nombre))
+        `)
+        .eq("id", idSIGA)
+        .single();
 
-  console.log("SIGA:", idSIGA);
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-  const { data, error } =
-    await supabase
-      .from("sigas")
-      .select("*")
-      .eq("id", idSIGA)
-      .single();
+    setSigaHistorial(data);
 
-  if (error) {
-    console.error(error);
-    return;
+    const { data: historial } =
+      await supabase
+        .from ("historial_siga")
+        .select(`
+          *,
+          estados_siga!estado_nuevo(nombre),
+          perfiles!usuario_id(nombre, correo)
+        `)
+        .eq("siga_id", idSIGA)
+        .order("fecha_movimiento", {
+          ascending: false
+        });
+    setHistorialSIGA(historial || []);
+    setMostrarHistorialSIGA(true);
   }
-
-  console.log(data);
-
-}
 
   return (
 
@@ -763,6 +824,24 @@ function Tecnicos() {
           </div>
         )
       }
+
+      <HistorialSIGAModal
+        visible={mostrarHistorialSIGA}
+        sigaHistorial={sigaHistorial}
+        historialSIGA={historialSIGA}
+        onClose={() =>
+          setMostrarHistorialSIGA(false)
+        }
+      />
+
+      <HistorialOrdenModal
+        visible={mostrarHistorialOrden}
+        ordenHistorial={ordenHistorial}
+        historialOrden={historialOrden}
+        onClose={() =>
+          setMostrarHistorialOrden(false)
+        }
+      />
 
     </div>
   );

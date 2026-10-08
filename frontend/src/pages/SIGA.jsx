@@ -20,7 +20,7 @@ function SIGA() {
   const [historialSIGA, setHistorialSIGA] = useState([]);
   const [sigaHistorial, setSigaHistorial] = useState(null);
   const [mostrarHistorialSIGA, setMostrarHistorialSIGA] = useState(false);
-  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  /*const [mostrarHistorial, setMostrarHistorial] = useState(false);*/
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [sigaEditando, setSigaEditando] = useState(null);
   const formularioVacio = {
@@ -60,54 +60,6 @@ function SIGA() {
     const diferencia =
       fechaLimite - ahora;
     return diferencia / (1000 * 60 * 60);
-  }
-
-  function formatoFechaHora(fecha) {
-
-    console.log("Original:", fecha);
-
-    console.log(
-      "Convertida:",
-      new Date(fecha)
-      .toLocaleString("es-CR", {
-      timeZone: "America/Costa_Rica"
-      })
-      );
-
-    return new Date(fecha).toLocaleString(
-      "es-CR",
-      {
-        timeZone: "America/Costa_Rica",
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit"
-      }
-    );
-
-  }
-
-  function formatoFechaHistorial(fecha) {
-
-    const fechaUtc = new Date(fecha);
-
-    fechaUtc.setHours(
-      fechaUtc.getHours() - 6
-    );
-
-    return fechaUtc.toLocaleString(
-      "es-CR",
-      {
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit"
-      }
-    );
   }
 
   function cerrarFormularioSIGA() {
@@ -709,21 +661,20 @@ function SIGA() {
   }, [location]);
 
   useEffect(() => {
+    console.log(
+      "mostrarHistorialSIGA:",
+      mostrarHistorialSIGA
+    );
 
-  console.log(
-    "mostrarHistorialSIGA:",
-    mostrarHistorialSIGA
-  );
+  }, [mostrarHistorialSIGA]);
 
-}, [mostrarHistorialSIGA]);
-
-  const metricas =
+  /*const metricas =
     mostrarHistorial
       ? calcularMetricasSIGA(
           historialSIGA,
           sigaHistorial?.prioridades_siga?.horas_sla || 0
         ) 
-      : null;
+      : null;*/
 
   return (
 

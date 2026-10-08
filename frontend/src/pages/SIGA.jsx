@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../services/supabase";
+import HistorialSIGAModal from "../components/HistorialSIGAModal";
 
 function SIGA() {
 
@@ -15,20 +16,13 @@ function SIGA() {
   const [tecnicos, setTecnicos] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
   const [mostrarTecnicos, setMostrarTecnicos] = useState(false);
-  const [
-    tecnicosSeleccionados,
-    setTecnicosSeleccionados
-  ] = useState([]);
-  const [historialSIGA, setHistorialSIGA] =
-    useState([]);
-  const [sigaHistorial, setSigaHistorial] =
-    useState(null);
-  const [mostrarHistorial, setMostrarHistorial] =
-  useState(false);
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
-  const [sigaEditando, setSigaEditando] =
-    useState(null);
+  const [tecnicosSeleccionados, setTecnicosSeleccionados] = useState([]);
+  const [historialSIGA, setHistorialSIGA] = useState([]);
+  const [sigaHistorial, setSigaHistorial] = useState(null);
+  const [mostrarHistorialSIGA, setMostrarHistorialSIGA] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [sigaEditando, setSigaEditando] = useState(null);
   const formularioVacio = {
     numero_siga: "",
     numero_linea: "",
@@ -583,7 +577,7 @@ function SIGA() {
     );
 
     setHistorialSIGA(data || []);
-    setMostrarHistorial(true);
+    setMostrarHistorialSIGA(true);
   }
 
   function calcularMetricasSIGA(
@@ -714,6 +708,15 @@ function SIGA() {
     }
   }, [location]);
 
+  useEffect(() => {
+
+  console.log(
+    "mostrarHistorialSIGA:",
+    mostrarHistorialSIGA
+  );
+
+}, [mostrarHistorialSIGA]);
+
   const metricas =
     mostrarHistorial
       ? calcularMetricasSIGA(
@@ -723,858 +726,703 @@ function SIGA() {
       : null;
 
   return (
-    <div>
-      <h1>SIGA</h1>
 
-      <button
-        onClick={() => {
-          setSigaEditando(null);
-          setFormData(formularioVacio);
-          setMostrarFormulario(true);
-          setTecnicosSeleccionados([]);
-        }}
-      >
-        Nuevo SIGA
-      </button>
+    <div
+      style={{
+        background: "white",
+        padding: "20px",
+        borderRadius: "10px",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
+      }}
+    >
 
-      <hr
-        style={{
-          margin: "20px 0"
-        }}
-      />
+      <div>
 
-      <h2>SIGAs Registrados</h2>
+        <div
+          style={{
+            position: "relative",
+            marginBottom: "30px"
+          }}
+        >
 
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "20px"
-        }}
-      >
-
-        <input
-          placeholder="Buscar SIGA"
-          value={filtroSIGA}
-          onChange={(e) => setFiltroSIGA(e.target.value)}
-        />
-
-        <input
-          placeholder="Buscar Linea"
-          value={filtroLinea}
-          onChange={(e) => setFiltroLinea(e.target.value)}
-        />
-
-        <input
-          placeholder="Buscar Evento AGIL"
-          value={filtroEvento}
-          onChange={(e) => setFiltroEvento(e.target.value)}
-        />
-
-      </div>
-
-      {
-        filtroDashboard && (
-          <div
+          <h1
             style={{
-              backgroundColor: "#eef2ff",
-              padding: "10px",
-              borderRadius: "8px",
-              marginBottom: "15px",
-              textAlign: "center"
+              textAlign: "center",
+              margin: 0
             }}
           >
-            Mostrando filtro:
-            <strong
-              style = {{
-                marginLeft: "5px",
-                marginRight: "15px"
+            SIGAs
+          </h1>
+
+          <button
+            style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  backgroundColor: "#4CAF50",
+                  color: "white",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "5px",
+                  cursor: "pointer"}}
+            onClick={() => {
+              setSigaEditando(null);
+              setFormData(formularioVacio);
+              setMostrarFormulario(true);
+              setTecnicosSeleccionados([]);
+            }}        
+          >
+            Nuevo SIGA
+          </button>
+
+        </div>
+
+        <hr
+          style={{
+            margin: "20px 0"
+          }}
+        />
+
+        <h2>SIGAs Registrados</h2>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginBottom: "20px"
+          }}
+        >
+
+          <input
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db"
+            }}
+            placeholder="Buscar SIGA"
+            value={filtroSIGA}
+            onChange={(e) => setFiltroSIGA(e.target.value)}
+          />
+
+          <input
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db"
+            }}
+            placeholder="Buscar Linea"
+            value={filtroLinea}
+            onChange={(e) => setFiltroLinea(e.target.value)}
+          />
+
+          <input
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db"
+            }}
+            placeholder="Buscar Evento AGIL"
+            value={filtroEvento}
+            onChange={(e) => setFiltroEvento(e.target.value)}
+          />
+
+        </div>
+
+        {
+          filtroDashboard && (
+            <div
+              style={{
+                backgroundColor: "#eef2ff",
+                padding: "10px",
+                borderRadius: "8px",
+                marginBottom: "15px",
+                textAlign: "center"
               }}
-            > {filtroDashboard}
-            </strong>
-
-            <button
-              onClick={() =>
-                setFiltroDashboard("")
-              }
             >
-              Limpiar
-            </button>
-          </div>
-        )
-      }
-
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "20px",
-        }}
-      >
-
-        <thead>
-          <tr>
-            <th>SIGA</th>
-            <th>Línea</th>
-            <th>Evento AGIL</th>
-            <th>Cliente</th>
-            <th>Servicio</th>
-            <th>Prioridad</th>
-            <th>Estado</th>
-            <th>Grupo</th>
-            <th>Horas</th>
-            <th>SLA</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {sigas.filter((siga) => 
-            String(siga.numero_siga || "")
-              .toLowerCase().includes(filtroSIGA.toLowerCase())
-          )
-          .filter((siga) =>
-            (siga.numero_linea || "")
-              .toLowerCase().includes(filtroLinea.toLowerCase())
-          )
-          .filter((siga) =>
-            (siga.evento_agil || "")
-              .toLowerCase().includes(filtroEvento.toLowerCase())
-          )
-          .filter ((siga) => {
-            if (
-              filtroDashboard === "Vencidos"
-            ){
-              return (horasRestantesSIGA(siga.fecha_maxima_atencion) < 0 &&siga.estados_siga?.nombre !=="Cerrado");
-            }
-            if (
-              filtroDashboard === "SIGAs En campo"
-            ){
-              return (
-                siga.tecnico_id &&
-                siga.estados_siga?.nombre !== "Cerrado" &&
-                siga.estados_siga?.nombre !== "Abierto - Verificación"
-              );
-            }
-            if (
-              filtroDashboard === "SIGAs Por vencer"
-            ){
-              return (siga.fecha_maxima_atencion === "Por vencer");
-            }
-            if (
-              filtroDashboard === "SIGAs Dentro SLA"
-            ){
-              return (
-                siga.estados_siga?.nombre !== "Cerrado" &&
-                siga.estados_siga?.nombre !== "Diferido" &&
-                horasRestantesSIGA(
-                  siga.fecha_maxima_atencion
-                ) > 1
-              );
-            }
-            return true;
-          })
-
-          .map((siga) => {
-            const sla = obtenerSLASIGA(siga.fecha_maxima_atencion);
-            return (
-            <tr key={siga.id}>
-              <td>{siga.numero_siga}</td>
-              <td>{siga.numero_linea}</td>
-              <td>{siga.evento_agil}</td>
-              <td>{siga.cliente}</td>
-              <td>{siga.tipo_servicio?.nombre || "-"}</td>
-              <td>{siga.prioridades_siga?.prioridad}</td>
-              <td>{siga.estados_siga?.nombre}</td>
-              <td>{siga.grupos_gestion?.nombre}</td>
-              <td>{siga.fecha_maxima_atencion? horasRestantesSIGA(siga.fecha_maxima_atencion).toFixed(1): "-"}</td>
-              <td>
-                <span
-                  style={{color: sla.color, fontWeight: 600,}}>
-                  {sla.texto}
-                </span>
-              </td>
-              <td>
-                <button
-                  onClick={() => editarSIGA(siga)}
-                >
-                  Editar
-                </button>
-                <button
-                  onClick ={() =>
-                    cargarHistorialSIGA(siga)
-                  }
-                >
-                  Historial
-                </button>
-              </td>
-            </tr>
-            )
-          })}
-        </tbody>
-      </table>
-
-      {
-        mostrarFormulario && (
-
-          <div className="modal-overlay">
-            <div className="modal-content">
-
-              <div>
-                <h3>
-                  {sigaEditando
-                    ? "Editar SIGA"
-                    : "Nuevo SIGA"}
-                </h3>
-
-                {/* DATOS OPERATIVOS */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "15px",
-                    marginBottom: "15px"
-                  }}
-                >
-
-                  {/* SIGA */}
-                  <input
-                    type="text"
-                    placeholder="Número SIGA"
-                    value={formData.numero_siga || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        numero_siga: e.target.value
-                      })
-                    }
-                  />
-
-                  {/* FECHA */}
-                  <input                    
-                    type="datetime-local"
-                    value={formData.fecha_recepcion || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fecha_recepcion: e.target.value})
-                    }
-                    disabled={sigaEditando !== null}
-                    style={{width: "180px", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
-                  />
-
-                  {/* LÍNEA */}
-                  <input
-                    type="text"
-                    placeholder="Número Línea"
-                    value={formData.numero_linea || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        numero_linea: e.target.value
-                      })
-                    }
-                  />
-
-                  {/* TÉCNICOS */}
-                  <div style = {{ position: "relative", width: "100%" }}>
-                    <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
-                    style={{
-                        width: "100%",
-                        padding: "8px",
-                        cursor: "pointer"
-                      }}
-                    >
-                      {tecnicosSeleccionados.length > 0
-                        ? `👷 Técnicos (${tecnicosSeleccionados.length})`
-                        : "👷 Sin técnicos asignados"
-                      }
-                    </button>
-
-                    {/* CHIPS */}
-                    {tecnicosSeleccionados.length > 0 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "6px",
-                          marginTop: "8px"
-                        }}
-                      >
-                        {tecnicos
-                          .filter(t =>
-                            tecnicosSeleccionados.includes(t.id)
-                          )
-                          .map(t => (
-                            <span
-                              key={t.id}
-                              style={{
-                                backgroundColor: "#dbeafe",
-                                color: "#1e40af",
-                                padding: "4px 8px",
-                                borderRadius: "12px",
-                                fontSize: "12px",
-                                fontWeight: "500"
-                              }}
-                            >
-                              {t.nombre}
-                            </span>
-                          ))
-                        }
-                      </div>
-                    )}
-
-                    {/* DESPLEGABLE */}
-                    {mostrarTecnicos && (                  
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "100%",
-                          left: 0,
-                          marginTop: "5px",
-                          background: "white",
-                          width: "320px",
-                          maxHeight: "220px",
-                          overflowY: "auto",
-                          zIndex: 1000,
-                          border: "1px solid #ccc",
-                          padding: "10px",
-                          borderRadius: "8px",
-                          boxShadow:
-                              "0 2px 8px rgba(0,0,0,0.15)"
-                        }}
-                      >
-
-                        {tecnicos.map((tecnico) => (
-
-                          <label
-                            key={tecnico.id}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              textAlign: "left",
-                              fontSize: "14px",
-                              cursor: "pointer",
-                            }}
-                          >
-
-                            <input
-                              type="checkbox"
-                              checked={
-                                tecnicosSeleccionados.includes(
-                                  tecnico.id
-                                )
-                              }
-                              onChange={(e) => {
-
-                                if (e.target.checked) {
-                                  setTecnicosSeleccionados([
-                                    ...tecnicosSeleccionados,
-                                    tecnico.id
-                                  ]);
-                                }
-                                else {
-                                  setTecnicosSeleccionados(
-                                    tecnicosSeleccionados.filter(
-                                      id => id !== tecnico.id
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                            {" "}
-                            {tecnico.nombre}
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* EVENTO AGIL */}
-                <div
-                  style={{
-                    marginTop: "15px"
-                  }}
-                >
-                  <input
-                    type="text"
-                    style={{width: "100%"}}
-                    placeholder="Evento AGIL"
-                    value={formData.evento_agil || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        evento_agil: e.target.value
-                      })
-                    }
-                  />
-                </div>
-
-                {/* CLIENTE */}
-                <div
-                  style={{
-                    marginTop: "15px"
-                  }}
-                >
-                  <input
-                    type="text"
-                    style={{width: "100%"}}
-                    placeholder="Cliente"
-                    value={formData.cliente || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        cliente: e.target.value
-                      })
-                    }
-                  />
-                </div>
-
-                {/* ESTADO, TIPO SERVICIO + PRIORIDAD */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "15px",
-                    marginTop: "15px"
-                  }}
-                >
-
-                  <select
-                    value={formData.estado_siga_id || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        estado_siga_id: e.target.value
-                      })
-                    }
-                  >
-                    <option value="">
-                      Estado
-                    </option>
-
-                    {estadosSIGA.map((estado) => (
-                      <option
-                        key={estado.id}
-                        value={estado.id}
-                      >
-                        {estado.nombre}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={formData.tipo_servicio_id || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        tipo_servicio_id: e.target.value
-                      })
-                    }
-                  >
-                    <option value="">
-                      Tipo Servicio
-                    </option>
-                    {tiposServicio.map((tipo) => (
-                      <option
-                        key={tipo.id}
-                        value={tipo.id}
-                      >
-                        {tipo.nombre}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={formData.prioridad_id || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        prioridad_id: e.target.value
-                      })
-                    }
-                  >
-                    <option value="">
-                      Prioridad
-                    </option>
-                    {prioridadesSIGA.map((prioridad) => (
-                      <option
-                        key={prioridad.id}
-                        value={prioridad.id}
-                      >
-                        {prioridad.prioridad}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    style={{width: "100%", marginTop: "10px"}}
-                    value={formData.grupo_gestion_id || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        grupo_gestion_id: e.target.value
-                      })
-                    }
-                  >
-                    <option value="">
-                      Grupo Gestión
-                    </option>
-
-                    {gruposGestion.map((grupo) => (
-                      <option
-                        key={grupo.id}
-                        value={grupo.id}
-                      >
-                        {grupo.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ marginTop: "15px" }}>
-                  <textarea
-                    rows={3}
-                    style={{width: "100%", marginTop: "15px"}}
-                    placeholder="Descripción"
-                    value={formData.descripcion || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        descripcion: e.target.value
-                      })
-                    }                  
-                  />
-                </div>
-
-                <div style={{ marginTop: "15px" }}>
-                  <textarea
-                    rows={3}
-                    style={{width: "100%", marginTop: "15px"}}
-                    placeholder="Observaciones"
-                    value={formData.observaciones || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        observaciones: e.target.value
-                      })
-                    }                  
-                  />                  
-                </div>
-
-                <br/>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "10px"
-                  }}
-                >
-
-                  <button
-                    onClick={guardarSIGA}>
-                    Guardar SIGA
-                  </button>
-
-                  <button
-                    onClick={cerrarFormularioSIGA}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        mostrarHistorial && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h3>
-                Historial SIGA {sigaHistorial?.numero_siga}
-              </h3>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: "20px",
-                  marginBottom: "20px"
+              Mostrando filtro:
+              <strong
+                style = {{
+                  marginLeft: "5px",
+                  marginRight: "15px"
                 }}
-              >
-                <div>
-                  <strong>Cliente:</strong><br />
-                  {sigaHistorial?.cliente || "-"}
-                </div>
-
-                <div>
-                  <strong>Evento AGIL:</strong><br />
-                  {sigaHistorial?.evento_agil || "-"}
-                </div>
-
-                <div>
-                  <strong>Prioridad:</strong><br />
-                  {sigaHistorial?.prioridades_siga?.prioridad}
-                </div>
-
-                <div>
-                  <strong>Línea:</strong><br />
-                  {sigaHistorial?.numero_linea}
-                </div>
-
-                <div>
-                  <strong>Tipo Servicio:</strong><br />
-                  {sigaHistorial?.tipo_servicio?.nombre}
-                </div>                
-
-                <div>
-                  <strong>Estado:</strong><br />
-                  {sigaHistorial?.estados_siga?.nombre}
-                </div>
-
-                <div>
-                  <strong>Nivel:</strong><br />
-                  {sigaHistorial?.nivel}
-                </div>
-
-                <div>
-                  <strong>Grupo de gestión:</strong><br />
-                  {sigaHistorial?.grupos_gestion?.nombre || "-"}
-                </div>
-
-                <div>
-                  <strong>Técnico:</strong><br />
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                      marginTop: "5px"
-                    }}
-                  >
-                    {sigaHistorial?.siga_tecnicos
-                      ?.map((st) => (
-                        <span
-                          key={st.tecnico_id}
-                          style={{
-                            backgroundColor: "#dbeafe",
-                            color: "#1e40af",
-                            padding: "4px 8px",
-                            borderRadius: "12px",
-                            fontSize: "12px"
-                          }}
-                        >
-                          {st.tecnicos?.nombre}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-
-                <div>
-                  <strong>Fecha Recpeción:</strong><br />
-                  {formatoFechaHora(sigaHistorial?.fecha_recepcion)}
-                </div>
-
-                <div>
-                  <strong>F. Máxima Atención:</strong><br />
-                  {formatoFechaHora(sigaHistorial?.fecha_maxima_atencion)}
-                </div>
-
-                <div>
-                  <strong>SLA:</strong><br />
-                  {obtenerSLASIGA(sigaHistorial?.fecha_maxima_atencion).texto}
-                </div>
-
-                <div>
-                  <strong>Tiempo Consumido:</strong><br />
-                  {formatearHoras(
-                    metricas?.tiempoConsumidoHoras || 0
-                  )}
-                </div>
-
-                <div>
-                  <strong>Tiempo Diferido:</strong><br />
-                  {formatearHoras(
-                    metricas?.tiempoDiferidoHoras || 0
-                  )}
-                </div>
-
-                <div>
-                  <strong>Tiempo Total:</strong><br />
-                  {formatearHoras(
-                    metricas?.tiempoTotalHoras || 0
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    gridColumn: "1 / span 3",
-                    textAlign: "center",
-                    marginTop: "10px",
-                    padding: "15px",
-                    borderRadius: "8px",
-                    backgroundColor: metricas?.cumpleSLA
-                      ? "#ecfdf5"
-                      : "#fef2f2"
-                  }}
-                >
-                  <strong
-                    style={{
-                      display: "block",
-                      marginBottom: "10px"
-                    }}
-                  >
-                    Cumplimiento SLA
-                  </strong>
-
-                  <span
-                    style={{
-                      color:
-                        metricas?.cumpleSLA
-                          ? "#16a34a"
-                          : "#dc2626",
-                      fontWeight: "bold",
-                      fontSize: "1.3rem"
-                    }}
-                  >
-                    {
-                      metricas?.cumpleSLA
-                        ? "✅ CUMPLE"
-                        : "❌ INCUMPLE"
-                    }
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: "20px" }}>
-                <strong>Descripción:</strong><br />
-                {sigaHistorial?.descripcion || "-"}
-              </div>
-
-              <br/>
-
-              <div>
-                <strong>Observaciones:</strong><br />
-                {sigaHistorial?.observaciones || "-"}
-              </div>
-
-              <hr style={{ margin: "20px 0"}} />
-
-              <h3>Timeline SIGA</h3>
-
-              <div
-                style={{
-                width: "700px",
-                margin: "0 auto"
-                }}
-              >
-
-                {historialSIGA.map((mov) => {
-
-                  let color = "#2563eb";
-
-                  if (mov.tipo_movimiento.includes("Creación")) {
-                    color = "#22c55e"
-                  }
-                  if (mov.tipo_movimiento.includes("Cambio de estado")) {
-                    color = "#3b82f6"
-                  }
-                  if (mov.tipo_movimiento.includes("Cierre")) {
-                    color = "#64748b"
-                  }
-                  if (mov.tipo_movimiento.includes("Asignación Técnico")) {
-                    color = "#06b6d4"
-                  }
-                  if (mov.tipo_movimiento.includes("Inicio Diferido")) {
-                    color = "#f59e0b"
-                  }
-                  if (mov.tipo_movimiento.includes("Fin diferido")) {
-                    color = "#84cc16"
-                  }
-                  if (mov.tipo_movimiento.includes("Restablecimiento")) {
-                    color = "#0ea5e9"
-                  }
-                  if (mov.tipo_movimiento.includes("Cambio Grupo Gestión")) {
-                    color = "#8b5cf6"
-                  }              
-
-                  return (
-                    <div
-                      key={mov.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        marginBottom: "20px"
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "40px",
-                          display: "flex",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "12px",
-                            height: "12px",
-                            backgroundColor: color,
-                            borderRadius: "50%",
-                            marginTop: "5px"
-                          }}
-                        />
-                      </div>
-
-                      <div
-                        style={{
-                          borderLeft: "2px solid #d1d5db",
-                          paddingLeft: "20px",
-                          marginLeft: "-6px",
-                          textAlign: "left",
-                          width: "500px"
-                        }}
-                      >
-                        
-                        <div
-                          style={{
-                            fontWeight: "600",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          {formatoFechaHistorial(
-                            mov.fecha_movimiento
-                          )}
-                        </div>
-
-                        <div>
-                          {mov.comentario}
-                          {mov.perfiles?.correo &&
-                            ` por ${mov.perfiles.correo}`}
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
-
-              </div>
+              > {filtroDashboard}
+              </strong>
 
               <button
                 onClick={() =>
-                  setMostrarHistorial(false)
+                  setFiltroDashboard("")
                 }
               >
-                Cerrar
+                Limpiar
               </button>
             </div>
-          </div>
-        )
-      }
+          )
+        }
+
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: "20px",
+          }}
+        >
+
+          <thead>
+            <tr>
+              <th>SIGA</th>
+              <th>Línea</th>
+              <th>Evento AGIL</th>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Grupo</th>
+              <th>Horas</th>
+              <th>SLA</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {sigas.filter((siga) => 
+              String(siga.numero_siga || "")
+                .toLowerCase().includes(filtroSIGA.toLowerCase())
+            )
+            .filter((siga) =>
+              (siga.numero_linea || "")
+                .toLowerCase().includes(filtroLinea.toLowerCase())
+            )
+            .filter((siga) =>
+              (siga.evento_agil || "")
+                .toLowerCase().includes(filtroEvento.toLowerCase())
+            )
+            .filter ((siga) => {
+              if (
+                filtroDashboard === "Vencidos"
+              ){
+                return (horasRestantesSIGA(siga.fecha_maxima_atencion) < 0 &&siga.estados_siga?.nombre !=="Cerrado");
+              }
+              if (
+                filtroDashboard === "SIGAs En campo"
+              ){
+                return (
+                  siga.tecnico_id &&
+                  siga.estados_siga?.nombre !== "Cerrado" &&
+                  siga.estados_siga?.nombre !== "Abierto - Verificación"
+                );
+              }
+              if (
+                filtroDashboard === "SIGAs Por vencer"
+              ){
+                return (siga.fecha_maxima_atencion === "Por vencer");
+              }
+              if (
+                filtroDashboard === "SIGAs Dentro SLA"
+              ){
+                return (
+                  siga.estados_siga?.nombre !== "Cerrado" &&
+                  siga.estados_siga?.nombre !== "Diferido" &&
+                  horasRestantesSIGA(
+                    siga.fecha_maxima_atencion
+                  ) > 1
+                );
+              }
+              return true;
+            })
+
+            .map((siga) => {
+              const sla = obtenerSLASIGA(siga.fecha_maxima_atencion);
+              return (
+              <tr key={siga.id}>
+                <td>{siga.numero_siga}</td>
+                <td>{siga.numero_linea}</td>
+                <td>{siga.evento_agil}</td>
+                <td>{siga.cliente}</td>
+                <td>{siga.tipo_servicio?.nombre || "-"}</td>
+                <td>{siga.prioridades_siga?.prioridad}</td>
+                <td>{siga.estados_siga?.nombre}</td>
+                <td>{siga.grupos_gestion?.nombre}</td>
+                <td>{siga.fecha_maxima_atencion? horasRestantesSIGA(siga.fecha_maxima_atencion).toFixed(1): "-"}</td>
+                <td>
+                  <span
+                    style={{color: sla.color, fontWeight: 600,}}>
+                    {sla.texto}
+                  </span>
+                </td>
+                <td>
+                  <div style={{
+                      display: "flex",
+                      gap: "4px",
+                      justifyContent: "center"
+                    }}>
+                    <button
+                      onClick={() => editarSIGA(siga)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick ={() =>
+                        cargarHistorialSIGA(siga)
+                      }
+                    >
+                      Historial
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        {
+          mostrarFormulario && (
+
+            <div className="modal-overlay">
+              <div className="modal-content">
+
+                <div>
+                  <h3>
+                    {sigaEditando
+                      ? "Editar SIGA"
+                      : "Nuevo SIGA"}
+                  </h3>
+
+                  {/* DATOS OPERATIVOS */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "15px",
+                      marginBottom: "15px"
+                    }}
+                  >
+
+                    {/* SIGA */}
+                    <input
+                      style={{
+                        width: "90%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      type="text"
+                      placeholder="Número SIGA"
+                      value={formData.numero_siga || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          numero_siga: e.target.value
+                        })
+                      }
+                    />
+
+                    {/* FECHA */}
+                    <input        
+                      type="datetime-local"
+                      value={formData.fecha_recepcion || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          fecha_recepcion: e.target.value})
+                      }
+                      disabled={sigaEditando !== null}
+                      style={{width: "180px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
+                    />
+
+                    {/* LÍNEA */}
+                    <input
+                      style={{
+                        width: "90%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      type="text"
+                      placeholder="Número Línea"
+                      value={formData.numero_linea || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          numero_linea: e.target.value
+                        })
+                      }
+                    />
+
+                    {/* TÉCNICOS */}
+                    <div style = {{ position: "relative" }}>
+                      <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
+                      style={{
+                          width: "100%",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {tecnicosSeleccionados.length > 0
+                          ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                          : "👷 Sin técnicos asignados"
+                        }
+                      </button>
+
+                      {/* CHIPS */}
+                      {tecnicosSeleccionados.length > 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "6px",
+                            marginTop: "8px"
+                          }}
+                        >
+                          {tecnicos
+                            .filter(t =>
+                              tecnicosSeleccionados.includes(t.id)
+                            )
+                            .map(t => (
+                              <span
+                                key={t.id}
+                                style={{
+                                  backgroundColor: "#dbeafe",
+                                  color: "#1e40af",
+                                  padding: "4px 8px",
+                                  borderRadius: "12px",
+                                  fontSize: "12px",
+                                  fontWeight: "500"
+                                }}
+                              >
+                                {t.nombre}
+                              </span>
+                            ))
+                          }
+                        </div>
+                      )}
+
+                      {/* DESPLEGABLE */}
+                      {mostrarTecnicos && (                  
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            marginTop: "5px",
+                            background: "white",
+                            width: "320px",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            zIndex: 1000,
+                            border: "1px solid #ccc",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            boxShadow:
+                                "0 2px 8px rgba(0,0,0,0.15)"
+                          }}
+                        >
+
+                          {tecnicos.map((tecnico) => (
+
+                            <label
+                              key={tecnico.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                textAlign: "left",
+                                fontSize: "14px",
+                                cursor: "pointer",
+                              }}
+                            >
+
+                              <input
+                                type="checkbox"
+                                checked={
+                                  tecnicosSeleccionados.includes(
+                                    tecnico.id
+                                  )
+                                }
+                                onChange={(e) => {
+
+                                  if (e.target.checked) {
+                                    setTecnicosSeleccionados([
+                                      ...tecnicosSeleccionados,
+                                      tecnico.id
+                                    ]);
+                                  }
+                                  else {
+                                    setTecnicosSeleccionados(
+                                      tecnicosSeleccionados.filter(
+                                        id => id !== tecnico.id
+                                      )
+                                    );
+                                  }
+                                }}
+                              />
+                              {" "}
+                              {tecnico.nombre}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* EVENTO AGIL */}
+                  <div
+                    style={{
+                      marginTop: "15px"
+                    }}
+                  >
+                    <input
+                      style={{
+                        width: "98%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      type="text"
+                      placeholder="Evento AGIL"
+                      value={formData.evento_agil || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          evento_agil: e.target.value
+                        })
+                      }
+                    />
+                  </div>
+
+                  {/* CLIENTE */}
+                  <div
+                    style={{
+                      marginTop: "15px"
+                    }}
+                  >
+                    <input
+                      style={{
+                        width: "98%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      type="text"
+                      placeholder="Cliente"
+                      value={formData.cliente || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cliente: e.target.value
+                        })
+                      }
+                    />
+                  </div>
+
+                  {/* ESTADO, TIPO SERVICIO + PRIORIDAD */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "15px",
+                      marginTop: "15px"
+                    }}
+                  >
+
+                    <select
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      value={formData.estado_siga_id || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          estado_siga_id: e.target.value
+                        })
+                      }
+                    >
+                      <option value="">
+                        Estado
+                      </option>
+
+                      {estadosSIGA.map((estado) => (
+                        <option
+                          key={estado.id}
+                          value={estado.id}
+                        >
+                          {estado.nombre}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      value={formData.tipo_servicio_id || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          tipo_servicio_id: e.target.value
+                        })
+                      }
+                    >
+                      <option value="">
+                        Tipo Servicio
+                      </option>
+                      {tiposServicio.map((tipo) => (
+                        <option
+                          key={tipo.id}
+                          value={tipo.id}
+                        >
+                          {tipo.nombre}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      value={formData.prioridad_id || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          prioridad_id: e.target.value
+                        })
+                      }
+                    >
+                      <option value="">
+                        Prioridad
+                      </option>
+                      {prioridadesSIGA.map((prioridad) => (
+                        <option
+                          key={prioridad.id}
+                          value={prioridad.id}
+                        >
+                          {prioridad.prioridad}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      style={{width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db"}}
+                      value={formData.grupo_gestion_id || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          grupo_gestion_id: e.target.value
+                        })
+                      }
+                    >
+                      <option value="">
+                        Grupo Gestión
+                      </option>
+
+                      {gruposGestion.map((grupo) => (
+                        <option
+                          key={grupo.id}
+                          value={grupo.id}
+                        >
+                          {grupo.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginTop: "15px" }}>
+                    <textarea
+                      rows={3}
+                      style={{width: "98%", marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db"}}
+                      placeholder="Descripción"
+                      value={formData.descripcion || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          descripcion: e.target.value
+                        })
+                      }                  
+                    />
+                  </div>
+
+                  <div style={{ marginTop: "15px" }}>
+                    <textarea
+                      rows={3}
+                      style={{width: "98%", marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db"}}
+                      placeholder="Observaciones"
+                      value={formData.observaciones || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          observaciones: e.target.value
+                        })
+                      }                  
+                    />                  
+                  </div>
+
+                  <br/>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: "10px"
+                    }}
+                  >
+
+                    <button
+                      style={{
+                      backgroundColor: "#4CAF50",
+                      color: "white",
+                      border: "none",
+                      padding: "10px 20px",
+                      borderRadius: "6px",
+                      cursor: "pointer"
+                    }}
+                      onClick={guardarSIGA}>
+                      Guardar SIGA
+                    </button>
+
+                    <button
+                      style={{
+                      backgroundColor: "#f44336",
+                      color: "white",
+                      border: "none",
+                      padding: "10px 20px",
+                      borderRadius: "6px",
+                      cursor: "pointer"
+                    }}
+                      onClick={cerrarFormularioSIGA}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        }
+
+        <HistorialSIGAModal
+
+          visible={mostrarHistorialSIGA}
+          sigaHistorial={sigaHistorial}
+          historialSIGA={historialSIGA}
+          onClose={() =>
+            setMostrarHistorialSIGA(false)
+          }
+        />
+        
+      </div>
+
     </div>
   );
 }

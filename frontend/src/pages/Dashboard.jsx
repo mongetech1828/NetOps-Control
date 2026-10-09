@@ -378,10 +378,11 @@ function Dashboard() {
 
   const cardStyle = {
     backgroundColor: "#ffffff",
-    borderRadius: "10px",
-    padding: "20px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+    borderRadius: "14px",
+    padding: "14px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     textAlign: "center",
+    transition: "all 0.2s ease"
   };
 
   async function cerrarSesion() {
@@ -410,7 +411,7 @@ function Dashboard() {
       await supabase
         .from("sigas")
         .select(`id,numero_siga,cliente,estados_siga(nombre)`)
-        .or(`numero_siga.ilike.%${texto}%,cliente.ilike.%${texto}%`);
+        .or(`numero_siga.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
 
     setResultadosBusqueda([
 
@@ -545,18 +546,57 @@ function Dashboard() {
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: "20px",
-          marginTop: "30px",
+          marginTop: "15px",
         }}
       >
-        <div style={cardStyle}>
-          <h3>OST Registradas</h3>
-          <h1>{totalOrdenes}</h1>
+        <div style={{
+          ...cardStyle,
+          borderLeft: "5px solid #2563eb",
+          cursor: "pointer"}}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >
+            OST Registradas
+          </h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{totalOrdenes}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #22c55e",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -565,14 +605,41 @@ function Dashboard() {
             })
           }
         >
-          <h3>Dentro SLA</h3>
-          <h1>{dentroSLA}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >
+            Dentro SLA
+          </h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >
+            {dentroSLA}
+          </h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #f59e0b",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -581,14 +648,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>Por Vencer</h3>
-          <h1>{porVencer}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Por Vencer</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{porVencer}</h1>
         </div>
 
         <div style={{
             ...cardStyle, 
+            borderLeft: "5px solid #ef4444",
             cursor: "pointer"
           }} 
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -597,14 +687,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>Vencen Hoy</h3>
-          <h1>{vencenHoy}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Vencen Hoy</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{vencenHoy}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #991b1b",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -613,14 +726,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>Vencidas</h3>
-          <h1>{vencidas}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Vencidas</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{vencidas}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #8b5cf6",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+        
           onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -629,14 +765,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>Órdenes Reingresadas</h3>
-          <h1>{totalReingresadas}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Órdenes Reingresadas</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{totalReingresadas}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #06b6d4",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
             onClick={() =>
             navigate("/ordenes", {
               state: {
@@ -645,8 +804,19 @@ function Dashboard() {
             })
           }
         >
-          <h3>En Campo</h3>
-          <h1>{enCampo}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >En Campo</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{enCampo}</h1>
         </div>
       </div>
 
@@ -669,13 +839,25 @@ function Dashboard() {
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: "20px",
-          marginTop: "30px",
+          marginTop: "15px",
         }}
       >
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #22c55e",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/siga", {
               state: {
@@ -684,14 +866,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>Dentro SLA</h3>
-          <h1>{sigasDentroSLA}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Dentro SLA</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{sigasDentroSLA}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #06b6d4",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/siga", {
               state: {
@@ -700,14 +905,37 @@ function Dashboard() {
             })
           }
         >
-          <h3>En Campo</h3>
-          <h1>{sigasEnCampo}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >En Campo</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{sigasEnCampo}</h1>
         </div>
 
         <div style={{
             ...cardStyle,
+            borderLeft: "5px solid #f59e0b",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
           onClick={() =>
             navigate("/siga", {
               state: {
@@ -716,15 +944,38 @@ function Dashboard() {
             })
           }
         >
-          <h3>Por Vencer</h3>
-          <h1>{sigasPorVencer}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Por Vencer</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{sigasPorVencer}</h1>
         </div>
 
         <div
           style={{
             ...cardStyle,
+            borderLeft: "5px solid #991b1b",
             cursor: "pointer"
           }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+          
           onClick={() =>
             navigate("/siga", {
               state: {
@@ -733,9 +984,19 @@ function Dashboard() {
             })
           }
         >
-          <h3>Vencidos</h3>
-
-          <h1>{sigasVencidos}</h1>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Vencidos</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{sigasVencidos}</h1>
         </div>
       </div>
 

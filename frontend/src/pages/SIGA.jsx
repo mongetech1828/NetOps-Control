@@ -41,15 +41,11 @@ function SIGA() {
   const [formData, setFormData] =
     useState(formularioVacio);
 
-  function calcularFechaMaximaSIGA(
-    fechaRecepcion,
-    horasSLA
-  ) {
+  function calcularFechaMaximaSIGA(fechaRecepcion,horasSLA) {
     const fecha = new Date(fechaRecepcion);
-    fecha.setHours(
-      fecha.getHours() + horasSLA
-    );
-    return fecha;
+    const milisegundosSLA = horasSLA * 60 * 60 * 1000;
+
+    return new Date(fecha.getTime() + milisegundosSLA);
   }
 
   function horasRestantesSIGA(fechaMaxima) {
@@ -94,7 +90,7 @@ function SIGA() {
       return {texto: "⚫Vencido",color: "#dc2626",};}
     if (horas <= 1) {
       return {texto: "🟡Prox. vencer",color: "#eab308",};}
-    return {texto: "🟢Dentro SLA",color: "#16a34a",};
+    return {texto: "🟢En tiempo",color: "#16a34a",};
   }
 
   async function cargarEstadosSIGA() {
@@ -138,29 +134,78 @@ function SIGA() {
     setTecnicos(data || []);
   }
 
-  async function guardarSIGA() {
-    const prioridadSeleccionada = 
-      prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
-    const fechaMaxima = 
-      calcularFechaMaximaSIGA(
-          formData.fecha_recepcion,
-          prioridadSeleccionada.horas_sla
-      );
-    const nivelCalculado =
-      formData.tecnico_id
-        ? "ST"
-        : "GT";
-      
-    const {data: sigaExistente} = await supabase
-      .from("sigas")
-      .select("id")
-      .eq("numero_siga", formData.numero_siga.trim())
-      .single();
+  async function registrarCambiosTecnicosSIGA(sigaId, agregados, removidos, user) {
+    if (agregados.length === 0 && removidos.length === 0) {
+      return true;
+    }
 
+    const idsTecnicos = [...new Set([...agregados, ...removidos])];
+    const { data: tecnicosNombres, error: errorTecnicos } = await supabase
+      .from("tecnicos")
+      .select("id, nombre")
+      .in("id", idsTecnicos);
+
+    if (errorTecnicos) {
+      console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorTecnicos);
+      alert("Los técnicos se actualizaron, pero no se pudieron obtener sus nombres para el historial.");
+      return false;
+    }
+
+    const nombresPorId = new Map(
+      (tecnicosNombres || []).map((tecnico) => [Number(tecnico.id), tecnico.nombre])
+    );
+    const idsSinNombre = idsTecnicos.filter((id) => !nombresPorId.has(Number(id)));
+    if (idsSinNombre.length > 0) {
+      console.error("TÉCNICOS SIN NOMBRE PARA HISTORIAL:", idsSinNombre);
+      alert("Los técnicos se actualizaron, pero no se encontraron todos sus nombres para el historial.");
+      return false;
+    }
+
+    const movimientos = [];
+    if (agregados.length > 0) {
+      const nombresAgregados = agregados.map((id) => nombresPorId.get(Number(id))).join(", ");
+      movimientos.push({
+        siga_id: sigaId,
+        usuario_id: user.id,
+        tipo_movimiento: "Asignación Técnico",
+        comentario: `Técnico(s) asignado(s): ${nombresAgregados}`
+      });
+    }
+
+    if (removidos.length > 0) {
+      const nombresRemovidos = removidos.map((id) => nombresPorId.get(Number(id))).join(", ");
+      movimientos.push({
+        siga_id: sigaId,
+        usuario_id: user.id,
+        tipo_movimiento: "Asignación Técnico",
+        comentario: `Técnico(s) removido(s): ${nombresRemovidos}`
+      });
+    }
+
+    const { error: historialError } = await supabase
+      .from("historial_siga")
+      .insert(movimientos);
+
+    if (historialError) {
+      console.error("ERROR REGISTRANDO CAMBIO DE TÉCNICOS EN HISTORIAL SIGA:", historialError);
+      alert("Los técnicos se actualizaron, pero no se pudo guardar el cambio en el historial.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function guardarSIGA() {
     if (!formData.numero_siga) {alert("Debe indicar el número SIGA");
       return;
     }
+    if (formData.numero_siga.length !== 10) {alert("El número SIGA debe contener exactamente 10 dígitos");
+      return;
+    }
     if (!formData.numero_linea) {alert("Debe indicar el número de línea");
+      return;
+    }
+    if (formData.numero_linea.length !== 8) {alert("El número de LINEA debe contener exactamente 8 dígitos");
       return;
     }
     if (!formData.cliente) {alert("Debe indicar el cliente");
@@ -179,6 +224,32 @@ function SIGA() {
       return;
     }
 
+    const prioridadSeleccionada =
+      prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
+    if (!prioridadSeleccionada) {
+      alert("No se encontró la prioridad seleccionada");
+      return;
+    }
+
+    const fechaMaxima = calcularFechaMaximaSIGA(
+      formData.fecha_recepcion,
+      prioridadSeleccionada.horas_sla
+    );
+    const nivelCalculado =
+      tecnicosSeleccionados.length > 0 ? "ST" : "GT";
+
+    const { data: sigaExistente, error: errorConsultaSiga } = await supabase
+      .from("sigas")
+      .select("id")
+      .eq("numero_siga", formData.numero_siga.trim())
+      .maybeSingle();
+
+    if (errorConsultaSiga) {
+      console.error("ERROR CONSULTANDO SIGA:", errorConsultaSiga);
+      alert("No fue posible verificar si el número SIGA ya existe.");
+      return;
+    }
+
     if (!sigaEditando && sigaExistente) {
       alert("Ya existe un SIGA con ese número. Utilice Editar para modificarlo.");
 
@@ -190,6 +261,11 @@ function SIGA() {
 
     if (sigaEditando){
       const sigaActual = sigas.find(s => s.id ===sigaEditando);
+      if (!sigaActual) {
+        alert("No se encontró el SIGA que intenta actualizar.");
+        return;
+      }
+
       const {error} = await supabase
         .from ("sigas")
         .update({
@@ -212,7 +288,15 @@ function SIGA() {
         return;
       }
 
-      const {data: {user}} = await supabase.auth.getUser();      
+      const {
+        data: { user },
+        error: usuarioError
+      } = await supabase.auth.getUser();
+      if (usuarioError || !user) {
+        console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", usuarioError);
+        alert("No se pudo identificar al usuario para guardar el historial.");
+        return;
+      }
 
       if (
         sigaActual.estado_siga_id !==
@@ -229,103 +313,103 @@ function SIGA() {
             e =>
               e.id ===
               Number(formData.estado_siga_id)
-          );
-        const { error: historialError } =
-          await supabase
+            );
+        const movimientos = [
+            {
+              siga_id: sigaEditando,
+              usuario_id: user.id,
+              tipo_movimiento: "Cambio Estado",
+              estado_anterior: sigaActual.estado_siga_id,
+              estado_nuevo: Number(formData.estado_siga_id),
+              comentario: `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
+            }
+        ];
+
+        if (estadoNuevo?.nombre === "Diferido") {
+            movimientos.push({
+              siga_id: sigaEditando,
+              usuario_id: user.id,
+              tipo_movimiento: "Inicio Diferido",
+              comentario: "El reporte fue colocado en estado Diferido"
+            });
+        }
+
+        if (
+            estadoAnterior?.nombre === "Diferido" &&
+            estadoNuevo?.nombre !== "Diferido"
+        ) {
+            movimientos.push({
+              siga_id: sigaEditando,
+              usuario_id: user.id,
+              tipo_movimiento: "Fin Diferido",
+              comentario: "El reporte salió del estado Diferido"
+            });
+        }
+
+        if (estadoNuevo?.nombre === "Restablecimiento") {
+            movimientos.push({
+              siga_id: sigaEditando,
+              usuario_id: user.id,
+              tipo_movimiento: "Restablecimiento",
+              comentario: "Servicio restablecido"
+            });
+        }
+
+        if (estadoNuevo?.nombre === "Cerrado") {
+            movimientos.push({
+              siga_id: sigaEditando,
+              usuario_id: user.id,
+              tipo_movimiento: "Cierre",
+              comentario: "Reporte cerrado"
+            });
+        }
+
+        const { error: historialError } = await supabase
             .from("historial_siga")
-            .insert([
-              {
-                siga_id: sigaEditando,
-                usuario_id: user.id,
-                tipo_movimiento: "Cambio Estado",
-                estado_anterior: sigaActual.estado_siga_id,
-                estado_nuevo:
-                  Number(
-                    formData.estado_siga_id
-                  ),
-                comentario: `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
-              }
-            ]);
+            .insert(movimientos);
 
-            if (
-              estadoNuevo?.nombre === "Diferido"
-            ) {
-              await supabase
-                .from("historial_siga")
-                .insert([
-                  {
-                    siga_id: sigaEditando,
-                    usuario_id: user.id,
-                    tipo_movimiento:"Inicio Diferido",
-                    comentario:"El reporte fue colocado en estado Diferido"
-                  }
-                ]);
-            }
-
-            if (
-              estadoAnterior?.nombre === "Diferido" &&
-              estadoNuevo?.nombre !== "Diferido"
-            ) {
-              await supabase
-                .from("historial_siga")
-                .insert([
-                  {
-                    siga_id: sigaEditando,
-                    usuario_id: user.id,
-                    tipo_movimiento:"Fin Diferido",
-                    comentario:"El reporte salió del estado Diferido"
-                  }
-                ]);
-            }
-            
-            if (
-              estadoNuevo?.nombre === "Restablecimiento"
-            ) {
-
-              await supabase
-                .from("historial_siga")
-                .insert([
-                  {
-                    siga_id: sigaEditando,
-                    usuario_id: user.id,
-                    tipo_movimiento:"Restablecimiento",
-                    comentario:"Servicio restablecido"
-                  }
-                ]);
-
-            }
-
-            if (
-              estadoNuevo?.nombre === "Cerrado"
-            ) {
-
-              await supabase
-                .from("historial_siga")
-                .insert([
-                  {
-                    siga_id: sigaEditando,
-                    usuario_id: user.id,
-                    tipo_movimiento:"Cierre",
-                    comentario:"Reporte cerrado"
-                  }
-                ]);
-
-            }
-        
         if (historialError) {
-        console.error(
-          "ERROR HISTORIAL:",
-          historialError
-          );
+            console.error("ERROR HISTORIAL SIGA:", historialError);
+            alert("El SIGA se actualizó, pero no se pudo guardar el movimiento en el historial.");
+            return;
         }
       }
 
-      await supabase
-      .from("siga_tecnicos")
-      .delete()
-      .eq("siga_id",sigaEditando);
+      const { data: tecnicosActuales, error: errorTecnicosActuales } = await supabase
+        .from("siga_tecnicos")
+        .select("tecnico_id")
+        .eq("siga_id", sigaEditando);
+
+      if (errorTecnicosActuales) {
+        console.error("ERROR CONSULTANDO TÉCNICOS ACTUALES DEL SIGA:", errorTecnicosActuales);
+        alert("El SIGA se actualizó, pero no se pudieron consultar sus técnicos actuales.");
+        return;
+      }
+
+      const idsTecnicosActuales = tecnicosActuales.map(
+        ({ tecnico_id }) => Number(tecnico_id)
+      );
+      const idsTecnicosSeleccionados = tecnicosSeleccionados.map(Number);
+      const agregados = tecnicosSeleccionados.filter(
+        (id) => !idsTecnicosActuales.includes(Number(id))
+      );
+      const removidos = idsTecnicosActuales.filter(
+        (id) => !idsTecnicosSeleccionados.includes(id)
+      );
+
+      const { error: errorEliminarTecnicos } = await supabase
+        .from("siga_tecnicos")
+        .delete()
+        .eq("siga_id", sigaEditando);
+
+      if (errorEliminarTecnicos) {
+        console.error("ERROR ACTUALIZANDO TÉCNICOS DEL SIGA:", errorEliminarTecnicos);
+        alert("No se pudieron actualizar los técnicos asignados al SIGA.");
+        return;
+      }
+
       if (
-        tecnicosSeleccionados.length > 0          
+        tecnicosSeleccionados.length > 0
       ) {
         const asignaciones = tecnicosSeleccionados.map(
           tecnicoId => ({
@@ -335,9 +419,25 @@ function SIGA() {
           })
         );
 
-        await supabase
+        const { error: errorInsertarTecnicos } = await supabase
         .from("siga_tecnicos")
         .insert(asignaciones);
+
+        if (errorInsertarTecnicos) {
+          console.error("ERROR INSERTANDO TÉCNICOS DEL SIGA:", errorInsertarTecnicos);
+          alert("No se pudieron guardar los técnicos asignados al SIGA.");
+          return;
+        }
+      }
+
+      const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
+        sigaEditando,
+        agregados,
+        removidos,
+        user
+      );
+      if (!historialTecnicosGuardado) {
+        return;
       }
 
       if (
@@ -372,20 +472,20 @@ function SIGA() {
                 grupoAnterior?.nombre || "-"
               } a ${
                 grupoNuevo?.nombre || "-"
-              }`
-          }
+                }`
+            }
         ]);
 
         if (historialGrupoError) {
-          console.error(
-          historialGrupoError
-          );
+            console.error("ERROR HISTORIAL GRUPO SIGA:", historialGrupoError);
+            alert("El grupo se actualizó, pero no se pudo guardar el cambio en el historial.");
+            return;
         }
       }      
 
     }
     else {
-      const {data, error} = await supabase      
+      const {data, error} = await supabase
         .from("sigas")
         .insert([
           {
@@ -400,7 +500,7 @@ function SIGA() {
             tecnico_id: tecnicosSeleccionados.length > 0 ? tecnicosSeleccionados[0] : null,
             nivel: nivelCalculado,
             fecha_recepcion: formData.fecha_recepcion,
-            fecha_maxima_atencion: fechaMaxima,
+            fecha_maxima_atencion: fechaMaxima.toLocaleString("sv-SE").replace(" ", "T"),
             descripcion: formData.descripcion,
             observaciones: formData.observaciones
           }
@@ -412,28 +512,33 @@ function SIGA() {
         return;
       }
 
-      const { data: {user} } = await supabase.auth.getUser();
+      let usuarioCreacion = null;
+      const {
+        data: { user },
+        error: usuarioError
+      } = await supabase.auth.getUser();
 
-      const {error: historialError} = await supabase
-        .from("historial_siga")
-        .insert([
-          {
-            siga_id: data.id,
-            usuario_id: user.id,
-            tipo_movimiento: "Creación",
-            estado_nuevo: Number(
-              formData.estado_siga_id
-            ),
-            comentario:
-              `Creación del reporte SIGA ${formData.numero_siga}`
-          }
-        ]);
+      if (usuarioError || !user) {
+        console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", usuarioError);
+        alert("El SIGA se creó, pero no se pudo identificar al usuario para guardar el historial.");
+      } else {
+        usuarioCreacion = user;
+        const { error: historialError } = await supabase
+          .from("historial_siga")
+          .insert([
+            {
+              siga_id: data.id,
+              usuario_id: user.id,
+              tipo_movimiento: "Creación",
+              estado_nuevo: Number(formData.estado_siga_id),
+              comentario: `Creación del reporte SIGA ${formData.numero_siga}`
+            }
+          ]);
 
-      if (historialError) {
-        console.error(
-          "ERROR HISTORIAL SIGA: ",
-          historialError
-        );
+        if (historialError) {
+          console.error("ERROR HISTORIAL SIGA:", historialError);
+          alert("El SIGA se creó, pero no se pudo guardar su inicio en el historial.");
+        }
       }
 
       if (tecnicosSeleccionados.length > 0) {
@@ -462,18 +567,24 @@ function SIGA() {
             "ERROR TECNICOS:",
             tecnicosError
           );
+          alert("El SIGA se creó, pero no se pudieron guardar sus técnicos asignados.");
+        } else if (usuarioCreacion) {
+          const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
+            data.id,
+            tecnicosSeleccionados,
+            [],
+            usuarioCreacion
+          );
+          if (!historialTecnicosGuardado) {
+            return;
+          }
         }
       }
     }
 
-    console.log(
-      "TECNICOS SELECCIONADOS:",
-      tecnicosSeleccionados
-    );    
-
     await cargarSigas();
     cerrarFormularioSIGA();
-  }  
+  }
 
   function editarSIGA(siga) {
 
@@ -511,7 +622,7 @@ function SIGA() {
 
   async function cargarHistorialSIGA(siga) {
     setSigaHistorial(siga);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("historial_siga")
       .select(`
         *,
@@ -520,114 +631,23 @@ function SIGA() {
       `)
       .eq("siga_id", siga.id)
       .order("fecha_movimiento", {
-        ascending: false
+        ascending: true
+      })
+      .order("id", {
+        ascending: true
       });
 
-    console.log(
-      "HISTORIAL SIGA:",
-      data
-    );
+    if (error) {
+      console.error("ERROR CARGANDO HISTORIAL SIGA:", error);
+      alert("No fue posible cargar el historial de este SIGA.");
+      return;
+    }
 
     setHistorialSIGA(data || []);
     setMostrarHistorialSIGA(true);
   }
 
-  function calcularMetricasSIGA(
-    historialSIGA,
-    horasSLA
-  ) {
-    if (!historialSIGA?.length) {
-      return {
-        tiempoConsumidoHoras: 0,
-        tiempoDiferidoHoras: 0,
-        tiempoTotalHoras: 0,
-        cumpleSLA: true
-      };
-    }
-
-    const movimientos = [...historialSIGA]
-      .sort(
-        (a, b) =>
-          new Date(a.fecha_movimiento)
-          - new Date(b.fecha_movimiento)
-      );
-    let tiempoConsumido = 0;
-    let tiempoDiferido = 0;
-
-    let inicioActivo = null;
-    let inicioDiferido = null;
-
-    let finalizado = false;
-
-    movimientos.forEach((mov) => {
-      const fecha = new Date(
-        mov.fecha_movimiento
-      );
-      switch (mov.tipo_movimiento) {
-        case "Creación":
-          inicioActivo = fecha;
-          break;
-
-        case "Inicio Diferido":
-          if (inicioActivo) {
-            tiempoConsumido +=
-              fecha - inicioActivo;
-            inicioActivo = null;
-          }
-          inicioDiferido = fecha;
-          break;
-
-        case "Fin Diferido":
-          if (inicioDiferido) {
-            tiempoDiferido +=
-              fecha - inicioDiferido;
-            inicioDiferido = null;
-          }
-          inicioActivo = fecha;
-          break;
-
-        case "Restablecimiento":
-
-        case "Cierre":
-          if (
-            inicioActivo &&
-            !finalizado
-          ) {
-            tiempoConsumido +=
-              fecha - inicioActivo;
-            inicioActivo = null;
-          }
-
-          finalizado = true;
-          break;
-        default:
-          break;
-      }
-    });
-
-    const tiempoConsumidoHoras =
-      tiempoConsumido /
-      (1000 * 60 * 60);
-    const tiempoDiferidoHoras =
-      tiempoDiferido /
-      (1000 * 60 * 60);
-    const tiempoTotalHoras =
-      tiempoConsumidoHoras +
-      tiempoDiferidoHoras;
-    const cumpleSLA =
-      tiempoConsumidoHoras <=
-      horasSLA;
-
-    return {
-      tiempoConsumidoHoras,
-      tiempoDiferidoHoras,
-      tiempoTotalHoras,
-      cumpleSLA
-    };
-  }
-
   function exportarSIGAs() {
-
     const datos = sigas.map(
       (siga) => ({
 
@@ -651,10 +671,16 @@ function SIGA() {
 
     const ws = XLSX.utils.json_to_sheet(datos);
     const wb =XLSX.utils.book_new();
-    const fecha = new Date()
-      .toISOString()
-      .slice(0,10)
-      .replaceAll("-","");
+    const partesFecha = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Costa_Rica",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+    const valoresFecha = Object.fromEntries(
+      partesFecha.map(({ type, value }) => [type, value])
+    );
+    const fecha = `${valoresFecha.year}${valoresFecha.month}${valoresFecha.day}`;
 
     XLSX.utils.book_append_sheet(
       wb,
@@ -722,7 +748,7 @@ function SIGA() {
               margin: 0
             }}
           >
-            SIGAs
+            Aseguramiento Servicios Empresariales
           </h1>
 
           <button
@@ -749,11 +775,7 @@ function SIGA() {
 
         </div>
 
-        <hr
-          style={{
-            margin: "20px 0"
-          }}
-        />
+        <hr/>
 
         <h2>SIGAs Registrados</h2>
 
@@ -861,7 +883,7 @@ function SIGA() {
               <th>Estado</th>
               <th>Grupo</th>
               <th>Horas</th>
-              <th>SLA</th>
+              <th>Cumplimiento</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -897,7 +919,10 @@ function SIGA() {
               if (
                 filtroDashboard === "SIGAs Por vencer"
               ){
-                return (siga.fecha_maxima_atencion === "Por vencer");
+                return (siga.estados_siga?.nombre !== "Cerrado" &&
+                  siga.estados_siga?.nombre !== "Diferido" &&
+                  horasRestantesSIGA(siga.fecha_maxima_atencion) <= 1 &&
+                  horasRestantesSIGA(siga.fecha_maxima_atencion) > 0);
               }
               if (
                 filtroDashboard === "SIGAs Dentro SLA"
@@ -995,7 +1020,7 @@ function SIGA() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          numero_siga: e.target.value
+                          numero_siga: e.target.value.replace(/\D/g, "").slice(0, 10)
                         })
                       }
                     />
@@ -1027,7 +1052,7 @@ function SIGA() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          numero_linea: e.target.value
+                          numero_linea: e.target.value.replace(/\D/g, "").slice(0, 8)
                         })
                       }
                     />
@@ -1169,7 +1194,7 @@ function SIGA() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          evento_agil: e.target.value
+                          evento_agil: e.target.value.replace(/\D/g, "").slice(0, 6)
                         })
                       }
                     />

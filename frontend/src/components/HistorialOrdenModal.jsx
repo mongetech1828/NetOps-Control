@@ -175,17 +175,17 @@ function HistorialOrdenModal({
 
                         <br />
 
-                        IVC: {ordenHistorial?.ivc?.[0]}
+                        IVC: {ordenHistorial?.ivc}
                         {" | "}
 
-                        UC: {ordenHistorial?.uc?.[0]}
+                        UC: {ordenHistorial?.uc}
 
                         <br />
 
-                        FO: {ordenHistorial?.fo?.[0]}
+                        FO: {ordenHistorial?.fo}
                         {" | "}
 
-                        CRC: {ordenHistorial?.crc?.[0]}
+                        CRC: {ordenHistorial?.crc}
                     </div>
                 </div>
 

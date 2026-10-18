@@ -1,16 +1,34 @@
+function parsearFechaMovimiento(fecha) {
+  if (!fecha) {
+    return null;
+  }
+
+  if (typeof fecha !== "string") {
+    const fechaParseada = new Date(fecha);
+    return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
+  }
+
+  let valor = fecha.trim().replace(" ", "T");
+  valor = valor.replace(
+    /(\.\d{3})\d+(?=Z|[+-]\d{2}(?::?\d{2})?$|$)/i,
+    "$1"
+  );
+
+  if (!/(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(valor)) {
+    valor = `${valor}Z`;
+  }
+
+  const fechaParseada = new Date(valor);
+  return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
+}
+
 function formatoFechaHora(fecha) {
+    const fechaParseada = parsearFechaMovimiento(fecha);
+    if (!fechaParseada) {
+      return "-";
+    }
 
-    console.log("Original:", fecha);
-
-    console.log(
-        "Convertida:",
-        new Date(fecha)
-        .toLocaleString("es-CR", {
-        timeZone: "America/Costa_Rica"
-        })
-        );
-
-    return new Date(fecha).toLocaleString(
+    return fechaParseada.toLocaleString(
         "es-CR",
         {
         timeZone: "America/Costa_Rica",
@@ -30,14 +48,77 @@ function calcularMetricasSIGA(
     historialSIGA,
     horasSLA
   ) {
-    if (!historialSIGA?.length) {
-      return {
-        tiempoConsumidoHoras: 0,
-        tiempoDiferidoHoras: 0,
-        tiempoTotalHoras: 0,
-        cumpleSLA: true
-      };
+    const movimientos = [...(historialSIGA || [])]
+      .sort(
+        (a, b) =>
+          parsearFechaMovimiento(a.fecha_movimiento) -
+          parsearFechaMovimiento(b.fecha_movimiento)
+      );
+    let tiempoConsumido = 0;
+    let tiempoDiferido = 0;
+    let inicioActivo = null;
+    let inicioDiferido = null;
+    let finalizado = false;
+
+    movimientos.forEach((mov) => {
+      const fecha = parsearFechaMovimiento(mov.fecha_movimiento);
+      if (!fecha) {
+        return;
+      }
+
+      switch (mov.tipo_movimiento) {
+        case "Creación":
+          inicioActivo = fecha;
+          break;
+        case "Inicio Diferido":
+          if (inicioActivo) {
+            tiempoConsumido += fecha - inicioActivo;
+            inicioActivo = null;
+          }
+          inicioDiferido = fecha;
+          break;
+        case "Fin Diferido":
+          if (inicioDiferido) {
+            tiempoDiferido += fecha - inicioDiferido;
+            inicioDiferido = null;
+          }
+          inicioActivo = fecha;
+          break;
+        case "Restablecimiento":
+        case "Cierre":
+          if (inicioActivo && !finalizado) {
+            tiempoConsumido += fecha - inicioActivo;
+            inicioActivo = null;
+          }
+          if (inicioDiferido && !finalizado) {
+            tiempoDiferido += fecha - inicioDiferido;
+            inicioDiferido = null;
+          }
+          finalizado = true;
+          break;
+        default:
+          break;
+      }
+    });
+
+    const ahora = new Date();
+    if (!finalizado && inicioActivo) {
+      tiempoConsumido += ahora - inicioActivo;
     }
+    if (!finalizado && inicioDiferido) {
+      tiempoDiferido += ahora - inicioDiferido;
+    }
+
+    const tiempoConsumidoHoras = tiempoConsumido / (1000 * 60 * 60);
+    const tiempoDiferidoHoras = tiempoDiferido / (1000 * 60 * 60);
+    const tiempoTotalHoras = tiempoConsumidoHoras + tiempoDiferidoHoras;
+
+    return {
+      tiempoConsumidoHoras,
+      tiempoDiferidoHoras,
+      tiempoTotalHoras,
+      cumpleSLA: tiempoConsumidoHoras <= horasSLA
+    };
   }
 
 function horasRestantesSIGA(fechaMaxima) {
@@ -51,25 +132,34 @@ function horasRestantesSIGA(fechaMaxima) {
   }
 
 function formatoFechaHistorial(fecha) {
-
-    const fechaUtc = new Date(fecha);
-
-    fechaUtc.setHours(
-      fechaUtc.getHours() - 6
-    );
-
-    return fechaUtc.toLocaleString(
-      "es-CR",
-      {
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit"
-      }
-    );
+  if (!fecha) {
+    return "-";
   }
+
+  const fechaUtc = parsearFechaMovimiento(fecha);
+  if (!fechaUtc) {
+    return "-";
+  }
+
+  const fechaCostaRica = new Date(Date.UTC(
+    fechaUtc.getUTCFullYear(),
+    fechaUtc.getUTCMonth(),
+    fechaUtc.getUTCDate(),
+    fechaUtc.getUTCHours() - 6,
+    fechaUtc.getUTCMinutes(),
+    fechaUtc.getUTCSeconds()
+  ));
+
+  return new Intl.DateTimeFormat("es-CR", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(fechaCostaRica);
+}
 
 function obtenerSLASIGA(fechaMaxima) {
     const horas = horasRestantesSIGA(fechaMaxima);
@@ -293,8 +383,10 @@ function HistorialSIGAModal({
 
         <div
             style={{
-            width: "800px",
-            margin: "0 auto"
+            width: "100%",
+            maxWidth: "700px",
+            margin: "0 auto",
+            boxSizing: "border-box"
             }}
         >
 
@@ -302,30 +394,36 @@ function HistorialSIGAModal({
 
             let color = "#2563eb";
 
-            if (mov.tipo_movimiento.includes("Creación")) {
+            const tipoMovimiento = mov.tipo_movimiento || "";
+
+            if (tipoMovimiento.includes("Creación")) {
                 color = "#22c55e"
             }
-            if (mov.tipo_movimiento.includes("Cambio de estado")) {
+            if (tipoMovimiento.includes("Cambio Estado")) {
                 color = "#3b82f6"
             }
-            if (mov.tipo_movimiento.includes("Cierre")) {
+            if (tipoMovimiento.includes("Cierre")) {
                 color = "#64748b"
             }
-            if (mov.tipo_movimiento.includes("Asignación Técnico")) {
+            if (tipoMovimiento.includes("Asignación Técnico")) {
                 color = "#06b6d4"
             }
-            if (mov.tipo_movimiento.includes("Inicio Diferido")) {
+            if (tipoMovimiento.includes("Inicio Diferido")) {
                 color = "#f59e0b"
             }
-            if (mov.tipo_movimiento.includes("Fin diferido")) {
+            if (tipoMovimiento.includes("Fin Diferido")) {
                 color = "#84cc16"
             }
-            if (mov.tipo_movimiento.includes("Restablecimiento")) {
+            if (tipoMovimiento.includes("Restablecimiento")) {
                 color = "#0ea5e9"
             }
-            if (mov.tipo_movimiento.includes("Cambio Grupo Gestión")) {
+            if (tipoMovimiento.includes("Cambio Grupo Gestión")) {
                 color = "#8b5cf6"
             }              
+            const comentario = mov.comentario || "";
+            const correo = mov.perfiles?.correo;
+            const mostrarCorreo = correo &&
+                !comentario.toLowerCase().includes(correo.toLowerCase());
 
             return (
                 <div
@@ -339,6 +437,7 @@ function HistorialSIGAModal({
                 <div
                     style={{
                     width: "40px",
+                    flex: "0 0 40px",
                     display: "flex",
                     justifyContent: "center"
                     }}
@@ -360,7 +459,11 @@ function HistorialSIGAModal({
                     paddingLeft: "20px",
                     marginLeft: "-6px",
                     textAlign: "left",
-                    width: "800px"
+                    width: "500px",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    overflowWrap: "anywhere"
                     }}
                 >
                     
@@ -374,11 +477,10 @@ function HistorialSIGAModal({
                         mov.fecha_movimiento
                     )}
                     </div>
-
                     <div>
-                    <span style= {{whiteSpace: "nowrap"}}>
-                        {mov.comentario}
-                        {mov.perfiles?.correo && ` por ${mov.perfiles.correo}` }
+                    <span style={{ overflowWrap: "anywhere" }}>
+                        {comentario}
+                        {mostrarCorreo && ` por ${correo}`}
                     </span>
                     </div>
 

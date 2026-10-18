@@ -404,13 +404,13 @@ function Dashboard() {
     const { data: ordenes } =
       await supabase
         .from("ordenes")
-        .select(`id,numero_ost,cliente,estado(nombre)`)
+        .select(`id,numero_ost,numero_linea,cliente,estado(nombre)`)
         .or(`numero_ost.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
 
     const { data: sigas } =
       await supabase
         .from("sigas")
-        .select(`id,numero_siga,cliente,estados_siga(nombre)`)
+        .select(`id,numero_siga,numero_linea,cliente,estados_siga(nombre)`)
         .or(`numero_siga.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
 
     setResultadosBusqueda([
@@ -420,6 +420,7 @@ function Dashboard() {
           tipo: "ORDEN",
           numero: o.numero_ost,
           cliente: o.cliente,
+          linea: o.numero_linea,
           estado: o.estado?.nombre,
           id: o.id
         })
@@ -430,6 +431,7 @@ function Dashboard() {
           tipo: "SIGA",
           numero: s.numero_siga,
           cliente: s.cliente,
+          linea: s.numero_linea,
           estado: s.estados_siga?.nombre,
           id: s.id
         })
@@ -505,7 +507,7 @@ function Dashboard() {
                     </strong>
 
                     {" "}
-                    {item.numero}
+                    {item.numero} - {item.linea}
 
                     <div>
                       Cliente: {item.cliente}
@@ -535,7 +537,8 @@ function Dashboard() {
 
       <h2
         style={{
-          textAlign: "center"
+          textAlign: "center",
+          marginBottom: "20px"
         }}
       >
         Órdenes
@@ -612,7 +615,7 @@ function Dashboard() {
               color: "#64748b"
             }}
           >
-            Dentro SLA
+            En cumplimiento
           </h3>
           <h1
             style={{
@@ -828,7 +831,8 @@ function Dashboard() {
 
       <h2
         style={{
-          textAlign: "center"
+          textAlign: "center",
+          marginBottom: "20px"
         }}
       >
         SIGA
@@ -872,7 +876,7 @@ function Dashboard() {
               fontSize: "1rem",
               color: "#64748b"
             }}
-          >Dentro SLA</h3>
+          >En tiempo</h3>
           <h1
             style={{
               fontSize: "2.5rem",

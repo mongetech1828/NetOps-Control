@@ -112,9 +112,17 @@ function Ordenes() {
     if (!formData.numero_ost) {alert("Debe indicar el número OST");
       return;
     }
+    if (formData.numero_ost.length !== 8) {
+      alert("El número de OST debe contener exactamente 8 dígitos.");
+      return;
+    }
     if (!formData.numero_linea) {alert("Debe indicar el número línea");
       return;
     }
+    if (formData.numero_linea.length !== 8) {
+        alert("El número de LINEA debe contener exactamente 8 dígitos.");
+        return;
+      }
     if (!formData.cliente) {alert("Debe indicar el Cliente");
       return;
     }
@@ -164,6 +172,21 @@ function Ordenes() {
           puntaje_prioridad: prioridadCalculada.puntaje
         })
         .eq("id", ordenEditando);
+
+        // Técnicos actuales de la orden
+        const { data: tecnicosActuales } = await supabase
+          .from("orden_tecnicos")
+          .select("tecnico_id, tecnicos(nombre)")
+          .eq("orden_id", ordenEditando);
+
+        // Detectar diferencias
+        const idsActuales = tecnicosActuales?.map(t => t.tecnico_id) || [];
+        const agregados = tecnicosSeleccionados.filter(
+          id => !idsActuales.includes(id)
+        );
+        const removidos = idsActuales.filter(
+          id => !tecnicosSeleccionados.includes(id)
+        );
 
         const {error: deleteError} = await supabase
         .from("orden_tecnicos")
@@ -221,6 +244,55 @@ function Ordenes() {
         }
       }
 
+      // Registrar cambios de técnicos
+      if (!error) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Técnicos agregados
+        if (agregados.length > 0) {
+          const { data: tecnicosAgregados } = await supabase
+            .from("tecnicos")
+            .select("nombre")
+            .in("id", agregados);
+
+          const nombresAgregados = tecnicosAgregados
+            ?.map(t => t.nombre)
+            .join(", ");
+
+          await supabase
+            .from("historial_movimientos")
+            .insert([
+              {
+                orden_id: ordenEditando,
+                usuario_id: user.id,
+                comentario: `Técnico(s) asignado(s): ${nombresAgregados} por el usuario ${user.email}`
+              }
+            ]);
+        }
+
+        // Técnicos removidos
+        if (removidos.length > 0) {
+          const { data: tecnicosRemovidos } = await supabase
+            .from("tecnicos")
+            .select("nombre")
+            .in("id", removidos);
+
+          const nombresRemovidos = tecnicosRemovidos
+            ?.map(t => t.nombre)
+            .join(", ");
+
+          await supabase
+            .from("historial_movimientos")
+            .insert([
+              {
+                orden_id: ordenEditando,
+                usuario_id: user.id,
+                comentario: `Técnico(s) removido(s): ${nombresRemovidos} por el usuario ${user.email}`
+              }
+            ]);
+        }
+      }
+
       } else {
 
         const { data, error } = await supabase
@@ -249,23 +321,6 @@ function Ordenes() {
           .select()
           .single();
 
-        if (
-          tecnicosSeleccionados.length > 0
-        ) {
-          const asignaciones =
-            tecnicosSeleccionados.map(
-              tecnicoId => ({
-                orden_id: data.id,
-                tecnico_id: tecnicoId,
-                activo: true
-              })
-            );
-
-          const { error: tecnicosError } = await supabase
-            .from("orden_tecnicos")
-            .insert(asignaciones);
-        }
-
         if (!error) {
           const { data: {user} } = await supabase.auth.getUser();
 
@@ -281,6 +336,47 @@ function Ordenes() {
               }
             ]);          
         }
+
+        if (
+          tecnicosSeleccionados.length > 0
+        ) {
+          const asignaciones =
+            tecnicosSeleccionados.map(
+              tecnicoId => ({
+                orden_id: data.id,
+                tecnico_id: tecnicoId,
+                activo: true
+              })
+            );
+
+          const { error: tecnicosError } = await supabase
+            .from("orden_tecnicos")
+            .insert(asignaciones);
+
+          if (!tecnicosError) {
+            const { data: tecnicosAsignados } = await supabase
+              .from("tecnicos")
+              .select("nombre")
+              .in("id", tecnicosSeleccionados);
+
+            const nombresTecnicos = tecnicosAsignados
+              ?.map(t => t.nombre)
+              .join(", ");
+
+            const { data: { user } } = await supabase.auth.getUser();
+
+            await supabase
+              .from("historial_movimientos")
+              .insert([
+                {
+                  orden_id: data.id,
+                  usuario_id: user.id,
+                  comentario: `Técnico(s) asignado(s): ${nombresTecnicos} por el usuario ${user.email}`
+                }
+              ]);
+          }
+        }
+        
       }
 
     await cargarOrdenes();
@@ -627,7 +723,7 @@ function Ordenes() {
               margin: 0
             }}
           >
-            Órdenes
+            Entrega Servicios Empresariales
           </h1>
 
           <button
@@ -654,7 +750,11 @@ function Ordenes() {
               <div className="modal-content">
 
                 <div>
-                  <h3>
+                  <h3
+                    style={{
+                      marginBottom: "10px"
+                    }}
+                  >
                     {ordenEditando
                       ? "Editar Orden"
                       : "Nueva Orden"}
@@ -664,11 +764,17 @@ function Ordenes() {
                     style={{
                       border: "1px solid #ddd",
                       borderRadius: "8px",
-                      padding: "15px",
-                      marginBottom: "15px"
+                      padding: "8px 15px",
+                      marginBottom: "10px"
                     }}
                   >
-                    <h4>Clasificación de Prioridad</h4>
+                    <h4
+                      style={{
+                        marginTop: "0",
+                        marginBottom: "8px",
+                        textAlign: "center"
+                      }}
+                      >Clasificación de Prioridad</h4>
 
                     <div
                       style={{
@@ -994,7 +1100,7 @@ function Ordenes() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          numero_ost: e.target.value
+                          numero_ost: e.target.value.replace(/\D/g, "").slice(0, 8)
                         })
                       }
                     />
@@ -1026,7 +1132,7 @@ function Ordenes() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          numero_linea: e.target.value
+                          numero_linea: e.target.value.replace(/\D/g, "").slice(0, 8)
                         })
                       }
                     />
@@ -1184,7 +1290,7 @@ function Ordenes() {
                         onChange={(e) =>
                           setFormData({
                           ...formData,
-                          evento_agil: e.target.value
+                          evento_agil: e.target.value.replace(/\D/g, "").slice(0, 6)
                         })
                       }
                     />
@@ -1484,8 +1590,8 @@ function Ordenes() {
               <th>Servicio</th>
               <th>Transporte</th>
               <th>Estado</th>
-              <th>Días</th>
-              <th>SLA</th>
+              <th>Cumplimiento</th>
+              <th>Prioridad</th>
               <th>Reing.</th>
               <th>Acciones</th>
             </tr>

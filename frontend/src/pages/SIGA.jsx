@@ -3,10 +3,15 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "../services/supabase";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
 import * as XLSX from "xlsx";
+import {
+  calcularHorasRestantesSIGA,
+  cargarMovimientosSIGA
+} from "../utils/sigaSla";
 
 function SIGA() {
 
   const [sigas, setSigas] = useState([]);
+  const [actualizandoSigas, setActualizandoSigas] = useState(false);
   const [filtroSIGA, setFiltroSIGA] = useState("");
   const [filtroLinea, setFiltroLinea] = useState("");
   const [filtroEvento, setFiltroEvento] = useState("");
@@ -41,6 +46,7 @@ function SIGA() {
   const [formData, setFormData] =
     useState(formularioVacio);
 
+  // Función para calcular la fecha máxima de atención según la fecha de recepción y las horas SLA
   function calcularFechaMaximaSIGA(fechaRecepcion,horasSLA) {
     const fecha = new Date(fechaRecepcion);
     const milisegundosSLA = horasSLA * 60 * 60 * 1000;
@@ -48,16 +54,7 @@ function SIGA() {
     return new Date(fecha.getTime() + milisegundosSLA);
   }
 
-  function horasRestantesSIGA(fechaMaxima) {
-    const ahora = new Date();
-    const fechaLimite = new Date(
-      fechaMaxima
-    );
-    const diferencia =
-      fechaLimite - ahora;
-    return diferencia / (1000 * 60 * 60);
-  }
-
+  // Función para cerrar el formulario de SIGA y resetear los datos
   function cerrarFormularioSIGA() {
     setMostrarFormulario(false);
     setFormData(formularioVacio);
@@ -65,8 +62,9 @@ function SIGA() {
     setSigaEditando(null);
   }
 
+  // Función para cargar los SIGAs desde la base de datos
   async function cargarSigas() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("sigas")
       .select(`
         *,
@@ -79,13 +77,67 @@ function SIGA() {
       .order("id", {
         ascending: false
       });
-    setSigas(data || []);
-    console.log(data);
+
+    if (error) {
+      console.error("ERROR CARGANDO SIGAS:", error);
+      alert("No se pudieron cargar los SIGAs.");
+      return;
+    }
+
+    if (data.length === 0) {
+      setSigas([]);
+      return;
+    }
+
+    const { data: movimientos, error: errorMovimientos } =
+      await cargarMovimientosSIGA(data.map(siga => siga.id));
+
+    if (errorMovimientos) {
+      console.error("ERROR CARGANDO MOVIMIENTOS PARA CALCULAR SLA:", errorMovimientos);
+      alert("No se pudieron calcular las horas de SLA de los SIGAs.");
+      return;
+    }
+
+    const movimientosPorSiga = new Map();
+    movimientos.forEach(movimiento => {
+      const movimientosSiga = movimientosPorSiga.get(movimiento.siga_id) || [];
+      movimientosSiga.push(movimiento);
+      movimientosPorSiga.set(movimiento.siga_id, movimientosSiga);
+    });
+
+    setSigas(data.map(siga => ({
+      ...siga,
+      horas_restantes_sla: calcularHorasRestantesSIGA(
+        siga.fecha_maxima_atencion,
+        movimientosPorSiga.get(siga.id),
+        siga.estados_siga?.nombre
+      )
+    })));
   }
 
-  function obtenerSLASIGA(fechaMaxima) {
-    const horas = horasRestantesSIGA(fechaMaxima);
+  async function actualizarSigas() {
+    if (actualizandoSigas) return;
 
+    setActualizandoSigas(true);
+    try {
+      await cargarSigas();
+    } finally {
+      setActualizandoSigas(false);
+    }
+  }
+
+  // Función para obtener el estado del SLA de un SIGA según la fecha máxima de atención
+  function obtenerSLASIGA(horas, estado) {
+    if (horas === null) {
+      const mensaje = estado === "Cerrado"
+        ? "⚪Sin registro de cierre"
+        : estado === "Restablecimiento"
+          ? "⚪Sin registro de restablecimiento"
+          : estado === "Diferido"
+            ? "⚪Sin registro de inicio diferido"
+            : "⚪No disponible";
+      return { texto: mensaje, color: "#6b7280" };
+    }
     if (horas < 0) {
       return {texto: "⚫Vencido",color: "#dc2626",};}
     if (horas <= 1) {
@@ -93,6 +145,7 @@ function SIGA() {
     return {texto: "🟢En tiempo",color: "#16a34a",};
   }
 
+  // Funciones para cargar datos de estado, prioridad, grupo de gestión y tipo de servicio desde la base de datos
   async function cargarEstadosSIGA() {
     const { data } = await supabase
       .from("estados_siga")
@@ -125,6 +178,7 @@ function SIGA() {
     setTiposServicio(data || []);
   }
 
+  // Función para cargar los técnicos desde la base de datos
   async function cargarTecnicos() {
 
     const { data } = await supabase
@@ -134,6 +188,7 @@ function SIGA() {
     setTecnicos(data || []);
   }
 
+  // Función para registrar los cambios de técnicos en el historial del SIGA
   async function registrarCambiosTecnicosSIGA(sigaId, agregados, removidos, user) {
     if (agregados.length === 0 && removidos.length === 0) {
       return true;
@@ -195,6 +250,7 @@ function SIGA() {
     return true;
   }
 
+  // Función para guardar un SIGA, ya sea creando uno nuevo o actualizando uno existente
   async function guardarSIGA() {
     if (!formData.numero_siga) {alert("Debe indicar el número SIGA");
       return;
@@ -259,6 +315,7 @@ function SIGA() {
       return;
     }
 
+    // Si estamos editando, verificamos que el SIGA exista
     if (sigaEditando){
       const sigaActual = sigas.find(s => s.id ===sigaEditando);
       if (!sigaActual) {
@@ -298,6 +355,7 @@ function SIGA() {
         return;
       }
 
+      // Registrar cambios de estado en el historial si hubo un cambio
       if (
         sigaActual.estado_siga_id !==
         Number(formData.estado_siga_id)
@@ -325,6 +383,7 @@ function SIGA() {
             }
         ];
 
+        // Registrar movimientos específicos según el estado nuevo
         if (estadoNuevo?.nombre === "Diferido") {
             movimientos.push({
               siga_id: sigaEditando,
@@ -334,6 +393,7 @@ function SIGA() {
             });
         }
 
+        // Registrar movimientos específicos según el estado anterior y nuevo
         if (
             estadoAnterior?.nombre === "Diferido" &&
             estadoNuevo?.nombre !== "Diferido"
@@ -375,6 +435,7 @@ function SIGA() {
         }
       }
 
+      // Registrar cambios de técnicos en el historial si hubo cambios
       const { data: tecnicosActuales, error: errorTecnicosActuales } = await supabase
         .from("siga_tecnicos")
         .select("tecnico_id")
@@ -408,6 +469,7 @@ function SIGA() {
         return;
       }
 
+      // Insertar los técnicos seleccionados nuevamente
       if (
         tecnicosSeleccionados.length > 0
       ) {
@@ -430,6 +492,7 @@ function SIGA() {
         }
       }
 
+      // Registrar cambios de técnicos en el historial
       const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
         sigaEditando,
         agregados,
@@ -440,6 +503,7 @@ function SIGA() {
         return;
       }
 
+      // Registrar cambios de grupo de gestión en el historial si hubo un cambio
       if (
         sigaActual.grupo_gestion_id !==
         (
@@ -485,6 +549,8 @@ function SIGA() {
 
     }
     else {
+
+      // Si no estamos editando, creamos un nuevo SIGA
       const {data, error} = await supabase
         .from("sigas")
         .insert([
@@ -541,6 +607,7 @@ function SIGA() {
         }
       }
 
+      // Registrar los técnicos asignados al nuevo SIGA
       if (tecnicosSeleccionados.length > 0) {
         const asignaciones =
           tecnicosSeleccionados.map(
@@ -586,6 +653,7 @@ function SIGA() {
     cerrarFormularioSIGA();
   }
 
+  // Función para editar un SIGA, cargando sus datos en el formulario
   function editarSIGA(siga) {
 
     setSigaEditando(siga.id);
@@ -620,6 +688,7 @@ function SIGA() {
     setMostrarFormulario(true);
   }
 
+  // Función para cargar el historial de un SIGA y mostrarlo en un modal
   async function cargarHistorialSIGA(siga) {
     setSigaHistorial(siga);
     const { data, error } = await supabase
@@ -647,8 +716,65 @@ function SIGA() {
     setMostrarHistorialSIGA(true);
   }
 
+  function obtenerSigasFiltrados() {
+    return sigas
+      .filter((siga) =>
+        String(siga.numero_siga || "")
+          .toLowerCase()
+          .includes(filtroSIGA.toLowerCase())
+      )
+      .filter((siga) =>
+        String(siga.numero_linea || "")
+          .toLowerCase()
+          .includes(filtroLinea.toLowerCase())
+      )
+      .filter((siga) =>
+        String(siga.evento_agil || "")
+          .toLowerCase()
+          .includes(filtroEvento.toLowerCase())
+      )
+      .filter((siga) => {
+        if (filtroDashboard === "Vencidos") {
+          return (
+            siga.horas_restantes_sla < 0 &&
+            siga.estados_siga?.nombre !== "Cerrado"
+          );
+        }
+        if (filtroDashboard === "SIGAs En campo") {
+          return (
+            siga.tecnico_id &&
+            siga.estados_siga?.nombre !== "Cerrado" &&
+            siga.estados_siga?.nombre !== "Abierto - Verificación"
+          );
+        }
+        if (filtroDashboard === "SIGAs Por vencer") {
+          return (
+            siga.estados_siga?.nombre !== "Cerrado" &&
+            siga.estados_siga?.nombre !== "Diferido" &&
+            siga.horas_restantes_sla <= 1 &&
+            siga.horas_restantes_sla > 0
+          );
+        }
+        if (filtroDashboard === "SIGAs Dentro SLA") {
+          return (
+            siga.estados_siga?.nombre !== "Cerrado" &&
+            siga.estados_siga?.nombre !== "Diferido" &&
+            siga.horas_restantes_sla > 1
+          );
+        }
+        return true;
+      });
+  }
+
+  // Función para exportar los SIGAs a un archivo Excel
   function exportarSIGAs() {
-    const datos = sigas.map(
+    const sigasExportados = obtenerSigasFiltrados();
+    if (sigasExportados.length === 0) {
+      alert("No hay SIGAs que coincidan con los filtros aplicados.");
+      return;
+    }
+
+    const datos = sigasExportados.map(
       (siga) => ({
 
         SIGA: siga.numero_siga,
@@ -693,6 +819,7 @@ function SIGA() {
     );
   }
 
+  // Cargar datos iniciales al montar el componente
   useEffect(() => {
     cargarSigas();
     cargarEstadosSIGA();
@@ -714,6 +841,7 @@ function SIGA() {
     }
   }, [location]);
 
+  // Mostrar en consola el estado de mostrarHistorialSIGA cuando cambie
   useEffect(() => {
     console.log(
       "mostrarHistorialSIGA:",
@@ -722,6 +850,7 @@ function SIGA() {
 
   }, [mostrarHistorialSIGA]);
 
+  // Renderizado del componente
   return (
 
     <div
@@ -777,6 +906,7 @@ function SIGA() {
 
         <hr/>
 
+        {/*Tabla SIGAs*/}
         <h2>SIGAs Registrados</h2>
 
         <div
@@ -831,8 +961,24 @@ function SIGA() {
               📊 Exportar Excel
           </button>
 
+          <button
+            type="button"
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              cursor: actualizandoSigas ? "wait" : "pointer"
+            }}
+            onClick={actualizarSigas}
+            disabled={actualizandoSigas}
+            title="Actualizar SIGAs"
+          >
+            {actualizandoSigas ? "Actualizando..." : "↻ Actualizar"}
+          </button>
+
         </div>
 
+        {/* Mostrar el filtro activo en un recuadro azul si existe */}
         {
           filtroDashboard && (
             <div
@@ -864,6 +1010,7 @@ function SIGA() {
           )
         }        
 
+        {/* Tabla de SIGAs */}
         <table
           style={{
             width: "100%",
@@ -889,57 +1036,12 @@ function SIGA() {
           </thead>
 
           <tbody>
-            {sigas.filter((siga) => 
-              String(siga.numero_siga || "")
-                .toLowerCase().includes(filtroSIGA.toLowerCase())
-            )
-            .filter((siga) =>
-              (siga.numero_linea || "")
-                .toLowerCase().includes(filtroLinea.toLowerCase())
-            )
-            .filter((siga) =>
-              (siga.evento_agil || "")
-                .toLowerCase().includes(filtroEvento.toLowerCase())
-            )
-            .filter ((siga) => {
-              if (
-                filtroDashboard === "Vencidos"
-              ){
-                return (horasRestantesSIGA(siga.fecha_maxima_atencion) < 0 &&siga.estados_siga?.nombre !=="Cerrado");
-              }
-              if (
-                filtroDashboard === "SIGAs En campo"
-              ){
-                return (
-                  siga.tecnico_id &&
-                  siga.estados_siga?.nombre !== "Cerrado" &&
-                  siga.estados_siga?.nombre !== "Abierto - Verificación"
-                );
-              }
-              if (
-                filtroDashboard === "SIGAs Por vencer"
-              ){
-                return (siga.estados_siga?.nombre !== "Cerrado" &&
-                  siga.estados_siga?.nombre !== "Diferido" &&
-                  horasRestantesSIGA(siga.fecha_maxima_atencion) <= 1 &&
-                  horasRestantesSIGA(siga.fecha_maxima_atencion) > 0);
-              }
-              if (
-                filtroDashboard === "SIGAs Dentro SLA"
-              ){
-                return (
-                  siga.estados_siga?.nombre !== "Cerrado" &&
-                  siga.estados_siga?.nombre !== "Diferido" &&
-                  horasRestantesSIGA(
-                    siga.fecha_maxima_atencion
-                  ) > 1
-                );
-              }
-              return true;
-            })
-
-            .map((siga) => {
-              const sla = obtenerSLASIGA(siga.fecha_maxima_atencion);
+            {obtenerSigasFiltrados().map((siga) => {
+              const horasRestantes = siga.horas_restantes_sla;
+              const sla = obtenerSLASIGA(
+                horasRestantes,
+                siga.estados_siga?.nombre
+              );
               return (
               <tr key={siga.id}>
                 <td>{siga.numero_siga}</td>
@@ -950,7 +1052,7 @@ function SIGA() {
                 <td>{siga.prioridades_siga?.prioridad}</td>
                 <td>{siga.estados_siga?.nombre}</td>
                 <td>{siga.grupos_gestion?.nombre}</td>
-                <td>{siga.fecha_maxima_atencion? horasRestantesSIGA(siga.fecha_maxima_atencion).toFixed(1): "-"}</td>
+                <td>{horasRestantes === null ? "-" : horasRestantes.toFixed(1)}</td>
                 <td>
                   <span
                     style={{color: sla.color, fontWeight: 600,}}>
@@ -983,6 +1085,7 @@ function SIGA() {
           </tbody>
         </table>
 
+        {/* Formulario SIGA */}
         {
           mostrarFormulario && (
 
@@ -1418,6 +1521,7 @@ function SIGA() {
           )
         }
 
+        {/* Modal Historial SIGA */}
         <HistorialSIGAModal
 
           visible={mostrarHistorialSIGA}

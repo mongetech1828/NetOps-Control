@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
 import { useLocation } from "react-router-dom";
 import HistorialOrdenModal from "../components/HistorialOrdenModal";
@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 function Ordenes() {
 
   const [ordenes, setOrdenes] = useState([]);
+  const [actualizandoOrdenes, setActualizandoOrdenes] = useState(false);
   const [filtroOST, setFiltroOST] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroLinea, setFiltroLinea] = useState("");
@@ -42,14 +43,7 @@ function Ordenes() {
     crc: ""
   };
   const [formData, setFormData] = useState(formularioVacio);
-  const prioridadCalculada = useMemo(() => calcularPrioridad(),
-    [
-      formData.ivc,
-      formData.uc,
-      formData.fo,
-      formData.crc
-    ]
-  ); 
+  const prioridadCalculada = calcularPrioridad();
 
   useEffect(() => {
     cargarOrdenes();
@@ -59,6 +53,7 @@ function Ordenes() {
     cargarTecnicos();
   }, []);
 
+  // Función para formatear la fecha en formato YYYY-MM-DD
   function formatearFechaDB(fecha) {
 
     const anio = fecha.getFullYear();
@@ -74,26 +69,18 @@ function Ordenes() {
     return `${anio}-${mes}-${dia}`;
   }
 
+  // Función para formatear la fecha y hora en formato YYYY-MM-DD HH:MM:SS
   function formatearFechaHoraDB(fecha) {
 
     const anio = fecha.getFullYear();
-
-    const mes = String(
-      fecha.getMonth() + 1
-    ).padStart(2, "0");
-
-    const dia = String(
-      fecha.getDate()
-    ).padStart(2, "0");
-
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
     const horas = String(
       fecha.getHours()
     ).padStart(2, "0");
-
     const minutos = String(
       fecha.getMinutes()
     ).padStart(2, "0");
-
     const segundos = String(
       fecha.getSeconds()
     ).padStart(2, "0");
@@ -101,29 +88,51 @@ function Ordenes() {
     return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
   }
 
-  async function guardarOrden() {
+  function crearFechaLocal(fecha) {
+    const fechaISO = fecha instanceof Date
+      ? formatearFechaDB(fecha)
+      : String(fecha || "").slice(0, 10);
+    const [anio, mes, dia] = fechaISO.split("-").map(Number);
 
-    const fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
-    const { data: ordenExistente } = await supabase
-      .from("ordenes")
-      .select("id")
-      .eq("numero_ost", formData.numero_ost);
+    if (!anio || !mes || !dia) return null;
+
+    const resultado = new Date(anio, mes - 1, dia);
+    if (
+      resultado.getFullYear() !== anio ||
+      resultado.getMonth() !== mes - 1 ||
+      resultado.getDate() !== dia
+    ) {
+      return null;
+    }
+
+    return resultado;
+  }
+
+  async function notificarGuardadoParcial(mensaje) {
+    await cargarOrdenes();
+    setMostrarFormulario(false);
+    setFormData(formularioVacio);
+    setOrdenEditando(null);
+    setTecnicosSeleccionados([]);
+    alert(mensaje);
+  }
+
+  // Función para guardar una orden (crear o actualizar)
+  async function guardarOrden() {
 
     if (!formData.numero_ost) {alert("Debe indicar el número OST");
       return;
     }
-    if (formData.numero_ost.length !== 8) {
+    if (!/^\d{8}$/.test(formData.numero_ost)) {
       alert("El número de OST debe contener exactamente 8 dígitos.");
       return;
     }
-    if (!formData.numero_linea) {alert("Debe indicar el número línea");
+    if (!/^\d{8}$/.test(formData.numero_linea)) {
+      alert("El número de LINEA debe contener exactamente 8 dígitos.");
       return;
     }
-    if (formData.numero_linea.length !== 8) {
-        alert("El número de LINEA debe contener exactamente 8 dígitos.");
-        return;
-      }
-    if (!formData.cliente) {alert("Debe indicar el Cliente");
+    if (!formData.cliente.trim()) {
+      alert("Debe indicar el Cliente");
       return;
     }
     if (!formData.tipo_servicio_id) {alert("Debe indicar el Tipo de Servicio");
@@ -135,31 +144,64 @@ function Ordenes() {
     if (!formData.estado_id) {alert("Debe indicar el estado");
       return;
     }
+    const { data: ordenesCoincidentes, error: errorConsultaOST } = await supabase
+      .from("ordenes")
+      .select("id")
+      .eq("numero_ost", formData.numero_ost);
 
-    if (!ordenEditando &&
-        ordenExistente &&
-        ordenExistente.length > 0) {
-          alert("La OST ya existe. Utilice Editar o Reingresar.");
+    if (errorConsultaOST) {
+      console.error("ERROR VALIDANDO OST:", errorConsultaOST);
+      alert("No fue posible verificar si el número OST ya existe.");
+      return;
+    }
+    if (ordenesCoincidentes.some(({ id }) => String(id) !== String(ordenEditando))) {
+      alert("La OST ya existe. Utilice Editar o Reingresar.");
+      return;
+    }
 
-          setFormData(formularioVacio);
-          setTecnicosSeleccionados([]);
-
-          return;
+    let fechaMaxima = null;
+    if (!ordenEditando) {
+      if (!formData.fecha_recepcion) {
+        alert("Debe indicar la fecha de recepción.");
+        return;
       }
+      fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
+      if (!fechaMaxima) {
+        alert("La fecha de recepción no es válida.");
+        return;
+      }
+    }
+
+    const {
+      data: { user },
+      error: errorUsuario
+    } = await supabase.auth.getUser();
+    if (errorUsuario || !user) {
+      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", errorUsuario);
+      alert("No se pudo identificar al usuario para guardar el historial.");
+      return;
+    }
 
     if (ordenEditando) {
-      const { data:ordenActual } = await supabase
+      const { data:ordenActual, error: errorOrdenActual } = await supabase
         .from("ordenes")
         .select("*")
         .eq("id", ordenEditando)
         .single();
-      const { data, error } = await supabase
+
+      if (errorOrdenActual || !ordenActual) {
+        console.error("ERROR CONSULTANDO ORDEN PARA EDITAR:", errorOrdenActual);
+        alert("No se encontró la orden que intenta actualizar.");
+        return;
+      }
+
+      const { error } = await supabase
         .from("ordenes")
         .update({
           numero_ost: formData.numero_ost,
           numero_linea: formData.numero_linea,
           evento_agil: formData.evento_agil,
-          cliente: formData.cliente,
+          cliente: formData.cliente.trim(),
           tipo_servicio_id: formData.tipo_servicio_id,
           transporte_id: formData.transporte_id,
           estado_id: formData.estado_id,
@@ -173,128 +215,119 @@ function Ordenes() {
         })
         .eq("id", ordenEditando);
 
-        // Técnicos actuales de la orden
-        const { data: tecnicosActuales } = await supabase
-          .from("orden_tecnicos")
-          .select("tecnico_id, tecnicos(nombre)")
-          .eq("orden_id", ordenEditando);
+      if (error) {
+        console.error("ERROR ACTUALIZANDO ORDEN:", error);
+        alert("No se pudo actualizar la orden.");
+        return;
+      }
 
-        // Detectar diferencias
-        const idsActuales = tecnicosActuales?.map(t => t.tecnico_id) || [];
-        const agregados = tecnicosSeleccionados.filter(
-          id => !idsActuales.includes(id)
-        );
-        const removidos = idsActuales.filter(
-          id => !tecnicosSeleccionados.includes(id)
-        );
-
-        const {error: deleteError} = await supabase
+      const { data: tecnicosActuales, error: errorTecnicosActuales } = await supabase
         .from("orden_tecnicos")
-        .delete()
-        .eq("orden_id",ordenEditando);
+        .select("tecnico_id")
+        .eq("orden_id", ordenEditando);
 
-        if (
-          tecnicosSeleccionados.length > 0
-        ) {
-          const asignaciones =
-            tecnicosSeleccionados.map(
-              tecnicoId => ({
-                orden_id:
-                  ordenEditando,
-                tecnico_id:
-                  tecnicoId,
-                activo: true
-              })
-            );
+      if (errorTecnicosActuales) {
+        console.error("ERROR CONSULTANDO TÉCNICOS DE LA ORDEN:", errorTecnicosActuales);
+        await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron consultar sus técnicos.");
+        return;
+      }
 
-          const { error: tecnicosError } = await supabase
-            .from("orden_tecnicos")
-            .insert(asignaciones);
-        }
+      const idsActuales = tecnicosActuales.map(({ tecnico_id }) => Number(tecnico_id));
+      const idsSeleccionados = tecnicosSeleccionados.map(Number);
+      const agregados = idsSeleccionados.filter(id => !idsActuales.includes(id));
+      const removidos = idsActuales.filter(id => !idsSeleccionados.includes(id));
 
-        //Registrando historial de estados
-      if (!error) {
-        if (ordenActual.estado_id !== Number(formData.estado_id)) {
-          const { data: {user} } = await supabase.auth.getUser();
+      if (agregados.length > 0) {
+        const asignaciones = agregados.map(tecnicoId => ({
+          orden_id: ordenEditando,
+          tecnico_id: tecnicoId,
+          activo: true
+        }));
+        const { error: errorAgregarTecnicos } = await supabase
+          .from("orden_tecnicos")
+          .insert(asignaciones);
 
-          const { data: estadoAnterior } = await supabase
-            .from("estado")
-            .select("nombre")
-            .eq("id", ordenActual.estado_id)
-            .single();
-
-          const { data: estadoNuevo } = await supabase
-            .from("estado")
-            .select("nombre")
-            .eq("id", formData.estado_id)
-            .single();
-
-          const { data, error } = await supabase
-            .from("historial_movimientos")
-            .insert([
-              {
-                orden_id: ordenEditando,
-                usuario_id: user.id,
-                estado_anterior : ordenActual.estado_id,
-                estado_nuevo: Number(formData.estado_id),
-
-                comentario: `Cambio de estado de "${estadoAnterior.nombre}" a "${estadoNuevo.nombre}" por el usuario ${user.email}`
-              }
-            ]);
+        if (errorAgregarTecnicos) {
+          console.error("ERROR ASIGNANDO TÉCNICOS A LA ORDEN:", errorAgregarTecnicos);
+          await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron guardar los técnicos nuevos.");
+          return;
         }
       }
 
-      // Registrar cambios de técnicos
-      if (!error) {
-        const { data: { user } } = await supabase.auth.getUser();
+      if (removidos.length > 0) {
+        const { error: errorRetirarTecnicos } = await supabase
+          .from("orden_tecnicos")
+          .delete()
+          .eq("orden_id", ordenEditando)
+          .in("tecnico_id", removidos);
 
-        // Técnicos agregados
-        if (agregados.length > 0) {
-          const { data: tecnicosAgregados } = await supabase
-            .from("tecnicos")
-            .select("nombre")
-            .in("id", agregados);
+        if (errorRetirarTecnicos) {
+          console.error("ERROR RETIRANDO TÉCNICOS DE LA ORDEN:", errorRetirarTecnicos);
+          await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron retirar algunos técnicos.");
+          return;
+        }
+      }
 
-          const nombresAgregados = tecnicosAgregados
-            ?.map(t => t.nombre)
-            .join(", ");
+      const idsTecnicosModificados = [...agregados, ...removidos];
+      const movimientos = [];
+      if (ordenActual.estado_id !== Number(formData.estado_id)) {
+        const estadoAnterior = estados.find(estado => estado.id === Number(ordenActual.estado_id));
+        const estadoNuevo = estados.find(estado => estado.id === Number(formData.estado_id));
+        movimientos.push({
+          orden_id: ordenEditando,
+          usuario_id: user.id,
+          estado_anterior: ordenActual.estado_id,
+          estado_nuevo: Number(formData.estado_id),
+          comentario: `Cambio de estado de "${estadoAnterior?.nombre || ordenActual.estado_id}" a "${estadoNuevo?.nombre || formData.estado_id}" por el usuario ${user.email}`
+        });
+      }
 
-          await supabase
-            .from("historial_movimientos")
-            .insert([
-              {
-                orden_id: ordenEditando,
-                usuario_id: user.id,
-                comentario: `Técnico(s) asignado(s): ${nombresAgregados} por el usuario ${user.email}`
-              }
-            ]);
+      if (idsTecnicosModificados.length > 0) {
+        const { data: tecnicosModificados, error: errorNombresTecnicos } = await supabase
+          .from("tecnicos")
+          .select("id, nombre")
+          .in("id", idsTecnicosModificados);
+
+        if (errorNombresTecnicos) {
+          console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorNombresTecnicos);
+          await notificarGuardadoParcial("La orden y sus técnicos se actualizaron, pero no se pudo completar el historial.");
+          return;
         }
 
-        // Técnicos removidos
+        const nombresPorId = new Map(
+          tecnicosModificados.map(({ id, nombre }) => [Number(id), nombre])
+        );
+        if (agregados.length > 0) {
+          movimientos.push({
+            orden_id: ordenEditando,
+            usuario_id: user.id,
+            comentario: `Técnico(s) asignado(s): ${agregados.map(id => nombresPorId.get(id) || id).join(", ")} por el usuario ${user.email}`
+          });
+        }
         if (removidos.length > 0) {
-          const { data: tecnicosRemovidos } = await supabase
-            .from("tecnicos")
-            .select("nombre")
-            .in("id", removidos);
+          movimientos.push({
+            orden_id: ordenEditando,
+            usuario_id: user.id,
+            comentario: `Técnico(s) removido(s): ${removidos.map(id => nombresPorId.get(id) || id).join(", ")} por el usuario ${user.email}`
+          });
+        }
+      }
 
-          const nombresRemovidos = tecnicosRemovidos
-            ?.map(t => t.nombre)
-            .join(", ");
+      if (movimientos.length > 0) {
+        const { error: errorHistorial } = await supabase
+          .from("historial_movimientos")
+          .insert(movimientos);
 
-          await supabase
-            .from("historial_movimientos")
-            .insert([
-              {
-                orden_id: ordenEditando,
-                usuario_id: user.id,
-                comentario: `Técnico(s) removido(s): ${nombresRemovidos} por el usuario ${user.email}`
-              }
-            ]);
+        if (errorHistorial) {
+          console.error("ERROR GUARDANDO HISTORIAL DE LA ORDEN:", errorHistorial);
+          await notificarGuardadoParcial("La orden y sus técnicos se actualizaron, pero no se pudo guardar todo el historial.");
+          return;
         }
       }
 
       } else {
 
+        // Crear nueva orden
         const { data, error } = await supabase
           .from("ordenes")
           .insert([
@@ -303,7 +336,7 @@ function Ordenes() {
               numero_ost: formData.numero_ost,
               numero_linea: formData.numero_linea,
               evento_agil: formData.evento_agil,
-              cliente: formData.cliente,
+              cliente: formData.cliente.trim(),
               tipo_servicio_id: formData.tipo_servicio_id,
               transporte_id: formData.transporte_id,
               estado_id: formData.estado_id,
@@ -321,10 +354,13 @@ function Ordenes() {
           .select()
           .single();
 
-        if (!error) {
-          const { data: {user} } = await supabase.auth.getUser();
+        if (error || !data) {
+          console.error("ERROR CREANDO ORDEN:", error);
+          alert("No se pudo crear la orden.");
+          return;
+        }
 
-          await supabase
+        const { error: errorHistorialCreacion } = await supabase
             .from("historial_movimientos")
             .insert([
               {
@@ -334,7 +370,12 @@ function Ordenes() {
                 estado_nuevo: Number(formData.estado_id),
                 comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
               }
-            ]);          
+            ]);
+
+        if (errorHistorialCreacion) {
+          console.error("ERROR GUARDANDO HISTORIAL DE CREACIÓN:", errorHistorialCreacion);
+          await notificarGuardadoParcial("La orden se creó, pero no se pudo guardar su inicio en el historial.");
+          return;
         }
 
         if (
@@ -353,19 +394,28 @@ function Ordenes() {
             .from("orden_tecnicos")
             .insert(asignaciones);
 
-          if (!tecnicosError) {
-            const { data: tecnicosAsignados } = await supabase
+          if (tecnicosError) {
+            console.error("ERROR ASIGNANDO TÉCNICOS A LA ORDEN:", tecnicosError);
+            await notificarGuardadoParcial("La orden se creó, pero no se pudieron guardar los técnicos asignados.");
+            return;
+          }
+
+          const { data: tecnicosAsignados, error: errorConsultaTecnicos } = await supabase
               .from("tecnicos")
               .select("nombre")
               .in("id", tecnicosSeleccionados);
+
+          if (errorConsultaTecnicos) {
+            console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorConsultaTecnicos);
+            await notificarGuardadoParcial("La orden y sus técnicos se guardaron, pero no se pudieron registrar los técnicos en el historial.");
+            return;
+          }
 
             const nombresTecnicos = tecnicosAsignados
               ?.map(t => t.nombre)
               .join(", ");
 
-            const { data: { user } } = await supabase.auth.getUser();
-
-            await supabase
+            const { error: errorHistorialTecnicos } = await supabase
               .from("historial_movimientos")
               .insert([
                 {
@@ -374,7 +424,12 @@ function Ordenes() {
                   comentario: `Técnico(s) asignado(s): ${nombresTecnicos} por el usuario ${user.email}`
                 }
               ]);
-          }
+
+            if (errorHistorialTecnicos) {
+              console.error("ERROR GUARDANDO HISTORIAL DE TÉCNICOS:", errorHistorialTecnicos);
+              await notificarGuardadoParcial("La orden y sus técnicos se guardaron, pero no se pudo registrar la asignación en el historial.");
+              return;
+            }
         }
         
       }
@@ -386,9 +441,10 @@ function Ordenes() {
     setTecnicosSeleccionados([]);
   } 
 
+  // Función para cargar las órdenes desde la base de datos
   async function cargarOrdenes() {
 
-  const { data } =
+  const { data, error } =
     await supabase
       .from("ordenes")
       .select(`
@@ -400,9 +456,27 @@ function Ordenes() {
       `)
       .order("id", { ascending: false });
 
-  setOrdenes(data || []);
+    if (error) {
+      console.error("ERROR CARGANDO ÓRDENES:", error);
+      alert("No se pudieron cargar las órdenes.");
+      return;
+    }
+
+    setOrdenes(data);
   }
 
+  async function actualizarOrdenes() {
+    if (actualizandoOrdenes) return;
+
+    setActualizandoOrdenes(true);
+    try {
+      await cargarOrdenes();
+    } finally {
+      setActualizandoOrdenes(false);
+    }
+  }
+
+  // Función para editar una orden existente
   function editarOrden(orden) {
 
     setOrdenEditando(orden.id);
@@ -432,6 +506,7 @@ function Ordenes() {
     setMostrarFormulario(true);
   }
 
+  // Función para reingresar una orden
   async function reingresarOrden(orden) {
     const motivo = window.prompt(`Ingrese el motivo del reingreso OST ${orden.numero_ost}`);
 
@@ -440,11 +515,11 @@ function Ordenes() {
     }
 
     const fechaRecepcion = new Date();
-    const fechaMaxima =
-      sumarDiasHabiles(
-        fechaRecepcion,
-        4
-      );
+    const fechaMaxima = sumarDiasHabiles(fechaRecepcion,4);
+    if (!fechaMaxima) {
+      alert("No se pudo calcular la fecha máxima de atención.");
+      return;
+    }
     const confirmar = window.confirm(`¿Está seguro de reingresar la OST: ${orden.numero_ost}?`);
 
     if (!confirmar) {
@@ -454,24 +529,32 @@ function Ordenes() {
     const { error } = await supabase
       .from("ordenes")
       .update({
-        fecha_recepcion:
-          formatearFechaDB(fechaRecepcion),
-        fecha_maxima_atencion:
-          formatearFechaDB(fechaMaxima),
-        cantidad_reingresos:
-          (orden.cantidad_reingresos || 0) + 1,
+        fecha_recepcion: formatearFechaDB(fechaRecepcion),
+        fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
+        cantidad_reingresos: (orden.cantidad_reingresos || 0) + 1,
         fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
         motivo_reingreso: motivo
       })
     .eq("id", orden.id);
 
     if (error) {
-      console.error(error);
+      console.error("ERROR ACTUALIZANDO FECHAS DE REINGRESO:", error);
+      alert("No se pudo reingresar la orden.");
       return;
     }
 
-    const {data: {user}} = await supabase.auth.getUser();
-    const { error:errorHistorial } = await supabase
+    const {
+      data: { user },
+      error: errorUsuario
+    } = await supabase.auth.getUser();
+    if (errorUsuario || !user) {
+      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", errorUsuario);
+      alert("La orden se reingresó, pero no se pudo identificar al usuario para guardar el historial.");
+      await cargarOrdenes();
+      return;
+    }
+
+    const { error: errorHistorial } = await supabase
       .from("historial_movimientos")
       .insert({
           orden_id: orden.id,
@@ -479,14 +562,18 @@ function Ordenes() {
           estado_anterior : orden.estado_id,
           estado_nuevo: orden.estado_id,
           comentario: `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`        
-        })
+        });
 
-    .select();
+    if (errorHistorial) {
+      console.error("ERROR GUARDANDO HISTORIAL DE REINGRESO:", errorHistorial);
+      alert("La orden se reingresó, pero no se pudo guardar el movimiento en el historial.");
+    }
 
     await cargarOrdenes();
 
   }
 
+  // Función para ver el historial de movimientos de una orden
   async function verHistorial(orden) {
 
     const { data,error } = await supabase
@@ -505,6 +592,7 @@ function Ordenes() {
     setMostrarHistorialOrden(true);
   }
 
+  // Función para cargar los estados desde la base de datos
   async function cargarEstados() {
 
     const { data } = await supabase
@@ -515,6 +603,7 @@ function Ordenes() {
     setEstados(data || []);
   }
 
+  // Función para cargar los tipos de servicio desde la base de datos
   async function cargarTiposServicio() {
 
     const { data } = await supabase
@@ -526,6 +615,7 @@ function Ordenes() {
 
   }
 
+  // Función para cargar el transporte desde la base de datos
   async function cargarTransporte() {
 
     const { data } = await supabase
@@ -537,6 +627,7 @@ function Ordenes() {
 
   }
 
+  // Función para cargar los técnicos desde la base de datos
   async function cargarTecnicos() {
     const { data } =
       await supabase
@@ -547,8 +638,11 @@ function Ordenes() {
     setTecnicos(data || []);
   }
 
+  // Función para sumar días hábiles a una fecha
   function sumarDiasHabiles(fecha, diasHabiles) {
-    const resultado = new Date(fecha);
+    const resultado = crearFechaLocal(fecha);
+    if (!resultado) return null;
+
     let diasAgregados = 0;
 
     while (diasAgregados < diasHabiles) {
@@ -563,14 +657,17 @@ function Ordenes() {
     return resultado;
   }
 
+  // Función para calcular los días restantes hasta la fecha máxima de atención
   function diasRestantes(fechaMaxima) {
-    const hoy = new Date();
-    const fecha = new Date(fechaMaxima);
+    const fecha = crearFechaLocal(fechaMaxima);
+    if (!fecha) return null;
 
-    const diffTime = fecha - hoy;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return Math.round((fecha - hoy) / (1000 * 60 * 60 * 24));
   }
 
+  // Función para obtener el puntaje según el nivel
   function obtenerPuntaje(
     nivel
   ) {
@@ -586,6 +683,7 @@ function Ordenes() {
     }
   }
 
+  // Función para calcular la prioridad y el puntaje total
   function calcularPrioridad() {
     const puntaje =
       (obtenerPuntaje(formData.ivc) * 0.40) +
@@ -609,6 +707,7 @@ function Ordenes() {
     };
   }
 
+  // Función para obtener el texto y color según la prioridad
   function estadoPrioridad(
     prioridad
   ) {
@@ -630,9 +729,57 @@ function Ordenes() {
     };
   }
 
+  function obtenerOrdenesFiltradas() {
+    return ordenes
+      .filter((orden) =>
+        String(orden.numero_ost || "")
+          .toLowerCase()
+          .includes(filtroOST.toLowerCase())
+      )
+      .filter((orden) =>
+        String(orden.numero_linea || "")
+          .toLowerCase()
+          .includes(filtroLinea.toLowerCase())
+      )
+      .filter((orden) =>
+        String(orden.evento_agil || "")
+          .toLowerCase()
+          .includes(filtroEvento.toLowerCase())
+      )
+      .filter((orden) => {
+        if (filtroDashboard === "Vencidas") {
+          return diasRestantes(orden.fecha_maxima_atencion) < 0;
+        }
+        if (filtroDashboard === "Dentro SLA") {
+          return diasRestantes(orden.fecha_maxima_atencion) > 2;
+        }
+        if (filtroDashboard === "En Campo") {
+          return orden.estado?.nombre === "En campo";
+        }
+        if (filtroDashboard === "Reingresadas") {
+          return orden.cantidad_reingresos > 0;
+        }
+        if (filtroDashboard === "Por vencer") {
+          const dias = diasRestantes(orden.fecha_maxima_atencion);
+          return dias >= 1 && dias <= 2;
+        }
+        if (filtroDashboard === "Vencen hoy") {
+          return diasRestantes(orden.fecha_maxima_atencion) === 0;
+        }
+        return true;
+      });
+  }
+
+  // Función para exportar los datos a un archivo Excel
   function exportarExcel() {
 
-    const datos = ordenes.map(
+    const ordenesExportadas = obtenerOrdenesFiltradas();
+    if (ordenesExportadas.length === 0) {
+      alert("No hay órdenes que coincidan con los filtros aplicados.");
+      return;
+    }
+
+    const datos = ordenesExportadas.map(
       (orden) => ({
 
         OST: orden.numero_ost,        
@@ -677,8 +824,10 @@ function Ordenes() {
     );
   }
 
+  // Obtener el estado de la ubicación actual
   const location = useLocation();
 
+  //
   useEffect(() => {
     if (
       location.state?.filtroDashboard
@@ -688,14 +837,6 @@ function Ordenes() {
       );
     }
   }, [location]);
-
-  useEffect(() => {
-    console.log(
-      "mostrarHistorialOrden:",
-      mostrarHistorialOrden
-    );
-
-  }, [mostrarHistorialOrden]);
 
   return (
 
@@ -744,6 +885,7 @@ function Ordenes() {
           </button>
         </div>
 
+        {/* Formulario de creación/edición de ordenes */}
         {
           mostrarFormulario && (
             <div className="modal-overlay">
@@ -1488,6 +1630,7 @@ function Ordenes() {
 
         <hr />
 
+        {/* Tabla de órdenes */}
         <h2>Órdenes Registradas</h2>
 
         <div
@@ -1540,10 +1683,26 @@ function Ordenes() {
             }}
             onClick={exportarExcel}>
               📊 Exportar Excel
-        </button>
+          </button>
+
+          <button
+            type="button"
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              cursor: actualizandoOrdenes ? "wait" : "pointer"
+            }}
+            onClick={actualizarOrdenes}
+            disabled={actualizandoOrdenes}
+            title="Actualizar órdenes"
+          >
+            {actualizandoOrdenes ? "Actualizando..." : "↻ Actualizar"}
+          </button>
 
         </div>
 
+        {/* Mostrar el filtro activo si existe */}
         {
           filtroDashboard && (
             <div
@@ -1574,6 +1733,7 @@ function Ordenes() {
           )
         }        
 
+        {/* Tabla de órdenes */}
         <table
           style={{
             borderCollapse: "collapse",
@@ -1598,53 +1758,7 @@ function Ordenes() {
           </thead>
 
           <tbody>
-            {ordenes.filter((orden) => 
-              String(orden.numero_ost || "")
-                .toLowerCase().includes(filtroOST.toLowerCase())
-            )
-            .filter((orden) =>
-              (orden.numero_linea || "")
-                .toLowerCase().includes(filtroLinea.toLowerCase())
-            )
-            .filter((orden) =>
-              (orden.evento_agil || "")
-                .toLowerCase().includes(filtroEvento.toLowerCase())
-            )
-            .filter((orden) => {
-              if (
-                filtroDashboard === "Vencidas"
-              ) {
-                return (diasRestantes(orden.fecha_maxima_atencion) < 0);
-              }
-              if (
-                filtroDashboard === "Dentro SLA"
-              ) {
-                return (diasRestantes(orden.fecha_maxima_atencion) > 2);
-              }
-              if (
-                filtroDashboard === "En Campo"
-              ) {
-                return (orden.estado?.nombre === "En campo");
-              }
-              if (
-                filtroDashboard === "Reingresadas"
-              ) {
-                return (orden.cantidad_reingresos > 0);
-              }
-              if (
-                filtroDashboard === "Por vencer"
-              ) {
-                const dias = diasRestantes(orden.fecha_maxima_atencion);
-                return dias >= 1 && dias <= 2;
-              }
-              if (
-                filtroDashboard === "Vencen hoy"
-              ) {
-                return (diasRestantes(orden.fecha_maxima_atencion) === 0);
-              }
-              return true;
-            })
-            .map((orden) => {
+            {obtenerOrdenesFiltradas().map((orden) => {
               const prioridad = estadoPrioridad(orden.prioridad_calculada);
               return (
                 <tr key={orden.id}>
@@ -1696,6 +1810,7 @@ function Ordenes() {
           </tbody>
         </table> 
         
+        {/* Modal de historial de órdenes */}
         <HistorialOrdenModal
           visible={mostrarHistorialOrden}
           ordenHistorial={ordenHistorial}

@@ -80,7 +80,7 @@ function Login() {
             color: "#1e3a8a"
           }}
         >
-          NetOps Control
+          PMOST EASE
         </h1>
 
         <br/>
@@ -211,7 +211,7 @@ function Login() {
             color: "#9ca3af"
           }}
         >
-          NetOps Control v1.0
+          PMOST EASE v1.0
         </p>
 
       </div>

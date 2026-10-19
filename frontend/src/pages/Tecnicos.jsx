@@ -6,6 +6,8 @@ import HistorialSIGAModal from "../components/HistorialSIGAModal";
 function Tecnicos() {
 
   const [tecnicos, setTecnicos] = useState([]);
+  const [filtroTecnico, setFiltroTecnico] = useState("");
+  const [actualizandoTecnicos, setActualizandoTecnicos] = useState(false);
   const [mostrarDetalleTecnico, setMostrarDetalleTecnico] = useState(false);
   const [tecnicoSeleccionado, setTecnicoSeleccionado] = useState(null);
   const [sigasTecnico, setSigasTecnico] = useState([]);
@@ -28,6 +30,18 @@ function Tecnicos() {
   };
   const [formDataTecnico, setFormDataTecnico] = useState(tecnicoVacio);
 
+  function contarSigasAbiertos(tecnico) {
+    return tecnico.siga_tecnicos?.filter(
+      ({ sigas }) => sigas && sigas.estados_siga?.nombre !== "Cerrado"
+    ).length || 0;
+  }
+
+  function contarOrdenesAbiertas(tecnico) {
+    return tecnico.orden_tecnicos?.filter(
+      ({ ordenes }) => ordenes && ordenes.estado?.nombre !== "Cerrado"
+    ).length || 0;
+  }
+
   useEffect(() => {
     const fetchTecnicos = async () => {
       const { data, error } = await supabase
@@ -35,18 +49,19 @@ function Tecnicos() {
         .select(`
           *,
           siga_tecnicos(
-            id
+            id,
+            sigas(estados_siga(nombre))
           ),
           orden_tecnicos(
-            id
+            id,
+            ordenes(estado(nombre))
           )
         `)
 
       .order("id", { ascending: true });
-      console.log(data);
-
       if (error) {
         console.error("Error fetching tecnicos:", error);
+        alert("No se pudo cargar la lista de técnicos.");
       } else {
         setTecnicos(data);
       }
@@ -60,21 +75,33 @@ function Tecnicos() {
     setTecnicoSeleccionado(tecnico);
 
     const {
-      data: sigasData
+      data: sigasData,
+      error: errorSigas
     } = await supabase
       .from("siga_tecnicos")
       .select(`sigas(id,numero_siga,cliente,estados_siga(nombre))`)
       .eq("tecnico_id",tecnico.id);
 
     const {
-      data: ordenesData
+      data: ordenesData,
+      error: errorOrdenes
     } = await supabase
       .from("orden_tecnicos")
       .select(`ordenes(id,numero_ost,cliente,estado(nombre))`)
       .eq("tecnico_id",tecnico.id);
 
-    setSigasTecnico(sigasData || []);
-    setOrdenesTecnico(ordenesData || []);
+    if (errorSigas || errorOrdenes) {
+      console.error("Error fetching technician assignments:", errorSigas || errorOrdenes);
+      alert("No se pudieron cargar las asignaciones abiertas del técnico.");
+      return;
+    }
+
+    setSigasTecnico((sigasData || []).filter(
+      ({ sigas }) => sigas && sigas.estados_siga?.nombre !== "Cerrado"
+    ));
+    setOrdenesTecnico((ordenesData || []).filter(
+      ({ ordenes }) => ordenes && ordenes.estado?.nombre !== "Cerrado"
+    ));
     setMostrarDetalleTecnico(true);
 
   }
@@ -147,8 +174,14 @@ function Tecnicos() {
         .from("tecnicos")
         .select(`
           *,
-          siga_tecnicos(id),
-          orden_tecnicos(id)
+          siga_tecnicos(
+            id,
+            sigas(estados_siga(nombre))
+          ),
+          orden_tecnicos(
+            id,
+            ordenes(estado(nombre))
+          )
         `);
 
     if (error) {
@@ -156,11 +189,26 @@ function Tecnicos() {
         "Error fetching tecnicos:",
         error
       );
+      alert("No se pudo actualizar la lista de técnicos.");
 
     } else {
 
       setTecnicos(data);
 
+    }
+  }
+
+  async function actualizarTecnicos() {
+    if (actualizandoTecnicos) return;
+
+    setActualizandoTecnicos(true);
+    try {
+      await cargarTecnicos();
+    } catch (error) {
+      console.error("Error refreshing tecnicos:", error);
+      alert("Ocurrió un error al actualizar la lista de técnicos.");
+    } finally {
+      setActualizandoTecnicos(false);
     }
   }
 
@@ -253,6 +301,12 @@ function Tecnicos() {
     setMostrarHistorialSIGA(true);
   }
 
+  const tecnicosFiltrados = tecnicos.filter((tecnico) =>
+    (tecnico.nombre || "")
+      .toLowerCase()
+      .includes(filtroTecnico.trim().toLowerCase())
+  );
+
   return (
 
     <div
@@ -303,6 +357,42 @@ function Tecnicos() {
 
         <hr />
 
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginTop: "20px",
+            marginBottom: "15px"
+          }}
+        >
+          <input
+            type="search"
+            placeholder="Buscar técnico por nombre"
+            value={filtroTecnico}
+            onChange={(e) => setFiltroTecnico(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              flex: 1
+            }}
+          />
+          <button
+            type="button"
+            onClick={actualizarTecnicos}
+            disabled={actualizandoTecnicos}
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              cursor: actualizandoTecnicos ? "wait" : "pointer"
+            }}
+            title="Actualizar técnicos y asignaciones abiertas"
+          >
+            {actualizandoTecnicos ? "Actualizando..." : "↻ Actualizar"}
+          </button>
+        </div>
+
         <table
           style={{
             width: "100%",
@@ -324,14 +414,14 @@ function Tecnicos() {
 
           <tbody>
 
-            {tecnicos?.map((tecnico) => (
+            {tecnicosFiltrados.map((tecnico) => (
 
               <tr key={tecnico.id}>
 
                 <td>{tecnico.nombre}</td>          
-                <td>{tecnico.siga_tecnicos?.length || 0}</td>
-                <td>{tecnico.orden_tecnicos?.length || 0}</td>
-                <td>{(tecnico.siga_tecnicos?.length || 0) + (tecnico.orden_tecnicos?.length || 0)}</td>
+                <td>{contarSigasAbiertos(tecnico)}</td>
+                <td>{contarOrdenesAbiertas(tecnico)}</td>
+                <td>{contarSigasAbiertos(tecnico) + contarOrdenesAbiertas(tecnico)}</td>
                 <td>{tecnico.activo ? (
                   <span style={{ color: "#16a34a", fontWeight: "600" }}>● Activo</span>) : (<span style={{ color: "#6b7280", fontWeight: "600" }}>● Inactivo</span>
                 )}</td>
@@ -349,7 +439,14 @@ function Tecnicos() {
                   </div>
                 </td>
               </tr>
-            ))}
+              ))}
+            {tecnicosFiltrados.length === 0 && (
+              <tr>
+                <td colSpan="6" style={{ textAlign: "center", padding: "16px" }}>
+                  No se encontraron técnicos con ese nombre.
+                </td>
+              </tr>
+            )}
 
           </tbody>
 
@@ -456,9 +553,7 @@ function Tecnicos() {
                     <br />
 
                     {
-                      tecnicoSeleccionado
-                        .siga_tecnicos
-                        ?.length || 0
+                      sigasTecnico.length
                     }
 
                   </div>
@@ -477,9 +572,7 @@ function Tecnicos() {
                     <br />
 
                     {
-                      tecnicoSeleccionado
-                        .orden_tecnicos
-                        ?.length || 0
+                      ordenesTecnico.length
                     }
 
                   </div>
@@ -498,13 +591,7 @@ function Tecnicos() {
                     <br />
 
                     {
-                      (tecnicoSeleccionado
-                        .siga_tecnicos
-                        ?.length || 0)
-                      +
-                      (tecnicoSeleccionado
-                        .orden_tecnicos
-                        ?.length || 0)
+                      sigasTecnico.length + ordenesTecnico.length
                     }
 
                   </div>

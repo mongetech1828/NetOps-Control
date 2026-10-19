@@ -195,8 +195,10 @@ function HistorialOrdenModal({
 
                 <div
                     style={{
-                        width: "700px",
-                        margin: "0 auto"
+                        width: "100%",
+                        maxWidth: "900px",
+                        margin: "0 auto",
+                        boxSizing: "border-box"
                     }}
                 >
 
@@ -250,7 +252,10 @@ function HistorialOrdenModal({
                                     paddingLeft: "20px",
                                     marginLeft: "-6px",
                                     textAlign: "left",
-                                    width: "500px"
+                                    width: "100%",
+                                    minWidth: 0,
+                                    boxSizing: "border-box",
+                                    overflowWrap: "anywhere"
                                 }}
                             >
                                 <div>
@@ -262,7 +267,9 @@ function HistorialOrdenModal({
                                 </div>
 
                                 <div>
-                                    {item.comentario}
+                                    <span style={{ overflowWrap: "anywhere" }}>
+                                        {item.comentario}
+                                    </span>
                                 </div>
 
                             </div>

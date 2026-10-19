@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import { useNavigate } from "react-router-dom";
+import {
+  calcularHorasRestantesSIGA,
+  cargarMovimientosSIGA
+} from "../utils/sigaSla";
 
 function Dashboard() {
 
@@ -22,7 +26,6 @@ function Dashboard() {
   const [ordenesPorVencer, setOrdenesPorVencer] = useState([]);
   const [mostrarVencidas, setMostrarVencidas] = useState(false);
   const [ordenesVencidas, setOrdenesVencidas] = useState([]);
-  const [sigas, setSigas] = useState([]);
   const [sigasDentroSLA, setSigasDentroSLA] = useState(0);
   const [sigasEnCampo, setSigasEnCampo] = useState(0);
   const [sigasPorVencer, setSigasPorVencer] = useState(0);
@@ -71,16 +74,6 @@ function Dashboard() {
     ).padStart(2, "0");
 
     return `${anio}-${mes}-${dia}`;
-  }
-
-  function horasRestantesSIGA(fechaMaxima) {
-    const ahora = new Date();
-    const fechaLimite = new Date(
-      fechaMaxima
-    );
-    const diferencia =
-      fechaLimite - ahora;
-    return diferencia / (1000 * 60 * 60);
   }
 
   async function cargarKpis() {
@@ -161,61 +154,6 @@ function Dashboard() {
       setEnCampo(totalEnCampo || 0);
     }
 
-    const { data: sigasData, error: errorSigas } =
-      await supabase
-        .from("sigas")
-        .select(`*,estados_siga(nombre)`);
-
-    if (errorSigas) {
-      console.error(errorSigas);
-    }
-    else {
-
-      console.log("SIGAS DATA:", sigasData);
-
-      const dentroSLA =
-        sigasData.filter((siga) =>
-          siga.estados_siga?.nombre !== "Cerrado" &&
-          siga.estados_siga?.nombre !== "Diferido" &&
-          horasRestantesSIGA(
-            siga.fecha_maxima_atencion
-          ) > 1
-        ).length;
-
-      const porVencer =
-        sigasData.filter((siga) => {
-          const horas =
-            horasRestantesSIGA(
-              siga.fecha_maxima_atencion
-            );
-          return (
-            siga.estados_siga?.nombre !== "Cerrado" &&
-            siga.estados_siga?.nombre !== "Diferido" &&
-            horas <= 1 &&
-            horas > 0
-          );
-        }).length;
-
-      const vencidos =
-        sigasData.filter((siga) =>
-          siga.estados_siga?.nombre !== "Cerrado" &&
-          horasRestantesSIGA(
-            siga.fecha_maxima_atencion
-          ) < 0
-        ).length;
-
-      const enCampo =
-        sigasData.filter((siga) =>
-          siga.tecnico_id &&
-          siga.estados_siga?.nombre !== "Cerrado" &&
-          siga.estados_siga?.nombre !== "Abierto - Verificación"
-        ).length;
-
-      setSigasDentroSLA(dentroSLA);
-      setSigasPorVencer(porVencer);
-      setSigasVencidos(vencidos);
-      setSigasEnCampo(enCampo);
-    }
   }
 
   // Mostrar Ordenes Vencen Hoy
@@ -367,13 +305,74 @@ function Dashboard() {
   }
 
   async function cargarSigasDashboard() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("sigas")
       .select(`
         *,
         estados_siga(nombre)
       `);
-    setSigas(data || []);
+
+    if (error) {
+      console.error("ERROR CARGANDO SIGAS DEL DASHBOARD:", error);
+      return;
+    }
+
+    if (data.length === 0) {
+      setSigasDentroSLA(0);
+      setSigasPorVencer(0);
+      setSigasVencidos(0);
+      setSigasEnCampo(0);
+      return;
+    }
+
+    const { data: movimientos, error: errorMovimientos } =
+      await cargarMovimientosSIGA(data.map(siga => siga.id));
+
+    if (errorMovimientos) {
+      console.error("ERROR CARGANDO MOVIMIENTOS SLA DEL DASHBOARD:", errorMovimientos);
+      return;
+    }
+
+    const movimientosPorSiga = new Map();
+    movimientos.forEach(movimiento => {
+      const historial = movimientosPorSiga.get(movimiento.siga_id) || [];
+      historial.push(movimiento);
+      movimientosPorSiga.set(movimiento.siga_id, historial);
+    });
+
+    const sigasCalculados = data.map(siga => ({
+      ...siga,
+      horas_restantes_sla: calcularHorasRestantesSIGA(
+        siga.fecha_maxima_atencion,
+        movimientosPorSiga.get(siga.id),
+        siga.estados_siga?.nombre
+      )
+    }));
+    const dentroSLA = sigasCalculados.filter(siga =>
+      siga.estados_siga?.nombre !== "Cerrado" &&
+      siga.estados_siga?.nombre !== "Diferido" &&
+      siga.horas_restantes_sla > 1
+    ).length;
+    const porVencer = sigasCalculados.filter(siga =>
+      siga.estados_siga?.nombre !== "Cerrado" &&
+      siga.estados_siga?.nombre !== "Diferido" &&
+      siga.horas_restantes_sla <= 1 &&
+      siga.horas_restantes_sla > 0
+    ).length;
+    const vencidos = sigasCalculados.filter(siga =>
+      siga.estados_siga?.nombre !== "Cerrado" &&
+      siga.horas_restantes_sla < 0
+    ).length;
+    const enCampo = sigasCalculados.filter(siga =>
+      siga.tecnico_id &&
+      siga.estados_siga?.nombre !== "Cerrado" &&
+      siga.estados_siga?.nombre !== "Abierto - Verificación"
+    ).length;
+
+    setSigasDentroSLA(dentroSLA);
+    setSigasPorVencer(porVencer);
+    setSigasVencidos(vencidos);
+    setSigasEnCampo(enCampo);
   }
 
   const cardStyle = {

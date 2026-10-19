@@ -23,6 +23,8 @@ function parsearFechaMovimiento(fecha) {
 }
 
 function formatoFechaHora(fecha) {
+    const tieneZonaHoraria = typeof fecha === "string" &&
+      /(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(fecha.trim());
     const fechaParseada = parsearFechaMovimiento(fecha);
     if (!fechaParseada) {
       return "-";
@@ -31,7 +33,7 @@ function formatoFechaHora(fecha) {
     return fechaParseada.toLocaleString(
         "es-CR",
         {
-        timeZone: "America/Costa_Rica",
+        timeZone: tieneZonaHoraria ? "America/Costa_Rica" : "UTC",
         year: "numeric",
         month: "numeric",
         day: "numeric",
@@ -121,16 +123,6 @@ function calcularMetricasSIGA(
     };
   }
 
-function horasRestantesSIGA(fechaMaxima) {
-    const ahora = new Date();
-    const fechaLimite = new Date(
-      fechaMaxima
-    );
-    const diferencia =
-      fechaLimite - ahora;
-    return diferencia / (1000 * 60 * 60);
-  }
-
 function formatoFechaHistorial(fecha) {
   if (!fecha) {
     return "-";
@@ -161,14 +153,15 @@ function formatoFechaHistorial(fecha) {
   }).format(fechaCostaRica);
 }
 
-function obtenerSLASIGA(fechaMaxima) {
-    const horas = horasRestantesSIGA(fechaMaxima);
+function obtenerSLASIGA(fechaMaxima, fechaEvaluacion = new Date()) {
+    const fechaLimite = new Date(fechaMaxima);
+    const horas = (fechaLimite - fechaEvaluacion) / (1000 * 60 * 60);
 
     if (horas < 0) {
       return {texto: "⚫Vencido",color: "#dc2626",};}
     if (horas <= 1) {
       return {texto: "🟡Prox. vencer",color: "#eab308",};}
-    return {texto: "🟢Dentro SLA",color: "#16a34a",};
+    return {texto: "🟢En tiempo",color: "#16a34a",};
 }
 
 function formatearHoras(
@@ -203,6 +196,21 @@ function HistorialSIGAModal({
       sigaHistorial?.prioridades_siga?.horas_sla || 0
     )
   : null;
+  const fechaCierreSIGA = (historialSIGA || [])
+    .filter(movimiento => movimiento.tipo_movimiento === "Cierre")
+    .reduce((fechaCierre, movimiento) => {
+      const fechaMovimiento = parsearFechaMovimiento(movimiento.fecha_movimiento);
+      return fechaMovimiento && (!fechaCierre || fechaMovimiento > fechaCierre)
+        ? fechaMovimiento
+        : fechaCierre;
+    }, null);
+  const sigaCerrado = sigaHistorial?.estados_siga?.nombre === "Cerrado";
+  const slaCierre = sigaCerrado && !fechaCierreSIGA
+    ? { texto: "⚪Sin registro de cierre", color: "#6b7280" }
+    : obtenerSLASIGA(
+        sigaHistorial?.fecha_maxima_atencion,
+        sigaCerrado ? fechaCierreSIGA : new Date()
+      );
 
   return (
 
@@ -290,7 +298,7 @@ function HistorialSIGAModal({
             </div>
 
             <div>
-            <strong>Fecha Recpeción:</strong><br />
+            <strong>Fecha Recepción:</strong><br />
             {formatoFechaHora(sigaHistorial?.fecha_recepcion)}
             </div>
 
@@ -300,8 +308,10 @@ function HistorialSIGAModal({
             </div>
 
             <div>
-            <strong>SLA:</strong><br />
-            {obtenerSLASIGA(sigaHistorial?.fecha_maxima_atencion).texto}
+            <strong>Cumplimiento:</strong><br />
+            <span style={{ color: slaCierre.color }}>
+                {slaCierre.texto}
+            </span>
             </div>
 
             <div>
@@ -343,7 +353,7 @@ function HistorialSIGAModal({
                 marginBottom: "10px"
                 }}
             >
-                Cumplimiento SLA
+                Cumplimiento
             </strong>
 
             <span
@@ -384,7 +394,7 @@ function HistorialSIGAModal({
         <div
             style={{
             width: "100%",
-            maxWidth: "700px",
+            maxWidth: "900px",
             margin: "0 auto",
             boxSizing: "border-box"
             }}
@@ -459,8 +469,7 @@ function HistorialSIGAModal({
                     paddingLeft: "20px",
                     marginLeft: "-6px",
                     textAlign: "left",
-                    width: "500px",
-                    maxWidth: "100%",
+                    width: "100%",
                     minWidth: 0,
                     boxSizing: "border-box",
                     overflowWrap: "anywhere"

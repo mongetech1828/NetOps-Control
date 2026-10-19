@@ -27,7 +27,7 @@ function MainLayout({
           padding: "20px"
         }}
       >
-        <h2>NetOps Control</h2>
+        <h2>PMOST EASE</h2>
 
         <hr />
 

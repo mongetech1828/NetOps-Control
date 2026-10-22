@@ -80,7 +80,7 @@ function Login() {
             color: "#1e3a8a"
           }}
         >
-          PMOST EASE TEST
+          PMOST EASE
         </h1>
 
         <br/>

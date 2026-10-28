@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
 
 function Login() {
 
@@ -13,32 +12,57 @@ function Login() {
   async function handleLogin() {
 
     try {
+
       setErrorLogin("");
       setLoading(true);
 
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const response = await fetch(
+        "/api/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            usuario: email,
+            password,
+          }),
+        }
+      );
 
-      if (error) {
+      const data = await response.json();
+
+      if (!data.ok) {
+
         setErrorLogin(
-          "Correo o contraseña incorrectos"
+          "Usuario o contraseña incorrectos"
         );
 
         return;
       }
 
+      localStorage.setItem(
+        "usuario",
+        JSON.stringify(data)
+      );
+
+      window.location.href = "/";
+
     } catch (error) {
+
+      console.error(error);
+
       setErrorLogin(
-        "Ocurrió un error al iniciar sesión"
+        "No fue posible conectar con el servidor"
       );
 
     } finally {
+
       setLoading(false);
+
     }
   }
+
 
   return (
 
@@ -91,12 +115,12 @@ function Login() {
             marginBottom: "30px"
           }}
         >
-          Gestión Servicios Especializados
+          Gestión Servicios Especializadosn
         </p>
 
         <input
-          type="email"
-          placeholder="Correo"
+          type="text"
+          placeholder="Usuario ICE"
           value={email}
           onChange={(e) =>
             setEmail(e.target.value)

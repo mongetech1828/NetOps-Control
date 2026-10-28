@@ -1,74 +1,43 @@
 import { useEffect, useState } from "react";
-import { supabase } from "./services/supabase";
 import Login from "./pages/Login";
 import AppRoutes from "./routes/AppRoutes";
 
 function App() {
 
-  const [session, setSession] = useState(null);
-  const [loadingSession, setLoadingSession] = useState(true);
-  const [perfil, setPerfil] = useState(null);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
 
-    async function cargarPerfil(userId) {
+    const usuarioGuardado =
+      localStorage.getItem("usuario");
 
-      const { data } = await supabase
-        .from("perfiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      setPerfil(data);
+    if (usuarioGuardado) {
+      setUsuario(
+        JSON.parse(usuarioGuardado)
+      );
     }
-
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-
-        setSession(session);
-
-        if (session?.user?.id) {
-          cargarPerfil(session.user.id);
-        }
-
-        setLoadingSession(false);        
-      });       
-     
-    const {data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        
-        setSession(session);
-
-        if (session?.user?.id) {
-          cargarPerfil(session.user.id);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
 
   }, []);
 
-  async function cerrarSesion() {
-    await supabase.auth.signOut();
+  function cerrarSesion() {
+
+    localStorage.removeItem("usuario");
+
+    setUsuario(null);
+
+    window.location.reload();
+
   }
 
-  if (loadingSession) {
-    return <div>Cargando...</div>;
-  }
-
-  if (!session) {
+  if (!usuario) {
     return <Login />;
-  }  
+  }
 
   return (
     <AppRoutes
-    perfil={perfil}
-    onLogout={cerrarSesion}
-   />
+      perfil={usuario}
+      onLogout={cerrarSesion}
+    />
   );
 
 }

@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../services/supabase";
 import { useNavigate } from "react-router-dom";
 import {
   calcularHorasRestantesSIGA,
   cargarMovimientosSIGA
 } from "../utils/sigaSla";
 
-function Dashboard() {
+function Dashboard({perfil}) {
 
-  const [perfil, setPerfil] = useState(null);
   const [totalOrdenes, setTotalOrdenes] = useState(0);
   const [dentroSLA, setDentroSLA] = useState(0);
   const [porVencer, setPorVencer] = useState(0);
@@ -35,27 +33,28 @@ function Dashboard() {
 
   useEffect(() => {
 
-    async function cargarPerfil() {
+    async function cargarKpis() {
 
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
+      try {
 
-      const { data, error } = await supabase
-        .from("perfiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        const response =
+          await fetch("/api/ordenes");
 
-      console.log(data);
-      console.log(error);
+        const ordenes =
+          await response.json();
 
-      setPerfil(data);
+        setTotalOrdenes(
+          ordenes.length
+        );
+
+      } catch (error) {
+
+        console.error(error);
+
+      }
 
     }
 
-    cargarPerfil();
-    cargarKpis();
     cargarSLA();
     cargarSigasDashboard();
 
@@ -383,10 +382,6 @@ function Dashboard() {
     textAlign: "center",
     transition: "all 0.2s ease"
   };
-
-  async function cerrarSesion() {
-    await supabase.auth.signOut();
-  }
 
   const navigate = useNavigate();
 

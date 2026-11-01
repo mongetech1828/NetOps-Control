@@ -56,8 +56,8 @@ function Dashboard({perfil}) {
     }
 
     cargarKpis();
-    cargarSLA();
-    cargarSigasDashboard();
+    /*cargarSLA();
+    cargarSigasDashboard();*/
 
   }, []);
 
@@ -76,88 +76,8 @@ function Dashboard({perfil}) {
     return `${anio}-${mes}-${dia}`;
   }
 
-  async function cargarKpis() {
-
-    // Total órdenes
-    const { count, error } = await supabase
-      .from("ordenes")
-      .select("*", {
-        count: "exact",
-        head: true
-      });
-
-    setTotalOrdenes(count || 0);
-
-    // Órdenes reingresadas
-    const {
-      count: reingresadas,
-      error: errorReingresadas
-    } = await supabase
-      .from("ordenes")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .gt("cantidad_reingresos", 0);
-
-    if (errorReingresadas) {
-      console.error(errorReingresadas);
-    } else {
-      setTotalReingresadas(
-        reingresadas || 0
-      );
-    }
-
-    // Órdenes Vencen hoy
-    const hoy = formatearFechaDB(
-      new Date()
-    );
-
-    const {
-      count: totalVencenHoy,
-      error: errorVencenHoy
-    } = await supabase
-      .from("ordenes")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .eq("fecha_maxima_atencion", hoy);
-
-    if (errorVencenHoy) {
-      console.error(errorVencenHoy);
-    } else {
-      setVencenHoy(
-        totalVencenHoy || 0
-      );
-    }
-
-    // Órdenes En campo
-    const {
-      count: totalEnCampo,
-      error: errorEnCampo
-    } = await supabase
-
-      .from("ordenes")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-    .eq("estado_id", 7);
-
-    console.log("totalEnCampo:", totalEnCampo);
-    console.log("errorEnCampo:", errorEnCampo);
-
-    if (errorEnCampo) {
-      console.error(errorEnCampo);
-    } else {
-      setEnCampo(totalEnCampo || 0);
-    }
-
-  }
-
   // Mostrar Ordenes Vencen Hoy
-  async function mostrarOrdenesHoy() {
+  /*async function mostrarOrdenesHoy() {
 
     const hoy = formatearFechaDB(
       new Date()
@@ -175,10 +95,10 @@ function Dashboard({perfil}) {
 
     setOrdenesVencenHoy(data);
     setMostrarVencenHoy(true);
-  }
+  }*/
 
   //Mostrar Ordenes reingresadas
-  async function mostrarReingresos() {
+  /*async function mostrarReingresos() {
 
     const { data, error } = await supabase
       .from("ordenes")
@@ -192,10 +112,10 @@ function Dashboard({perfil}) {
 
     setOrdenesReingresadas(data);
     setMostrarReingresadas(true);
-  }
+  }*/
 
   //Mostrar Ordenes en campo
-  async function mostrarOrdenesEnCampo() {
+  /*async function mostrarOrdenesEnCampo() {
 
     const { data, error } = await supabase
       .from("ordenes")
@@ -209,10 +129,10 @@ function Dashboard({perfil}) {
 
     setOrdenesEnCampo(data);
     setMostrarEnCampo(true);
-  }
+  }*/
 
   //Mostrar Ordenes Por Vencer
-  async function mostrarOrdenesPorVencer() {
+  /*async function mostrarOrdenesPorVencer() {
 
     const { data, error } = await supabase
       .from("ordenes")
@@ -234,10 +154,10 @@ function Dashboard({perfil}) {
 
     setOrdenesPorVencer(filtradas);
     setMostrarPorVencer(true);
-  }
+  }*/
 
   //Mostrar Ordenes Vencidas
-  async function mostrarOrdenesVencidas() {
+  /*async function mostrarOrdenesVencidas() {
 
     const { data, error } = await supabase
       .from("ordenes")
@@ -259,7 +179,7 @@ function Dashboard({perfil}) {
 
     setOrdenesVencidas(filtradas);
     setMostrarVencidas(true);
-  }
+  }*/
 
   function diasRestantes(fechaMaxima) {
     const hoy = new Date();
@@ -269,7 +189,7 @@ function Dashboard({perfil}) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  async function cargarSLA() {
+  /*async function cargarSLA() {
 
     const { data } = await supabase
       .from("ordenes")
@@ -302,9 +222,9 @@ function Dashboard({perfil}) {
     console.log("Dentro SLA:", contadorDentroSLA);
     console.log("Por Vencer:", contadorPorVencer);
     console.log("Vencidas:", contadorVencidas);
-  }
+  }*/
 
-  async function cargarSigasDashboard() {
+  /*async function cargarSigasDashboard() {
     const { data, error } = await supabase
       .from("sigas")
       .select(`
@@ -373,7 +293,7 @@ function Dashboard({perfil}) {
     setSigasPorVencer(porVencer);
     setSigasVencidos(vencidos);
     setSigasEnCampo(enCampo);
-  }
+  }*/
 
   const cardStyle = {
     backgroundColor: "#ffffff",
@@ -386,7 +306,7 @@ function Dashboard({perfil}) {
 
   const navigate = useNavigate();
 
-  async function buscarGlobal() {
+  /*async function buscarGlobal() {
 
     if (!busquedaGlobal.trim()) {
       setResultadosBusqueda([]);
@@ -433,7 +353,7 @@ function Dashboard({perfil}) {
       )
 
     ]);
-  }
+  }*/
 
   useEffect(() => {
     buscarGlobal();

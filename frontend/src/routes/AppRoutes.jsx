@@ -19,7 +19,9 @@ function AppRoutes({ perfil, onLogout }) {
 
         <Route
           path="/"
-          element={<Dashboard />}
+          element={<Dashboard
+            perfil={perfil}
+          />}
         />
 
         <Route

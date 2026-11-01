@@ -355,9 +355,9 @@ function Dashboard({perfil}) {
     ]);
   }*/
 
-  useEffect(() => {
+  /*useEffect(() => {
     buscarGlobal();
-  }, [busquedaGlobal]);
+  }, [busquedaGlobal]);*/
 
   return (
     <div>

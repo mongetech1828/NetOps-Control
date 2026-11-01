@@ -55,6 +55,7 @@ function Dashboard({perfil}) {
 
     }
 
+    cargarKpis();
     cargarSLA();
     cargarSigasDashboard();
 

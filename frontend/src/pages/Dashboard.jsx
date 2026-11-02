@@ -34,25 +34,75 @@ function Dashboard({perfil}) {
   useEffect(() => {
 
     async function cargarKpis() {
-
       try {
+        const response = await fetch("/api/ordenes");
+        const ordenes = await response.json();
+        console.log("ORDENES:",ordenes);
 
-        const response =
-          await fetch("/api/ordenes");
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
 
-        const ordenes =
-          await response.json();
+        let dentroSLA = 0;
+        let porVencer = 0;
+        let vencenHoy = 0;
+        let vencidas = 0;
+        let reingresadas = 0;
+        let enCampo = 0;
 
-        setTotalOrdenes(
-          ordenes.length
-        );
+        ordenes.forEach((orden) => {
+
+          // Reingresadas
+          if ((orden.cantidad_reingresos || 0) > 0) {
+            reingresadas++;
+          }
+
+          // En Campo
+          if (
+            number(orden.estado_id) === 7
+          ) {
+            enCampo++;
+          }
+
+          // SLA
+          if (orden.fecha_maxima_atencion) {
+
+            const fechaMaxima = new Date(
+              orden.fecha_maxima_atencion
+            );
+
+            fechaMaxima.setHours(0, 0, 0, 0);
+
+            const diferenciaDias = Math.ceil(
+              (fechaMaxima - hoy) /
+              (1000 * 60 * 60 * 24)
+            );
+
+            if (diferenciaDias > 2) {
+              dentroSLA++;
+            }
+            else if (diferenciaDias >= 1 && diferenciaDias <= 2) {
+              porVencer++;
+            }
+            else if (diferenciaDias === 0) {
+              vencenHoy++;
+            }
+            else {
+              vencidas++;
+            }
+          }
+        });
+
+        setTotalOrdenes(ordenes.length);
+        setDentroSLA(dentroSLA);
+        setPorVencer(porVencer);
+        setVencenHoy(vencenHoy);
+        setVencidas(vencidas);
+        setTotalReingresadas(reingresadas);
+        setEnCampo(enCampo);
 
       } catch (error) {
-
-        console.error(error);
-
+        console.error("ERROR CARGANDO KPIs:", error);
       }
-
     }
 
     cargarKpis();

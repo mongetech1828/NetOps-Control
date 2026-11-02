@@ -58,7 +58,7 @@ function Dashboard({perfil}) {
 
           // En Campo
           if (
-            number(orden.estado_id) === 7
+            Number(orden.estado_id) === 7
           ) {
             enCampo++;
           }

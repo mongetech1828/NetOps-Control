@@ -444,25 +444,29 @@ function Ordenes() {
   // Función para cargar las órdenes desde la base de datos
   async function cargarOrdenes() {
 
-  const { data, error } =
-    await supabase
-      .from("ordenes")
-      .select(`
-        *,
-        estado ( nombre ),
-        tipo_servicio(nombre),
-        transporte(nombre),
-        orden_tecnicos(tecnico_id, tecnicos(id,nombre))
-      `)
-      .order("id", { ascending: false });
+    try {
 
-    if (error) {
-      console.error("ERROR CARGANDO ÓRDENES:", error);
-      alert("No se pudieron cargar las órdenes.");
-      return;
+      const response =
+        await fetch("/api/ordenes");
+
+      const data =
+        await response.json();
+
+      setOrdenes(data || []);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO ÓRDENES:",
+        error
+      );
+
+      alert(
+        "No se pudieron cargar las órdenes."
+      );
+
     }
 
-    setOrdenes(data);
   }
 
   async function actualizarOrdenes() {
@@ -595,47 +599,97 @@ function Ordenes() {
   // Función para cargar los estados desde la base de datos
   async function cargarEstados() {
 
-    const { data } = await supabase
-      .from("estado")
-      .select("*")
-      .order("nombre");
+    try {
 
-    setEstados(data || []);
+      const response =
+        await fetch("/api/estados");
+
+      const data =
+        await response.json();
+
+      setEstados(data || []);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO ESTADOS:",
+        error
+      );
+
+    }
+
   }
 
   // Función para cargar los tipos de servicio desde la base de datos
   async function cargarTiposServicio() {
 
-    const { data } = await supabase
-      .from("tipo_servicio")
-      .select("*")
-      .order("nombre");
+    try {
 
-    setTiposServicio(data || []);
+      const response =
+        await fetch("/api/tipo-servicio");
+
+      const data =
+        await response.json();
+
+      setTiposServicio(data || []);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO TIPOS DE SERVICIO:",
+        error
+      );
+
+    }
 
   }
 
   // Función para cargar el transporte desde la base de datos
   async function cargarTransporte() {
 
-    const { data } = await supabase
-      .from("transporte")
-      .select("*")
-      .order("nombre");
+    try {
 
-    setTransporte(data || []);
+      const response =
+        await fetch("/api/transporte");
+
+      const data =
+        await response.json();
+
+      setTransporte(data || []);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO TRANSPORTES:",
+        error
+      );
+
+    }
 
   }
 
   // Función para cargar los técnicos desde la base de datos
   async function cargarTecnicos() {
-    const { data } =
-      await supabase
-        .from("tecnicos")
-        .select("*")
-        .order("nombre");
 
-    setTecnicos(data || []);
+    try {
+
+      const response =
+        await fetch("/api/tecnicos");
+
+      const data =
+        await response.json();
+
+      setTecnicos(data || []);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO TÉCNICOS:",
+        error
+      );
+
+    }
+
   }
 
   // Función para sumar días hábiles a una fecha

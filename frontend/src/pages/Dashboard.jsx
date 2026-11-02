@@ -105,8 +105,9 @@ function Dashboard({perfil}) {
     }
 
     cargarKpis();
-    /*cargarSLA();
-    cargarSigasDashboard();*/
+    cargarSigasDashboard();
+    
+    /*cargarSLA();*/
 
   }, []);
 
@@ -273,76 +274,78 @@ function Dashboard({perfil}) {
     console.log("Vencidas:", contadorVencidas);
   }*/
 
-  /*async function cargarSigasDashboard() {
-    const { data, error } = await supabase
-      .from("sigas")
-      .select(`
-        *,
-        estados_siga(nombre)
-      `);
+  async function cargarSigasDashboard() {
+    try {
 
-    if (error) {
-      console.error("ERROR CARGANDO SIGAS DEL DASHBOARD:", error);
-      return;
+      const response =
+        await fetch("/api/sigas");
+
+      const sigas =
+        await response.json();
+
+      let dentroSLA = 0;
+      let porVencer = 0;
+      let vencidos = 0;
+      let enCampo = 0;
+
+      const ahora = new Date();
+
+      sigas.forEach((siga) => {
+
+        if (!siga.fecha_maxima_atencion) {
+          return;
+        }
+
+        const fechaMaxima =
+          new Date(siga.fecha_maxima_atencion);
+
+        const horasRestantes =
+          (fechaMaxima - ahora) / (1000 * 60 * 60);
+
+        if (
+          siga.estado !== "Cerrado" &&
+          siga.estado !== "Diferido"
+        ) {
+
+          if (horasRestantes > 1) {
+            dentroSLA++;
+          }
+          else if (
+            horasRestantes > 0 &&
+            horasRestantes <= 1
+          ) {
+            porVencer++;
+          }
+          else {
+            vencidos++;
+          }
+
+        }
+
+        if (
+          siga.estado !== "Cerrado" &&
+          siga.estado !== "Abierto"
+        ) {
+          enCampo++;
+        }
+
+      });
+
+      setSigasDentroSLA(dentroSLA);
+      setSigasPorVencer(porVencer);
+      setSigasVencidos(vencidos);
+      setSigasEnCampo(enCampo);
+
     }
+    catch (error) {
 
-    if (data.length === 0) {
-      setSigasDentroSLA(0);
-      setSigasPorVencer(0);
-      setSigasVencidos(0);
-      setSigasEnCampo(0);
-      return;
+      console.error(
+        "ERROR KPI SIGA:",
+        error
+      );
+
     }
-
-    const { data: movimientos, error: errorMovimientos } =
-      await cargarMovimientosSIGA(data.map(siga => siga.id));
-
-    if (errorMovimientos) {
-      console.error("ERROR CARGANDO MOVIMIENTOS SLA DEL DASHBOARD:", errorMovimientos);
-      return;
-    }
-
-    const movimientosPorSiga = new Map();
-    movimientos.forEach(movimiento => {
-      const historial = movimientosPorSiga.get(movimiento.siga_id) || [];
-      historial.push(movimiento);
-      movimientosPorSiga.set(movimiento.siga_id, historial);
-    });
-
-    const sigasCalculados = data.map(siga => ({
-      ...siga,
-      horas_restantes_sla: calcularHorasRestantesSIGA(
-        siga.fecha_maxima_atencion,
-        movimientosPorSiga.get(siga.id),
-        siga.estados_siga?.nombre
-      )
-    }));
-    const dentroSLA = sigasCalculados.filter(siga =>
-      siga.estados_siga?.nombre !== "Cerrado" &&
-      siga.estados_siga?.nombre !== "Diferido" &&
-      siga.horas_restantes_sla > 1
-    ).length;
-    const porVencer = sigasCalculados.filter(siga =>
-      siga.estados_siga?.nombre !== "Cerrado" &&
-      siga.estados_siga?.nombre !== "Diferido" &&
-      siga.horas_restantes_sla <= 1 &&
-      siga.horas_restantes_sla > 0
-    ).length;
-    const vencidos = sigasCalculados.filter(siga =>
-      siga.estados_siga?.nombre !== "Cerrado" &&
-      siga.horas_restantes_sla < 0
-    ).length;
-    const enCampo = sigasCalculados.filter(siga =>
-      siga.tecnico_id &&
-      siga.estados_siga?.nombre !== "Cerrado" &&
-      siga.estados_siga?.nombre !== "Abierto - Verificación"
-    ).length;
-
-    setSigasDentroSLA(dentroSLA);
-    setSigasPorVencer(porVencer);
-    setSigasVencidos(vencidos);
-    setSigasEnCampo(enCampo);
-  }*/
+  }
 
   const cardStyle = {
     backgroundColor: "#ffffff",

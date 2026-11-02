@@ -72,9 +72,35 @@ function SIGA() {
       const data =
         await response.json();
 
+      const sigasProcesados = data.map((siga) => {
+
+        if (!siga.fecha_maxima_atencion) {
+          return {
+            ...siga,
+            horas_restantes_sla: null
+          };
+        }
+
+        const ahora = new Date();
+
+        const fechaMaxima =
+          new Date(siga.fecha_maxima_atencion);
+
+        const horasRestantes =
+          (fechaMaxima - ahora) / (1000 * 60 * 60);
+
+        return {
+          ...siga,
+          horas_restantes_sla: horasRestantes
+        };
+
+      });
+
+      setSigas(sigasProcesados);
+
       console.log("SIGAS API:", data);
 
-      setSigas(data);
+      /*setSigas(data);*/
 
     } catch (error) {
 
@@ -1071,11 +1097,11 @@ function SIGA() {
                 <td>{siga.numero_linea}</td>
                 <td>{siga.evento_agil}</td>
                 <td>{siga.cliente}</td>
-                <td>{siga.tipo_servicio?.nombre || "-"}</td>
-                <td>{siga.prioridades_siga?.prioridad}</td>
-                <td>{siga.estados_siga?.nombre}</td>
-                <td>{siga.grupos_gestion?.nombre}</td>
-                <td>{horasRestantes === null ? "-" : horasRestantes.toFixed(1)}</td>
+                <td>{siga.tipo_servicio || "-"}</td>
+                <td>{siga.prioridad}</td>
+                <td>{siga.estado}</td>
+                <td>{siga.grupo_gestion}</td>
+                <td>{horasRestantes === null ? "-" : Number(horasRestantes).toFixed(1)}</td>
                 <td>
                   <span
                     style={{color: sla.color, fontWeight: 600,}}>

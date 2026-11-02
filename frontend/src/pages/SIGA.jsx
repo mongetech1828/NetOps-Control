@@ -259,7 +259,7 @@ function SIGA() {
     try {
 
       const response =
-        await fetch("/api/tipos-servicio");
+        await fetch("/api/tipo-servicio");
 
       const data =
         await response.json();

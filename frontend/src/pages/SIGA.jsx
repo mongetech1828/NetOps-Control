@@ -64,6 +64,27 @@ function SIGA() {
 
   // Función para cargar los SIGAs desde la base de datos
   async function cargarSigas() {
+    try {
+
+      const response =
+        await fetch("/api/sigas");
+
+      const data =
+        await response.json();
+
+      console.log("SIGAS API:", data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO SIGAS:",
+        error
+      );
+    }
+  }
+
+
+  /*async function cargarSigas() {
     const { data, error } = await supabase
       .from("sigas")
       .select(`
@@ -113,7 +134,7 @@ function SIGA() {
         siga.estados_siga?.nombre
       )
     })));
-  }
+  }*/
 
   async function actualizarSigas() {
     if (actualizandoSigas) return;

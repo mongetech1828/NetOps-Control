@@ -74,6 +74,8 @@ function SIGA() {
 
       console.log("SIGAS API:", data);
 
+      setSigas(data);
+
     } catch (error) {
 
       console.error(

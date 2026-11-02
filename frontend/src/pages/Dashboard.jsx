@@ -37,7 +37,6 @@ function Dashboard({perfil}) {
       try {
         const response = await fetch("/api/ordenes");
         const ordenes = await response.json();
-        console.log("ORDENES:",ordenes);
 
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);

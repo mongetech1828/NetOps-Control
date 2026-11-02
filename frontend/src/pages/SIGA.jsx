@@ -196,45 +196,104 @@ function SIGA() {
 
   // Funciones para cargar datos de estado, prioridad, grupo de gestión y tipo de servicio desde la base de datos
   async function cargarEstadosSIGA() {
-    const { data } = await supabase
-      .from("estados_siga")
-      .select("*")
-      .order("nombre");
-    setEstadosSIGA(data || []);
+    try {
+
+      const response =
+        await fetch("/api/estados-siga");
+
+      const data =
+        await response.json();
+
+      setEstadosSIGA(data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO ESTADOS SIGA:",
+        error
+      );
+    }
   }
 
   async function cargarPrioridades() {
-    const { data } = await supabase
-      .from("prioridades_siga")
-      .select("*")
-      .order("prioridad");
-    setPrioridadesSIGA(data || []);
+    try {
+
+      const response =
+        await fetch("/api/prioridades-siga");
+
+      const data =
+        await response.json();
+
+      setPrioridadesSIGA(data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO PRIORIDADES SIGA:",
+        error
+      );
+    }
   }
 
   async function cargarGrupos() {
-    const { data } = await supabase
-      .from("grupos_gestion")
-      .select("*")
-      .order("nombre");
-    setGruposGestion(data || []);
+    try {
+
+      const response =
+        await fetch("/api/grupos-gestion");
+
+      const data =
+        await response.json();
+
+      setGruposGestion(data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO GRUPOS:",
+        error
+      );
+    }
   }
 
   async function cargarTiposServicio() {
-    const { data } = await supabase
-      .from("tipo_servicio")
-      .select("*")
-      .order("nombre");
-    setTiposServicio(data || []);
+    try {
+
+      const response =
+        await fetch("/api/tipos-servicio");
+
+      const data =
+        await response.json();
+
+      setTiposServicio(data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO TIPOS DE SERVICIO:",
+        error
+      );
+    }
   }
 
   // Función para cargar los técnicos desde la base de datos
   async function cargarTecnicos() {
+    try {
 
-    const { data } = await supabase
-      .from("tecnicos")
-      .select("*")
-      .order("nombre");
-    setTecnicos(data || []);
+      const response =
+        await fetch("/api/tecnicos");
+
+      const data =
+        await response.json();
+
+      setTecnicos(data);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO TECNICOS:",
+        error
+      );
+    }
   }
 
   // Función para registrar los cambios de técnicos en el historial del SIGA

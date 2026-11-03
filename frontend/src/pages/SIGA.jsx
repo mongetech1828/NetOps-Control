@@ -439,25 +439,35 @@ function SIGA() {
         return;
       }
 
-      const {error} = await supabase
-        .from ("sigas")
-        .update({
+      const response = await fetch(`/api/sigas/${sigaEditando}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           numero_linea: formData.numero_linea,
           evento_agil: formData.evento_agil,
           cliente: formData.cliente,
-          tipo_servicio_id: formData.tipo_servicio_id? parseInt(formData.tipo_servicio_id): null,
-          prioridad_id: formData.prioridad_id? parseInt(formData.prioridad_id): null,
-          estado_siga_id: formData.estado_siga_id? parseInt (formData.estado_siga_id): null,
-          grupo_gestion_id: formData.grupo_gestion_id? parseInt(formData.grupo_gestion_id) : null,
-          tecnico_id: tecnicosSeleccionados.length > 0 ? tecnicosSeleccionados[0] : null,
-          nivel: nivelCalculado,
+          tipo_servicio_id: formData.tipo_servicio_id
+            ? parseInt(formData.tipo_servicio_id)
+            : null,
+          prioridad_id: formData.prioridad_id
+            ? parseInt(formData.prioridad_id)
+            : null,
+          estado_siga_id: formData.estado_siga_id
+            ? parseInt(formData.estado_siga_id)
+            : null,
+          grupo_gestion_id: formData.grupo_gestion_id
+            ? parseInt(formData.grupo_gestion_id)
+            : null,
           descripcion: formData.descripcion,
-          observaciones: formData.observaciones
-        })
-        .eq("id", sigaEditando);
-        
-      if (error) {
-        console.error(error);
+          observaciones: formData.observaciones,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error actualizando SIGA:", errorData);
         return;
       }
 

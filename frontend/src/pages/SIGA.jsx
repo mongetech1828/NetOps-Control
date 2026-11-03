@@ -345,7 +345,7 @@ function SIGA() {
       });
     }
 
-    const { error: historialError } = await supabase
+    /*const { error: historialError } = await supabase
       .from("historial_siga")
       .insert(movimientos);
 
@@ -353,7 +353,7 @@ function SIGA() {
       console.error("ERROR REGISTRANDO CAMBIO DE TÉCNICOS EN HISTORIAL SIGA:", historialError);
       alert("Los técnicos se actualizaron, pero no se pudo guardar el cambio en el historial.");
       return false;
-    }
+    }*/
 
     return true;
   }
@@ -620,7 +620,7 @@ function SIGA() {
       }
 
       // Registrar cambios de grupo de gestión en el historial si hubo un cambio
-      if (
+      /*if (
         sigaActual.grupo_gestion_id !==
         (
           formData.grupo_gestion_id
@@ -661,7 +661,7 @@ function SIGA() {
             alert("El grupo se actualizó, pero no se pudo guardar el cambio en el historial.");
             return;
         }
-      }      
+      }     */ 
 
     }
     else {
@@ -695,7 +695,7 @@ function SIGA() {
       }
 
       let usuarioCreacion = null;
-      const {
+      /*const {
         data: { user },
         error: usuarioError
       } = await supabase.auth.getUser();
@@ -721,7 +721,7 @@ function SIGA() {
           console.error("ERROR HISTORIAL SIGA:", historialError);
           alert("El SIGA se creó, pero no se pudo guardar su inicio en el historial.");
         }
-      }
+      }*/
 
       // Registrar los técnicos asignados al nuevo SIGA
       if (tecnicosSeleccionados.length > 0) {
@@ -805,7 +805,7 @@ function SIGA() {
   }
 
   // Función para cargar el historial de un SIGA y mostrarlo en un modal
-  async function cargarHistorialSIGA(siga) {
+  /*async function cargarHistorialSIGA(siga) {
     setSigaHistorial(siga);
     const { data, error } = await supabase
       .from("historial_siga")
@@ -830,7 +830,7 @@ function SIGA() {
 
     setHistorialSIGA(data || []);
     setMostrarHistorialSIGA(true);
-  }
+  }*/
 
   function obtenerSigasFiltrados() {
     return sigas

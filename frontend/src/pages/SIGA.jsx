@@ -392,11 +392,14 @@ function SIGA() {
     console.log("prioridadesSIGA =", prioridadesSIGA);    
 
     const prioridadSeleccionada =
-      prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
+      prioridadesSIGA.find((p) => Number(p.id) === Number(formData.prioridad_id));
     if (!prioridadSeleccionada) {
       alert("No se encontró la prioridad seleccionada");
       return;
     }
+
+    console.log("prioridadesSIGA completo:", prioridadesSIGA);
+    console.log("prioridadSeleccionada:", prioridadSeleccionada);
 
     console.log("prioridadSeleccionada =", prioridadSeleccionada);
 

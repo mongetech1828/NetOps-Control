@@ -471,16 +471,6 @@ function SIGA() {
         return;
       }
 
-      /*const {
-        data: { user },
-        error: usuarioError
-      } = await supabase.auth.getUser();
-      if (usuarioError || !user) {
-        console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", usuarioError);
-        alert("No se pudo identificar al usuario para guardar el historial.");
-        return;
-      }*/
-
       const user = {id: 1 }; // Reemplaza con la lógica para obtener el usuario actual
 
       // Registrar cambios de estado en el historial si hubo un cambio
@@ -552,15 +542,13 @@ function SIGA() {
             });
         }
 
-        const { error: historialError } = await supabase
+        /*const { error: historialError } = await supabase
             .from("historial_siga")
             .insert(movimientos);
 
         if (historialError) {
-            console.error("ERROR HISTORIAL SIGA:", historialError);
-            alert("El SIGA se actualizó, pero no se pudo guardar el movimiento en el historial.");
-            return;
-        }
+          console.warn("Historial SIGA pendiente de migración");
+        }*/
       }
 
       // Registrar cambios de técnicos en el historial si hubo cambios

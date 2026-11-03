@@ -461,7 +461,7 @@ function SIGA() {
         return;
       }
 
-      const {
+      /*const {
         data: { user },
         error: usuarioError
       } = await supabase.auth.getUser();
@@ -469,7 +469,9 @@ function SIGA() {
         console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", usuarioError);
         alert("No se pudo identificar al usuario para guardar el historial.");
         return;
-      }
+      }*/
+
+      const user = {id: 1 }; // Reemplaza con la lógica para obtener el usuario actual
 
       // Registrar cambios de estado en el historial si hubo un cambio
       if (

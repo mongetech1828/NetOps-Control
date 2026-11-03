@@ -388,12 +388,17 @@ function SIGA() {
       return;
     }
 
+    console.log("formData.prioridad_id =", formData.prioridad_id);
+    console.log("prioridadesSIGA =", prioridadesSIGA);    
+
     const prioridadSeleccionada =
       prioridadesSIGA.find((p) => p.id === Number(formData.prioridad_id));
     if (!prioridadSeleccionada) {
       alert("No se encontró la prioridad seleccionada");
       return;
     }
+
+    console.log("prioridadSeleccionada =", prioridadSeleccionada);
 
     const fechaMaxima = calcularFechaMaximaSIGA(
       formData.fecha_recepcion,

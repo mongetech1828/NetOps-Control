@@ -480,10 +480,10 @@ function Ordenes() {
       numero_linea: orden.numero_linea || "",
       evento_agil: orden.evento_agil || "",
       cliente: orden.cliente || "",
-      tipo_servicio_id: orden.tipo_servicio_id || "",
-      transporte_id: orden.transporte_id || "",
+      tipo_servicio_id: String(orden.tipo_servicio_id || ""),
+      transporte_id: String(orden.transporte_id || ""),
       observaciones: orden.observaciones || "",
-      estado_id: orden.estado_id || "",
+      estado_id: String(orden.estado_id || ""),
       fecha_recepcion: orden.fecha_recepcion?.split("T")[0] || "",
       ivc: orden.ivc || "",
       uc: orden.uc || "",
@@ -854,7 +854,7 @@ function Ordenes() {
           return diasRestantes(orden.fecha_maxima_atencion) > 2;
         }
         if (filtroDashboard === "En Campo") {
-          return orden.estado?.nombre === "En campo";
+          return orden.estado === "En campo";
         }
         if (filtroDashboard === "Reingresadas") {
           return orden.cantidad_reingresos > 0;
@@ -886,9 +886,9 @@ function Ordenes() {
         Linea: orden.numero_linea,
         Evento_agil: orden.evento_agil,
         Cliente: orden.cliente,
-        Servicio: orden.tipo_servicio?.nombre,
-        Transporte: orden.transporte?.nombre,
-        Estado: orden.estado?.nombre,
+        Servicio: orden.tipo_servicio,
+        Transporte: orden.transporte,
+        Estado: orden.estado,
         Dias: diasRestantes(orden.fecha_maxima_atencion),
         Tecnicos:
           orden.orden_tecnicos
@@ -1866,9 +1866,9 @@ function Ordenes() {
                   <td>{orden.numero_linea}</td>
                   <td>{orden.evento_agil}</td>
                   <td>{orden.cliente}</td>
-                  <td>{orden.tipo_servicio?.nombre || "-"}</td>
-                  <td>{orden.transporte?.nombre || "-"}</td>
-                  <td>{orden.estado?.nombre}</td>
+                  <td>{orden.tipo_servicio || "-"}</td>
+                  <td>{orden.transporte || "-"}</td>
+                  <td>{orden.estado}</td>
                   <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
                   <td
                     style={{

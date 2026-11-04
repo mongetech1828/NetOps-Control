@@ -770,37 +770,69 @@ function SIGA() {
   }
 
   // Función para editar un SIGA, cargando sus datos en el formulario
-  function editarSIGA(siga) {
+  async function editarSIGA(siga) {
 
     setSigaEditando(siga.id);
+
     setFormData({
       numero_siga: siga.numero_siga || "",
       numero_linea: siga.numero_linea || "",
       evento_agil: siga.evento_agil || "",
       cliente: siga.cliente || "",
-      tipo_servicio_id:
-        siga.tipo_servicio_id || "",
-      prioridad_id:
-        siga.prioridad_id || "",
-      estado_siga_id:
-        siga.estado_siga_id || "",
-      grupo_gestion_id:
-        siga.grupo_gestion_id || "",
-      tecnico_id:
-        siga.tecnico_id || "",
-      fecha_recepcion:
-        siga.fecha_recepcion? siga.fecha_recepcion.substring(0,16): "",
-      descripcion:
-        siga.descripcion || "",
-      observaciones:
-        siga.observaciones || ""
+      tipo_servicio_id: siga.tipo_servicio_id || "",
+      prioridad_id: siga.prioridad_id || "",
+      estado_siga_id: siga.estado_siga_id || "",
+      grupo_gestion_id: siga.grupo_gestion_id || "",
+      tecnico_id: siga.tecnico_id || "",
+      fecha_recepcion: siga.fecha_recepcion
+        ? siga.fecha_recepcion.substring(0, 16)
+        : "",
+      descripcion: siga.descripcion || "",
+      observaciones: siga.observaciones || ""
     });
 
-    setTecnicosSeleccionados(
-      siga.siga_tecnicos?.map(
-        st => st.tecnico_id
-      ) || []
-    );
+    try {
+
+      const response = await fetch(
+        `/api/siga-tecnicos/${siga.id}`
+      );
+
+      if (response.ok) {
+
+        const tecnicos = await response.json();
+
+        console.log(
+          "TÉCNICOS DEL SIGA:",
+          tecnicos
+        );
+
+        setTecnicosSeleccionados(
+          tecnicos.map(
+            t => String(t.tecnico_id)
+          )
+        );
+
+      } else {
+
+        console.error(
+          "Error obteniendo técnicos del SIGA"
+        );
+
+        setTecnicosSeleccionados([]);
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando técnicos:",
+        error
+      );
+
+      setTecnicosSeleccionados([]);
+
+    }
+
     setMostrarFormulario(true);
   }
 

@@ -549,18 +549,42 @@ function Ordenes() {
       return;
     }
 
-    const { error } = await supabase
-      .from("ordenes")
-      .update({
-        fecha_recepcion: formatearFechaDB(fechaRecepcion),
-        fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
-        cantidad_reingresos: (orden.cantidad_reingresos || 0) + 1,
-        fecha_ultimo_reingreso: formatearFechaHoraDB(new Date()),
-        motivo_reingreso: motivo
-      })
-    .eq("id", orden.id);
+    const response = await fetch(
+      `/api/ordenes/${orden.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
 
-    if (error) {
+          numero_ost: orden.numero_ost,
+          numero_linea: orden.numero_linea,
+          cliente: orden.cliente,
+          tipo_servicio_id: orden.tipo_servicio_id,
+          transporte_id: orden.transporte_id,
+          estado_id: orden.estado_id,
+          observaciones: orden.observaciones,
+          evento_agil: orden.evento_agil,
+          ivc: orden.ivc,
+          uc: orden.uc,
+          fo: orden.fo,
+          crc: orden.crc,
+          prioridad_calculada: orden.prioridad_calculada,
+          puntaje_prioridad: orden.puntaje_prioridad,
+          fecha_recepcion: formatearFechaDB(fechaRecepcion),
+          fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
+          cantidad_reingresos:
+            (orden.cantidad_reingresos || 0) + 1,
+          fecha_ultimo_reingreso:
+            formatearFechaHoraDB(new Date()),
+          motivo_reingreso: motivo
+
+        })
+      }
+    );
+
+    if (!response.ok) {
       console.error("ERROR ACTUALIZANDO FECHAS DE REINGRESO:", error);
       alert("No se pudo reingresar la orden.");
       return;

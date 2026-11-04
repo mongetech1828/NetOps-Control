@@ -586,6 +586,9 @@ function SIGA() {
           })
         );
 
+        console.log("sigaEditando =", sigaEditando);
+        console.log("tecnicosSeleccionados =", tecnicosSeleccionados);
+
         const responseAsignacion = await fetch(
           `/api/siga-tecnicos/${sigaEditando}`,
           {

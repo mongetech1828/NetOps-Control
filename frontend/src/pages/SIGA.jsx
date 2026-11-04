@@ -763,25 +763,39 @@ function SIGA() {
           asignaciones
         );
 
-        const {
-          error: tecnicosError
-        } = await supabase
-          .from("siga_tecnicos")
-          .insert(asignaciones);
+        const responseAsignacion = await fetch(
+          `/api/siga-tecnicos/${data.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              tecnicos: tecnicosSeleccionados,
+            }),
+          }
+        );
 
-        if (tecnicosError) {
+        if (!responseAsignacion.ok) {
+
+          const errorData =
+            await responseAsignacion.json();
+
           console.error(
             "ERROR TECNICOS:",
-            tecnicosError
+            errorData
           );
-          alert("El SIGA se creó, pero no se pudieron guardar sus técnicos asignados.");
+
+          alert(
+            "El SIGA se creó, pero no se pudieron guardar los técnicos asignados."
+          );
         } else if (usuarioCreacion) {
-          const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
+          /*const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
             data.id,
             tecnicosSeleccionados,
             [],
             usuarioCreacion
-          );
+          );*/
           if (!historialTecnicosGuardado) {
             return;
           }

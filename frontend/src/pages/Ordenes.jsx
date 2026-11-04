@@ -172,6 +172,7 @@ function Ordenes() {
       }
     }
 
+    /*// Historial pendiente de migración
     const {
       data: { user },
       error: errorUsuario
@@ -180,94 +181,100 @@ function Ordenes() {
       console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", errorUsuario);
       alert("No se pudo identificar al usuario para guardar el historial.");
       return;
-    }
+    }*/
 
     if (ordenEditando) {
-      const { data:ordenActual, error: errorOrdenActual } = await supabase
-        .from("ordenes")
-        .select("*")
-        .eq("id", ordenEditando)
-        .single();
+      const responseOrdenes = await fetch("/api/ordenes");
 
-      if (errorOrdenActual || !ordenActual) {
-        console.error("ERROR CONSULTANDO ORDEN PARA EDITAR:", errorOrdenActual);
+      if (!responseOrdenes.ok) {
+        alert("No se pudo consultar la orden.");
+        return;
+      }
+
+      const ordenes = await responseOrdenes.json();
+
+      const ordenActual = ordenes.find(
+        o => String(o.id) === String(ordenEditando)
+      );
+
+      if (!ordenActual) {
         alert("No se encontró la orden que intenta actualizar.");
         return;
       }
 
-      const { error } = await supabase
-        .from("ordenes")
-        .update({
-          numero_ost: formData.numero_ost,
-          numero_linea: formData.numero_linea,
-          evento_agil: formData.evento_agil,
-          cliente: formData.cliente.trim(),
-          tipo_servicio_id: formData.tipo_servicio_id,
-          transporte_id: formData.transporte_id,
-          estado_id: formData.estado_id,
-          observaciones: formData.observaciones,
-          ivc: formData.ivc,
-          uc: formData.uc,
-          fo: formData.fo,
-          crc: formData.crc,
-          prioridad_calculada: prioridadCalculada.prioridad,
-          puntaje_prioridad: prioridadCalculada.puntaje
-        })
-        .eq("id", ordenEditando);
+      const response = await fetch(
+        `/api/ordenes/${ordenEditando}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            numero_ost: formData.numero_ost,
+            numero_linea: formData.numero_linea,
+            evento_agil: formData.evento_agil,
+            cliente: formData.cliente.trim(),
+            tipo_servicio_id: formData.tipo_servicio_id,
+            transporte_id: formData.transporte_id,
+            estado_id: formData.estado_id,
+            observaciones: formData.observaciones,
+            ivc: formData.ivc,
+            uc: formData.uc,
+            fo: formData.fo,
+            crc: formData.crc,
+            prioridad_calculada: prioridadCalculada.prioridad,
+            puntaje_prioridad: prioridadCalculada.puntaje
+          })
+        }
+      );
 
-      if (error) {
-        console.error("ERROR ACTUALIZANDO ORDEN:", error);
+      if (!response.ok) {
         alert("No se pudo actualizar la orden.");
         return;
       }
 
-      const { data: tecnicosActuales, error: errorTecnicosActuales } = await supabase
-        .from("orden_tecnicos")
-        .select("tecnico_id")
-        .eq("orden_id", ordenEditando);
+      const responseTecnicos = await fetch(
+        `/api/orden-tecnicos/${ordenEditando}`
+      );
 
-      if (errorTecnicosActuales) {
-        console.error("ERROR CONSULTANDO TÉCNICOS DE LA ORDEN:", errorTecnicosActuales);
-        await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron consultar sus técnicos.");
+      if (!responseTecnicos.ok) {
+        alert(
+          "No se pudieron consultar los técnicos actuales."
+        );
         return;
       }
+
+      const tecnicosActuales =
+        await responseTecnicos.json();
 
       const idsActuales = tecnicosActuales.map(({ tecnico_id }) => Number(tecnico_id));
       const idsSeleccionados = tecnicosSeleccionados.map(Number);
       const agregados = idsSeleccionados.filter(id => !idsActuales.includes(id));
       const removidos = idsActuales.filter(id => !idsSeleccionados.includes(id));
 
-      if (agregados.length > 0) {
-        const asignaciones = agregados.map(tecnicoId => ({
-          orden_id: ordenEditando,
-          tecnico_id: tecnicoId,
-          activo: true
-        }));
-        const { error: errorAgregarTecnicos } = await supabase
-          .from("orden_tecnicos")
-          .insert(asignaciones);
-
-        if (errorAgregarTecnicos) {
-          console.error("ERROR ASIGNANDO TÉCNICOS A LA ORDEN:", errorAgregarTecnicos);
-          await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron guardar los técnicos nuevos.");
-          return;
+      const responseAsignacion = await fetch(
+        `/api/orden-tecnicos/${ordenEditando}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            tecnicos: tecnicosSeleccionados
+          })
         }
+      );
+
+      if (!responseAsignacion.ok) {
+
+        alert(
+          "No se pudieron actualizar los técnicos asignados."
+        );
+
+        return;
       }
 
-      if (removidos.length > 0) {
-        const { error: errorRetirarTecnicos } = await supabase
-          .from("orden_tecnicos")
-          .delete()
-          .eq("orden_id", ordenEditando)
-          .in("tecnico_id", removidos);
-
-        if (errorRetirarTecnicos) {
-          console.error("ERROR RETIRANDO TÉCNICOS DE LA ORDEN:", errorRetirarTecnicos);
-          await notificarGuardadoParcial("La orden se actualizó, pero no se pudieron retirar algunos técnicos.");
-          return;
-        }
-      }
-
+      /* Historial pendiente de migración
       const idsTecnicosModificados = [...agregados, ...removidos];
       const movimientos = [];
       if (ordenActual.estado_id !== Number(formData.estado_id)) {
@@ -323,7 +330,7 @@ function Ordenes() {
           await notificarGuardadoParcial("La orden y sus técnicos se actualizaron, pero no se pudo guardar todo el historial.");
           return;
         }
-      }
+      }*/
 
       } else {
 
@@ -360,6 +367,7 @@ function Ordenes() {
           return;
         }
 
+        /* Hitorial pendiente de migración
         const { error: errorHistorialCreacion } = await supabase
             .from("historial_movimientos")
             .insert([
@@ -376,7 +384,7 @@ function Ordenes() {
           console.error("ERROR GUARDANDO HISTORIAL DE CREACIÓN:", errorHistorialCreacion);
           await notificarGuardadoParcial("La orden se creó, pero no se pudo guardar su inicio en el historial.");
           return;
-        }
+        }*/
 
         if (
           tecnicosSeleccionados.length > 0
@@ -547,7 +555,7 @@ function Ordenes() {
       return;
     }
 
-    const {
+    /*const {
       data: { user },
       error: errorUsuario
     } = await supabase.auth.getUser();
@@ -571,13 +579,13 @@ function Ordenes() {
     if (errorHistorial) {
       console.error("ERROR GUARDANDO HISTORIAL DE REINGRESO:", errorHistorial);
       alert("La orden se reingresó, pero no se pudo guardar el movimiento en el historial.");
-    }
+    }*/
 
     await cargarOrdenes();
 
   }
 
-  // Función para ver el historial de movimientos de una orden
+  /*// Función para ver el historial de movimientos de una orden
   async function verHistorial(orden) {
 
     const { data,error } = await supabase
@@ -594,7 +602,7 @@ function Ordenes() {
     setHistorialOrden(data);
     setOrdenHistorial(orden);
     setMostrarHistorialOrden(true);
-  }
+  }*/
 
   // Función para cargar los estados desde la base de datos
   async function cargarEstados() {

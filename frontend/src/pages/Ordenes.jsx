@@ -226,7 +226,13 @@ function Ordenes() {
             fo: formData.fo,
             crc: formData.crc,
             prioridad_calculada: prioridadCalculada.prioridad,
-            puntaje_prioridad: prioridadCalculada.puntaje
+            puntaje_prioridad: prioridadCalculada.puntaje,
+
+            fecha_recepcion: ordenActual.fecha_recepcion,
+            fecha_maxima_atencion: ordenActual.fecha_maxima_atencion,
+            cantidad_reingresos: ordenActual.cantidad_reingresos,
+            fecha_ultimo_reingreso: ordenActual.fecha_ultimo_reingreso,
+            motivo_reingreso: ordenActual.motivo_reingreso
           })
         }
       );

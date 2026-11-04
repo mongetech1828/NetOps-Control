@@ -332,115 +332,93 @@ function Ordenes() {
         }
       }*/
 
-      } else {
+    } else {
 
-        // Crear nueva orden
-        const { data, error } = await supabase
-          .from("ordenes")
-          .insert([
-            {
-              tipo_registro: formData.tipo_registro,
-              numero_ost: formData.numero_ost,
-              numero_linea: formData.numero_linea,
-              evento_agil: formData.evento_agil,
-              cliente: formData.cliente.trim(),
-              tipo_servicio_id: formData.tipo_servicio_id,
-              transporte_id: formData.transporte_id,
-              estado_id: formData.estado_id,
-              observaciones: formData.observaciones,
-              fecha_recepcion: formData.fecha_recepcion,
-              fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
-              ivc: formData.ivc,
-              uc: formData.uc,
-              fo: formData.fo,
-              crc: formData.crc,
-              prioridad_calculada: prioridadCalculada.prioridad,
-              puntaje_prioridad: prioridadCalculada.puntaje
-            }
-          ])
-          .select()
-          .single();
-
-        if (error || !data) {
-          console.error("ERROR CREANDO ORDEN:", error);
-          alert("No se pudo crear la orden.");
-          return;
+      // Crear nueva orden
+      const response = await fetch(
+        "/api/ordenes",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            tipo_registro: formData.tipo_registro,
+            numero_ost: formData.numero_ost,
+            numero_linea: formData.numero_linea,
+            evento_agil: formData.evento_agil,
+            cliente: formData.cliente.trim(),
+            tipo_servicio_id: formData.tipo_servicio_id,
+            transporte_id: formData.transporte_id,
+            estado_id: formData.estado_id,
+            observaciones: formData.observaciones,
+            fecha_recepcion: formData.fecha_recepcion,
+            fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
+            ivc: formData.ivc,
+            uc: formData.uc,
+            fo: formData.fo,
+            crc: formData.crc,
+            prioridad_calculada: prioridadCalculada.prioridad,
+            puntaje_prioridad: prioridadCalculada.puntaje
+          })
         }
+      );
 
-        /* Hitorial pendiente de migración
-        const { error: errorHistorialCreacion } = await supabase
-            .from("historial_movimientos")
-            .insert([
-              {
-                orden_id: data.id,
-                usuario_id: user.id,
-                estado_anterior : null,
-                estado_nuevo: Number(formData.estado_id),
-                comentario: `Creación de OST ${formData.numero_ost} por el usuario ${user.email}`
-              }
-            ]);
+      if (!response.ok) {
 
-        if (errorHistorialCreacion) {
-          console.error("ERROR GUARDANDO HISTORIAL DE CREACIÓN:", errorHistorialCreacion);
-          await notificarGuardadoParcial("La orden se creó, pero no se pudo guardar su inicio en el historial.");
-          return;
-        }*/
+        const errorData = await response.json();
 
-        if (
-          tecnicosSeleccionados.length > 0
-        ) {
-          const asignaciones =
-            tecnicosSeleccionados.map(
-              tecnicoId => ({
-                orden_id: data.id,
-                tecnico_id: tecnicoId,
-                activo: true
-              })
-            );
+        console.error(
+          "ERROR CREANDO ORDEN:",
+          errorData
+        );
 
-          const { error: tecnicosError } = await supabase
-            .from("orden_tecnicos")
-            .insert(asignaciones);
+        alert("No se pudo crear la orden.");
 
-          if (tecnicosError) {
-            console.error("ERROR ASIGNANDO TÉCNICOS A LA ORDEN:", tecnicosError);
-            await notificarGuardadoParcial("La orden se creó, pero no se pudieron guardar los técnicos asignados.");
-            return;
-          }
-
-          const { data: tecnicosAsignados, error: errorConsultaTecnicos } = await supabase
-              .from("tecnicos")
-              .select("nombre")
-              .in("id", tecnicosSeleccionados);
-
-          if (errorConsultaTecnicos) {
-            console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorConsultaTecnicos);
-            await notificarGuardadoParcial("La orden y sus técnicos se guardaron, pero no se pudieron registrar los técnicos en el historial.");
-            return;
-          }
-
-            const nombresTecnicos = tecnicosAsignados
-              ?.map(t => t.nombre)
-              .join(", ");
-
-            const { error: errorHistorialTecnicos } = await supabase
-              .from("historial_movimientos")
-              .insert([
-                {
-                  orden_id: data.id,
-                  usuario_id: user.id,
-                  comentario: `Técnico(s) asignado(s): ${nombresTecnicos} por el usuario ${user.email}`
-                }
-              ]);
-
-            if (errorHistorialTecnicos) {
-              console.error("ERROR GUARDANDO HISTORIAL DE TÉCNICOS:", errorHistorialTecnicos);
-              await notificarGuardadoParcial("La orden y sus técnicos se guardaron, pero no se pudo registrar la asignación en el historial.");
-              return;
-            }
-        }
-        
+        return;
       }
+
+      const data = await response.json();
+
+      /*
+        Historial pendiente de migración
+      */
+
+      if (tecnicosSeleccionados.length > 0) {
+
+        const responseTecnicos = await fetch(
+          `/api/orden-tecnicos/${data.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              tecnicos: tecnicosSeleccionados
+            })
+          }
+        );
+
+        if (!responseTecnicos.ok) {
+
+          console.error(
+            "ERROR ASIGNANDO TÉCNICOS A LA ORDEN"
+          );
+
+          await notificarGuardadoParcial(
+            "La orden se creó, pero no se pudieron guardar los técnicos asignados."
+          );
+
+          return;
+        }
+
+        /*
+          Historial de técnicos pendiente
+          de migración
+        */
+      }
+
+    }
 
     await cargarOrdenes();
     setMostrarFormulario(false);  
@@ -547,7 +525,7 @@ function Ordenes() {
       setTecnicosSeleccionados([]);
 
     }
-    
+
     setMostrarFormulario(true);
   }
 

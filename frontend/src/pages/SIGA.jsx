@@ -410,20 +410,24 @@ function SIGA() {
     const nivelCalculado =
       tecnicosSeleccionados.length > 0 ? "ST" : "GT";
 
-    const { data: sigaExistente, error: errorConsultaSiga } = await supabase
-      .from("sigas")
-      .select("id")
-      .eq("numero_siga", formData.numero_siga.trim())
-      .maybeSingle();
+    const responseSigas = await fetch("/api/sigas");
 
-    if (errorConsultaSiga) {
-      console.error("ERROR CONSULTANDO SIGA:", errorConsultaSiga);
+    if (!responseSigas.ok) {
       alert("No fue posible verificar si el número SIGA ya existe.");
       return;
     }
 
+    const sigasExistentes = await responseSigas.json();
+
+    const sigaExistente = sigasExistentes.find(
+      s => s.numero_siga === formData.numero_siga.trim()
+    );
+
     if (!sigaEditando && sigaExistente) {
-      alert("Ya existe un SIGA con ese número. Utilice Editar para modificarlo.");
+
+      alert(
+        "Ya existe un SIGA con ese número. Utilice Editar para modificarlo."
+      );
 
       setFormData(formularioVacio);
       setTecnicosSeleccionados([]);
@@ -667,32 +671,52 @@ function SIGA() {
     else {
 
       // Si no estamos editando, creamos un nuevo SIGA
-      const {data, error} = await supabase
-        .from("sigas")
-        .insert([
-          {
-            numero_siga: formData.numero_siga,
-            numero_linea: formData.numero_linea,
-            evento_agil: formData.evento_agil,
-            cliente: formData.cliente,
-            tipo_servicio_id: formData.tipo_servicio_id ? parseInt(formData.tipo_servicio_id) : null,
-            prioridad_id: formData.prioridad_id ? parseInt(formData.prioridad_id) : null,
-            estado_siga_id: formData.estado_siga_id ? parseInt(formData.estado_siga_id) : null,
-            grupo_gestion_id: formData.grupo_gestion_id ? parseInt(formData.grupo_gestion_id) : null,
-            tecnico_id: tecnicosSeleccionados.length > 0 ? tecnicosSeleccionados[0] : null,
-            nivel: nivelCalculado,
-            fecha_recepcion: formData.fecha_recepcion,
-            fecha_maxima_atencion: fechaMaxima.toLocaleString("sv-SE").replace(" ", "T"),
-            descripcion: formData.descripcion,
-            observaciones: formData.observaciones
-          }
-        ])
-        .select()
-        .single();
-      if (error){
-        console.error(error);
+      const response = await fetch("/api/sigas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          numero_siga: formData.numero_siga,
+          numero_linea: formData.numero_linea,
+          evento_agil: formData.evento_agil,
+          cliente: formData.cliente,
+          tipo_servicio_id: formData.tipo_servicio_id
+            ? parseInt(formData.tipo_servicio_id)
+            : null,
+          prioridad_id: formData.prioridad_id
+            ? parseInt(formData.prioridad_id)
+            : null,
+          estado_siga_id: formData.estado_siga_id
+            ? parseInt(formData.estado_siga_id)
+            : null,
+          grupo_gestion_id: formData.grupo_gestion_id
+            ? parseInt(formData.grupo_gestion_id)
+            : null,
+          nivel: nivelCalculado,
+          fecha_recepcion: formData.fecha_recepcion,
+          fecha_maxima_atencion: fechaMaxima
+            .toLocaleString("sv-SE")
+            .replace(" ", "T"),
+          descripcion: formData.descripcion,
+          observaciones: formData.observaciones,
+          evento_agil: formData.evento_agil
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+
+        console.error(
+          "Error creando SIGA:",
+          errorData
+        );
+
+        alert("No se pudo crear el SIGA.");
         return;
       }
+
+      const data = await response.json();
 
       let usuarioCreacion = null;
       /*const {

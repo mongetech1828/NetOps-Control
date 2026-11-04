@@ -144,16 +144,19 @@ function Ordenes() {
     if (!formData.estado_id) {alert("Debe indicar el estado");
       return;
     }
-    const { data: ordenesCoincidentes, error: errorConsultaOST } = await supabase
-      .from("ordenes")
-      .select("id")
-      .eq("numero_ost", formData.numero_ost);
+    
+    const responseOrdenes = await fetch("/api/ordenes");
 
-    if (errorConsultaOST) {
-      console.error("ERROR VALIDANDO OST:", errorConsultaOST);
+    if (!responseOrdenes.ok) {
       alert("No fue posible verificar si el número OST ya existe.");
       return;
     }
+
+    const ordenes = await responseOrdenes.json();
+
+    const ordenesCoincidentes = ordenes.filter(
+      orden => orden.numero_ost === formData.numero_ost
+    );
     if (ordenesCoincidentes.some(({ id }) => String(id) !== String(ordenEditando))) {
       alert("La OST ya existe. Utilice Editar o Reingresar.");
       return;

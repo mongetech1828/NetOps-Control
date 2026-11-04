@@ -552,16 +552,16 @@ function SIGA() {
       }
 
       // Registrar cambios de técnicos en el historial si hubo cambios
-      const { data: tecnicosActuales, error: errorTecnicosActuales } = await supabase
-        .from("siga_tecnicos")
-        .select("tecnico_id")
-        .eq("siga_id", sigaEditando);
+      const responseTecnicos = await fetch(
+        `/api/siga-tecnicos/${sigaEditando}`
+      );
 
-      if (errorTecnicosActuales) {
-        console.error("ERROR CONSULTANDO TÉCNICOS ACTUALES DEL SIGA:", errorTecnicosActuales);
-        alert("El SIGA se actualizó, pero no se pudieron consultar sus técnicos actuales.");
+      if (!responseTecnicos.ok) {
+        alert("No se pudieron consultar los técnicos actuales del SIGA.");
         return;
       }
+
+      const tecnicosActuales = await responseTecnicos.json();
 
       const idsTecnicosActuales = tecnicosActuales.map(
         ({ tecnico_id }) => Number(tecnico_id)
@@ -573,17 +573,6 @@ function SIGA() {
       const removidos = idsTecnicosActuales.filter(
         (id) => !idsTecnicosSeleccionados.includes(id)
       );
-
-      const { error: errorEliminarTecnicos } = await supabase
-        .from("siga_tecnicos")
-        .delete()
-        .eq("siga_id", sigaEditando);
-
-      if (errorEliminarTecnicos) {
-        console.error("ERROR ACTUALIZANDO TÉCNICOS DEL SIGA:", errorEliminarTecnicos);
-        alert("No se pudieron actualizar los técnicos asignados al SIGA.");
-        return;
-      }
 
       // Insertar los técnicos seleccionados nuevamente
       if (
@@ -597,13 +586,21 @@ function SIGA() {
           })
         );
 
-        const { error: errorInsertarTecnicos } = await supabase
-        .from("siga_tecnicos")
-        .insert(asignaciones);
+        const responseAsignacion = await fetch(
+          `/api/siga-tecnicos/${sigaEditando}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              tecnicos: tecnicosSeleccionados,
+            }),
+          }
+        );
 
-        if (errorInsertarTecnicos) {
-          console.error("ERROR INSERTANDO TÉCNICOS DEL SIGA:", errorInsertarTecnicos);
-          alert("No se pudieron guardar los técnicos asignados al SIGA.");
+        if (!responseAsignacion.ok) {
+          alert("No se pudieron actualizar los técnicos asignados.");
           return;
         }
       }

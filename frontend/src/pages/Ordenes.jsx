@@ -489,7 +489,7 @@ function Ordenes() {
   }
 
   // Función para editar una orden existente
-  function editarOrden(orden) {
+  async function editarOrden(orden) {
 
     setOrdenEditando(orden.id);
 
@@ -510,11 +510,44 @@ function Ordenes() {
       crc: orden.crc || ""
     });
 
-    setTecnicosSeleccionados(
-      orden.orden_tecnicos?.map(
-        ot => ot.tecnico_id
-      ) || []
-    );
+    try {
+
+      const response = await fetch(
+        `/api/orden-tecnicos/${orden.id}`
+      );
+
+      if (response.ok) {
+
+        const tecnicos = await response.json();
+
+        console.log(
+          "TÉCNICOS DE LA ORDEN:",
+          tecnicos
+        );
+
+        setTecnicosSeleccionados(
+          tecnicos.map(
+            t => String(t.tecnico_id)
+          )
+        );
+
+      } else {
+
+        setTecnicosSeleccionados([]);
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando técnicos:",
+        error
+      );
+
+      setTecnicosSeleccionados([]);
+
+    }
+    
     setMostrarFormulario(true);
   }
 

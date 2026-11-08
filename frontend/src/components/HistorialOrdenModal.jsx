@@ -1,25 +1,17 @@
 function formatoFechaHora(fecha) {
 
-    console.log("Original:", fecha);
+    if (!fecha) return "-";
 
-    console.log(
-        "Convertida:",
-        new Date(fecha)
-        .toLocaleString("es-CR", {
-        timeZone: "America/Costa_Rica"
-        })
-        );
-
-    return new Date(fecha + "Z").toLocaleString(
+    return new Date(fecha).toLocaleString(
         "es-CR",
         {
-        timeZone: "America/Costa_Rica",
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit"
+            timeZone: "America/Costa_Rica",
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit"
         }
     );
 }

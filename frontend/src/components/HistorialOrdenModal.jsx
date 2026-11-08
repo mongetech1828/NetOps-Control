@@ -72,17 +72,17 @@ function HistorialOrdenModal({
 
                     <div>
                         <strong>Servicio:</strong><br />
-                        {ordenHistorial?.tipo_servicio?.nombre || "-"}
+                        {ordenHistorial?.tipo_servicio || "-"}
                     </div>
 
                     <div>
                         <strong>Transporte:</strong><br />
-                        {ordenHistorial?.transporte?.nombre || "-"}
+                        {ordenHistorial?.transporte || "-"}
                     </div>
 
                     <div>
                         <strong>Estado Actual:</strong><br />
-                        {ordenHistorial?.estado?.nombre}
+                        {ordenHistorial?.estado || "-"}
                     </div>
 
                     <div>

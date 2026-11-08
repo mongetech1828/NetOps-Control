@@ -464,10 +464,6 @@ function Ordenes() {
 
       const data = await response.json();
 
-      /*
-        Historial pendiente de migración
-      */
-
       if (tecnicosSeleccionados.length > 0) {
 
         const responseTecnicos = await fetch(
@@ -496,10 +492,6 @@ function Ordenes() {
           return;
         }
 
-        /*
-          Historial de técnicos pendiente
-          de migración
-        */
       }
 
     }
@@ -711,25 +703,39 @@ function Ordenes() {
 
   }
 
-  /*// Función para ver el historial de movimientos de una orden
+  // Función para ver el historial de movimientos de una orden
   async function verHistorial(orden) {
 
-    const { data,error } = await supabase
-      .from("historial_movimientos")
-      .select("*")
-      .eq("orden_id", orden.id)
-      .order("fecha_movimiento", { ascending: true });
+    try {
+      const response = await fetch(
+        `/api/historial-orden/${orden.id}`
+      );
 
-    if (error) {
-      console.error(error);
-      return;
+      if (!response.ok) {
+        alert(
+          "No se pudo consultar el historial."
+        );
+
+        return;
+      }
+
+      const data = await response.json();
+
+      setHistorialOrden(data);
+      setOrdenHistorial(orden);
+      setMostrarHistorialOrden(true);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CONSULTANDO HISTORIAL:",
+        error
+      );
+
     }
 
-    setHistorialOrden(data);
-    setOrdenHistorial(orden);
-    setMostrarHistorialOrden(true);
-  }*/
-
+  }
+  
   // Función para cargar los estados desde la base de datos
   async function cargarEstados() {
 

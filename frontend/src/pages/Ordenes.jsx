@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../services/supabase";
 import { useLocation } from "react-router-dom";
 import HistorialOrdenModal from "../components/HistorialOrdenModal";
 import * as XLSX from "xlsx";
@@ -175,16 +174,14 @@ function Ordenes() {
       }
     }
 
-    /*// Historial pendiente de migración
-    const {
-      data: { user },
-      error: errorUsuario
-    } = await supabase.auth.getUser();
-    if (errorUsuario || !user) {
-      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", errorUsuario);
+    // Historial getUser
+    const usuarioActual = 
+      JSON.parse(localStorage.getItem("usuario"));
+    if (!usuarioActual) {
+      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:");
       alert("No se pudo identificar al usuario para guardar el historial.");
       return;
-    }*/
+    }
 
     if (ordenEditando) {
       const responseOrdenes = await fetch("/api/ordenes");
@@ -283,63 +280,141 @@ function Ordenes() {
         return;
       }
 
-      /* Historial pendiente de migración
-      const idsTecnicosModificados = [...agregados, ...removidos];
+      const usuarioActual =
+        JSON.parse(
+          localStorage.getItem("usuario")
+        );
+
+      const idsTecnicosModificados = [
+        ...agregados,
+        ...removidos
+      ];
+
       const movimientos = [];
-      if (ordenActual.estado_id !== Number(formData.estado_id)) {
-        const estadoAnterior = estados.find(estado => estado.id === Number(ordenActual.estado_id));
-        const estadoNuevo = estados.find(estado => estado.id === Number(formData.estado_id));
+
+      if (
+        Number(ordenActual.estado_id) !==
+        Number(formData.estado_id)
+      ) {
+
+        const estadoAnterior =
+          estados.find(
+            estado =>
+              Number(estado.id) ===
+              Number(ordenActual.estado_id)
+          );
+
+        const estadoNuevo =
+          estados.find(
+            estado =>
+              Number(estado.id) ===
+              Number(formData.estado_id)
+          );
+
         movimientos.push({
-          orden_id: ordenEditando,
-          usuario_id: user.id,
-          estado_anterior: ordenActual.estado_id,
-          estado_nuevo: Number(formData.estado_id),
-          comentario: `Cambio de estado de "${estadoAnterior?.nombre || ordenActual.estado_id}" a "${estadoNuevo?.nombre || formData.estado_id}" por el usuario ${user.email}`
+          orden_id: Number(ordenEditando),
+          usuario_id: usuarioActual.id,
+          estado_anterior: Number(
+            ordenActual.estado_id
+          ),
+          estado_nuevo: Number(
+            formData.estado_id
+          ),
+          comentario:
+            `Cambio de estado de "${estadoAnterior?.nombre || ordenActual.estado_id}" a "${estadoNuevo?.nombre || formData.estado_id}" por ${usuarioActual.nombre}`
         });
       }
 
       if (idsTecnicosModificados.length > 0) {
-        const { data: tecnicosModificados, error: errorNombresTecnicos } = await supabase
-          .from("tecnicos")
-          .select("id, nombre")
-          .in("id", idsTecnicosModificados);
 
-        if (errorNombresTecnicos) {
-          console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorNombresTecnicos);
-          await notificarGuardadoParcial("La orden y sus técnicos se actualizaron, pero no se pudo completar el historial.");
+        const responseTecnicosNombres =
+          await fetch("/api/tecnicos");
+
+        if (!responseTecnicosNombres.ok) {
+
+          console.error(
+            "ERROR CONSULTANDO NOMBRES DE TÉCNICOS"
+          );
+
+          await notificarGuardadoParcial(
+            "La orden y sus técnicos se actualizaron, pero no se pudo completar el historial."
+          );
+
           return;
         }
 
+        const tecnicosCatalogo =
+          await responseTecnicosNombres.json();
+
         const nombresPorId = new Map(
-          tecnicosModificados.map(({ id, nombre }) => [Number(id), nombre])
+          tecnicosCatalogo.map(
+            tecnico => [
+              Number(tecnico.id),
+              tecnico.nombre
+            ]
+          )
         );
+
         if (agregados.length > 0) {
+
           movimientos.push({
-            orden_id: ordenEditando,
-            usuario_id: user.id,
-            comentario: `Técnico(s) asignado(s): ${agregados.map(id => nombresPorId.get(id) || id).join(", ")} por el usuario ${user.email}`
+            orden_id: Number(ordenEditando),
+            usuario_id: usuarioActual.id,
+            comentario:
+              `Técnico(s) asignado(s): ${
+                agregados
+                  .map(id =>
+                    nombresPorId.get(id) || id
+                  )
+                  .join(", ")
+              } por ${usuarioActual.nombre}`
           });
         }
+
         if (removidos.length > 0) {
+
           movimientos.push({
-            orden_id: ordenEditando,
-            usuario_id: user.id,
-            comentario: `Técnico(s) removido(s): ${removidos.map(id => nombresPorId.get(id) || id).join(", ")} por el usuario ${user.email}`
+            orden_id: Number(ordenEditando),
+            usuario_id: usuarioActual.id,
+            comentario:
+              `Técnico(s) removido(s): ${
+                removidos
+                  .map(id =>
+                    nombresPorId.get(id) || id
+                  )
+                  .join(", ")
+              } por ${usuarioActual.nombre}`
           });
         }
       }
 
       if (movimientos.length > 0) {
-        const { error: errorHistorial } = await supabase
-          .from("historial_movimientos")
-          .insert(movimientos);
 
-        if (errorHistorial) {
-          console.error("ERROR GUARDANDO HISTORIAL DE LA ORDEN:", errorHistorial);
-          await notificarGuardadoParcial("La orden y sus técnicos se actualizaron, pero no se pudo guardar todo el historial.");
-          return;
+        for (const movimiento of movimientos) {
+
+          const responseHistorial =
+            await fetch(
+              "/api/historial-orden",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+                body: JSON.stringify(
+                  movimiento
+                )
+              }
+            );
+
+          if (!responseHistorial.ok) {
+
+            console.error(
+              "ERROR GUARDANDO HISTORIAL"
+            );
+          }
         }
-      }*/
+      }
 
     } else {
 
@@ -594,36 +669,43 @@ function Ordenes() {
     );
 
     if (!response.ok) {
-      console.error("ERROR ACTUALIZANDO FECHAS DE REINGRESO:", error);
+      console.error("ERROR ACTUALIZANDO FECHAS DE REINGRESO:");
       alert("No se pudo reingresar la orden.");
       return;
     }
 
-    /*const {
-      data: { user },
-      error: errorUsuario
-    } = await supabase.auth.getUser();
-    if (errorUsuario || !user) {
-      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", errorUsuario);
+    const usuarioActual = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuarioActual) {
+
+      console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:");
+
       alert("La orden se reingresó, pero no se pudo identificar al usuario para guardar el historial.");
       await cargarOrdenes();
       return;
     }
 
-    const { error: errorHistorial } = await supabase
-      .from("historial_movimientos")
-      .insert({
+    const responseHistorial = await fetch(
+      "/api/historial-orden",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
           orden_id: orden.id,
-          usuario_id: user.id,
-          estado_anterior : orden.estado_id,
+          usuario_id: usuarioActual.id,
+          estado_anterior: orden.estado_id,
           estado_nuevo: orden.estado_id,
-          comentario: `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`        
-        });
+          comentario:
+            `OST ${orden.numero_ost} reingresada. Motivo: ${motivo}. Reingreso #${(orden.cantidad_reingresos || 0) + 1}`
+        })
+      }
+    );
 
-    if (errorHistorial) {
-      console.error("ERROR GUARDANDO HISTORIAL DE REINGRESO:", errorHistorial);
+    if (!responseHistorial.ok) {
+      console.error("ERROR GUARDANDO HISTORIAL DE REINGRESO:");
       alert("La orden se reingresó, pero no se pudo guardar el movimiento en el historial.");
-    }*/
+    }
 
     await cargarOrdenes();
 

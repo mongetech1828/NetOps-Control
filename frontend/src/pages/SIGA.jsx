@@ -71,11 +71,6 @@ function SIGA() {
       );
 
       console.log(
-        "horas_sla:",
-        prioridadSeleccionada.horas_sla
-      );
-
-      console.log(
         "fechaMaxima:",
         fechaMaxima
       );

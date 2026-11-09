@@ -72,35 +72,64 @@ function SIGA() {
       const data =
         await response.json();
 
-      const sigasProcesados = data.map((siga) => {
+      const {
+        data: movimientos,
+        error: errorMovimientos
+      } = await cargarMovimientosSIGA();
 
-        if (!siga.fecha_maxima_atencion) {
-          return {
-            ...siga,
-            horas_restantes_sla: null
-          };
+      if (errorMovimientos) {
+
+        console.error(
+          "ERROR CARGANDO MOVIMIENTOS PARA CALCULAR SLA:",
+          errorMovimientos
+        );
+
+        alert(
+          "No se pudieron calcular las horas de SLA de los SIGAs."
+        );
+
+        return;
+      }
+
+      const movimientosPorSiga =
+        new Map();
+
+      movimientos.forEach(
+        movimiento => {
+
+          const movimientosSiga =
+            movimientosPorSiga.get(
+              movimiento.siga_id
+            ) || [];
+
+          movimientosSiga.push(
+            movimiento
+          );
+
+          movimientosPorSiga.set(
+            movimiento.siga_id,
+            movimientosSiga
+          );
+
         }
+      );
 
-        const ahora = new Date();
-
-        const fechaMaxima =
-          new Date(siga.fecha_maxima_atencion);
-
-        const horasRestantes =
-          (fechaMaxima - ahora) / (1000 * 60 * 60);
-
-        return {
+      const sigasProcesados =
+        data.map(siga => ({
           ...siga,
-          horas_restantes_sla: horasRestantes
-        };
-
-      });
+          horas_restantes_sla:
+            calcularHorasRestantesSIGA(
+              siga.fecha_maxima_atencion,
+              movimientosPorSiga.get(
+                siga.id
+              ),
+              siga.estado
+            )
+        }));
 
       setSigas(sigasProcesados);
 
       console.log("SIGAS API:", data);
-
-      /*setSigas(data);*/
 
     } catch (error) {
 

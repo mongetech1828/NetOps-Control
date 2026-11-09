@@ -1,32 +1,40 @@
 import { supabase } from "../services/supabase";
 
-export async function cargarMovimientosSIGA(sigaIds) {
-  if (sigaIds.length === 0) return { data: [], error: null };
+export async function cargarMovimientosSIGA() {
 
-  const movimientos = [];
-  const tamanoPagina = 1000;
+  try {
 
-  for (let desde = 0; ; desde += tamanoPagina) {
-    const { data, error } = await supabase
-      .from("historial_siga")
-      .select("siga_id, tipo_movimiento, fecha_movimiento")
-      .in("siga_id", sigaIds)
-      .in("tipo_movimiento", [
-        "Inicio Diferido",
-        "Fin Diferido",
-        "Cierre",
-        "Restablecimiento"
-      ])
-      .order("fecha_movimiento", { ascending: true })
-      .range(desde, desde + tamanoPagina - 1);
+    const response =
+      await fetch(
+        "/api/historial-siga"
+      );
 
-    if (error) return { data: null, error };
+    if (!response.ok) {
 
-    movimientos.push(...data);
-    if (data.length < tamanoPagina) break;
+      return {
+        data: null,
+        error: true
+      };
+
+    }
+
+    const data =
+      await response.json();
+
+    return {
+      data,
+      error: null
+    };
+
+  } catch (error) {
+
+    return {
+      data: null,
+      error
+    };
+
   }
 
-  return { data: movimientos, error: null };
 }
 
 export function parsearFechaMovimientoSIGA(fecha) {

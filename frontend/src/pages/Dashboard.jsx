@@ -127,109 +127,233 @@ function Dashboard({perfil}) {
   }
 
   // Mostrar Ordenes Vencen Hoy
-  /*async function mostrarOrdenesHoy() {
+  async function mostrarOrdenesHoy() {
 
-    const hoy = formatearFechaDB(
-      new Date()
-    );
+    try {
 
-    const { data, error } = await supabase
-      .from("ordenes")
-      .select("*")
-      .eq("fecha_maxima_atencion", hoy);
+      const response =
+        await fetch("/api/ordenes");
 
-    if (error) {
+      if (!response.ok) {
+        return;
+      }
+
+      const ordenes =
+        await response.json();
+
+      const hoy = new Date();
+
+      hoy.setHours(
+        0, 0, 0, 0
+      );
+
+      const filtradas =
+        ordenes.filter(
+          orden => {
+
+            if (
+              !orden.fecha_maxima_atencion
+            ) {
+              return false;
+            }
+
+            const fecha =
+              new Date(
+                orden.fecha_maxima_atencion
+              );
+
+            fecha.setHours(
+              0, 0, 0, 0
+            );
+
+            return (
+              fecha.getTime() ===
+              hoy.getTime()
+            );
+
+          }
+        );
+
+      setOrdenesVencenHoy(
+        filtradas
+      );
+
+      setMostrarVencenHoy(
+        true
+      );
+
+    } catch (error) {
+
       console.error(error);
-      return;
+
     }
 
-    setOrdenesVencenHoy(data);
-    setMostrarVencenHoy(true);
-  }*/
+  }
 
   //Mostrar Ordenes reingresadas
-  /*async function mostrarReingresos() {
+  async function mostrarReingresos() {
 
-    const { data, error } = await supabase
-      .from("ordenes")
-      .select("*")
-      .gt("cantidad_reingresos", 0);
+    try {
 
-    if (error) {
+      const response =
+        await fetch("/api/ordenes");
+
+      if (!response.ok) {
+        return;
+      }
+
+      const ordenes =
+        await response.json();
+
+      const filtradas =
+        ordenes.filter(
+          orden =>
+            (
+              orden.cantidad_reingresos || 0
+            ) > 0
+        );
+
+      setOrdenesReingresadas(
+        filtradas
+      );
+
+      setMostrarReingresadas(
+        true
+      );
+
+    } catch (error) {
+
       console.error(error);
-      return;
+
     }
 
-    setOrdenesReingresadas(data);
-    setMostrarReingresadas(true);
-  }*/
+  }
 
   //Mostrar Ordenes en campo
-  /*async function mostrarOrdenesEnCampo() {
+  async function mostrarOrdenesEnCampo() {
 
-    const { data, error } = await supabase
-      .from("ordenes")
-      .select("*")
-      .eq("estado_id", 7);
+    try {
 
-    if (error) {
+      const response =
+        await fetch("/api/ordenes");
+
+      if (!response.ok) {
+        return;
+      }
+
+      const ordenes =
+        await response.json();
+
+      const filtradas =
+        ordenes.filter(
+          orden =>
+            Number(
+              orden.estado_id
+            ) === 7
+        );
+
+      setOrdenesEnCampo(
+        filtradas
+      );
+
+      setMostrarEnCampo(
+        true
+      );
+
+    } catch (error) {
+
       console.error(error);
-      return;
+
     }
 
-    setOrdenesEnCampo(data);
-    setMostrarEnCampo(true);
-  }*/
+  }
 
   //Mostrar Ordenes Por Vencer
-  /*async function mostrarOrdenesPorVencer() {
+  async function mostrarOrdenesPorVencer() {
 
-    const { data, error } = await supabase
-      .from("ordenes")
-      .select("*");
+    try {
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+      const response =
+        await fetch("/api/ordenes");
 
-    const filtradas = data.filter((orden) => {
+      if (!response.ok) {
+        return;
+      }
 
-      const dias = diasRestantes(
-        orden.fecha_maxima_atencion
+      const ordenes =
+        await response.json();
+
+      const filtradas =
+        ordenes.filter(
+          orden => {
+
+            const dias =
+              diasRestantes(
+                orden.fecha_maxima_atencion
+              );
+
+            return (
+              dias >= 1 &&
+              dias <= 2
+            );
+
+          }
+        );
+
+      setOrdenesPorVencer(
+        filtradas
       );
 
-      return dias === 2;
-    });
+      setMostrarPorVencer(
+        true
+      );
 
-    setOrdenesPorVencer(filtradas);
-    setMostrarPorVencer(true);
-  }*/
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  }
 
   //Mostrar Ordenes Vencidas
-  /*async function mostrarOrdenesVencidas() {
+  async function mostrarOrdenesVencidas() {
 
-    const { data, error } = await supabase
-      .from("ordenes")
-      .select("*");
+    try {
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+      const response =
+        await fetch("/api/ordenes");
 
-    const filtradas = data.filter((orden) => {
+      if (!response.ok) {
+        return;
+      }
 
-      const dias = diasRestantes(
-        orden.fecha_maxima_atencion
+      const ordenes =
+        await response.json();
+
+      const filtradas =
+        ordenes.filter(
+          orden =>
+            diasRestantes(
+              orden.fecha_maxima_atencion
+            ) < 0
+        );
+
+      setOrdenesVencidas(
+        filtradas
       );
 
-      return dias < 0;
-    });
+      setMostrarVencidas(
+        true
+      );
 
-    setOrdenesVencidas(filtradas);
-    setMostrarVencidas(true);
-  }*/
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  }
 
   function diasRestantes(fechaMaxima) {
     const hoy = new Date();
@@ -239,105 +363,150 @@ function Dashboard({perfil}) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  /*async function cargarSLA() {
-
-    const { data } = await supabase
-      .from("ordenes")
-      .select("*");
-
-    let contadorDentroSLA = 0;
-    let contadorPorVencer = 0;
-    let contadorVencidas = 0;
-
-    data.forEach((orden) => {
-      const dias = diasRestantes(orden.fecha_maxima_atencion);
-      if (dias > 2) {
-        contadorDentroSLA++;
-      } 
-      else if (dias >= 1 && dias <= 2) {
-        contadorPorVencer++;
-      } 
-      else if (dias === 0) {
-        // Vencen Hoy
-      } 
-      else { 
-        contadorVencidas++;
-      }
-    });
-
-    setDentroSLA(contadorDentroSLA);
-    setPorVencer(contadorPorVencer);
-    setVencidas(contadorVencidas);
-
-    console.log("Dentro SLA:", contadorDentroSLA);
-    console.log("Por Vencer:", contadorPorVencer);
-    console.log("Vencidas:", contadorVencidas);
-  }*/
-
   async function cargarSigasDashboard() {
+
     try {
 
       const response =
         await fetch("/api/sigas");
 
+      if (!response.ok) {
+
+        console.error(
+          "ERROR CARGANDO SIGAS"
+        );
+
+        return;
+      }
+
       const sigas =
         await response.json();
+
+      const {
+        data: movimientos,
+        error: errorMovimientos
+      } = await cargarMovimientosSIGA();
+
+      if (errorMovimientos) {
+
+        console.error(
+          "ERROR CARGANDO MOVIMIENTOS SLA:",
+          errorMovimientos
+        );
+
+        return;
+      }
+
+      const movimientosPorSiga =
+        new Map();
+
+      movimientos.forEach(
+        movimiento => {
+
+          const lista =
+            movimientosPorSiga.get(
+              Number(movimiento.siga_id)
+            ) || [];
+
+          lista.push(
+            movimiento
+          );
+
+          movimientosPorSiga.set(
+            Number(movimiento.siga_id),
+            lista
+          );
+
+        }
+      );
 
       let dentroSLA = 0;
       let porVencer = 0;
       let vencidos = 0;
       let enCampo = 0;
 
-      const ahora = new Date();
+      sigas.forEach(
+        siga => {
 
-      sigas.forEach((siga) => {
+          const horasRestantes =
+            calcularHorasRestantesSIGA(
+              siga.fecha_maxima_atencion,
+              movimientosPorSiga.get(
+                Number(siga.id)
+              ) || [],
+              siga.estado
+            );
 
-        if (!siga.fecha_maxima_atencion) {
-          return;
-        }
+          // En Campo
+          if (
+            siga.estado !== "Cerrado" &&
+            siga.estado !== "Abierto"
+          ) {
+            enCampo++;
+          }
 
-        const fechaMaxima =
-          new Date(siga.fecha_maxima_atencion);
+          // Diferidos no cuentan
+          if (
+            siga.estado === "Diferido"
+          ) {
+            return;
+          }
 
-        const horasRestantes =
-          (fechaMaxima - ahora) / (1000 * 60 * 60);
+          // Cerrados tampoco
+          if (
+            siga.estado === "Cerrado"
+          ) {
+            return;
+          }
 
-        if (
-          siga.estado !== "Cerrado" &&
-          siga.estado !== "Diferido"
-        ) {
+          if (
+            horasRestantes === null ||
+            horasRestantes === undefined
+          ) {
+            return;
+          }
 
-          if (horasRestantes > 1) {
+          if (
+            horasRestantes > 1
+          ) {
+
             dentroSLA++;
+
           }
           else if (
             horasRestantes > 0 &&
             horasRestantes <= 1
           ) {
+
             porVencer++;
+
           }
           else {
+
             vencidos++;
+
           }
 
         }
+      );
 
-        if (
-          siga.estado !== "Cerrado" &&
-          siga.estado !== "Abierto"
-        ) {
-          enCampo++;
-        }
+      setSigasDentroSLA(
+        dentroSLA
+      );
 
-      });
+      setSigasPorVencer(
+        porVencer
+      );
 
-      setSigasDentroSLA(dentroSLA);
-      setSigasPorVencer(porVencer);
-      setSigasVencidos(vencidos);
-      setSigasEnCampo(enCampo);
+      setSigasVencidos(
+        vencidos
+      );
 
-    }
-    catch (error) {
+      setSigasEnCampo(
+        enCampo
+      );
+
+    } catch (error) {
 
       console.error(
         "ERROR KPI SIGA:",
@@ -345,6 +514,7 @@ function Dashboard({perfil}) {
       );
 
     }
+
   }
 
   const cardStyle = {
@@ -358,58 +528,142 @@ function Dashboard({perfil}) {
 
   const navigate = useNavigate();
 
-  /*async function buscarGlobal() {
+  async function buscarGlobal() {
 
-    if (!busquedaGlobal.trim()) {
+    if (!busquedaGlobal.trim().length < 3) {
+
       setResultadosBusqueda([]);
 
       return;
     }
 
-    const texto = busquedaGlobal.trim();
-    
-    const { data: ordenes } =
-      await supabase
-        .from("ordenes")
-        .select(`id,numero_ost,numero_linea,cliente,estado(nombre)`)
-        .or(`numero_ost.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
+    try {
 
-    const { data: sigas } =
-      await supabase
-        .from("sigas")
-        .select(`id,numero_siga,numero_linea,cliente,estados_siga(nombre)`)
-        .or(`numero_siga.ilike.%${texto}%,cliente.ilike.%${texto}%,numero_linea.ilike.%${texto}%`);
+      const texto =
+        busquedaGlobal
+          .trim()
+          .toLowerCase();
 
-    setResultadosBusqueda([
+      const [
+        responseOrdenes,
+        responseSigas
+      ] = await Promise.all([
+        fetch("/api/ordenes"),
+        fetch("/api/sigas")
+      ]);
 
-      ...(ordenes || []).map(
-        (o) => ({
-          tipo: "ORDEN",
-          numero: o.numero_ost,
-          cliente: o.cliente,
-          linea: o.numero_linea,
-          estado: o.estado?.nombre,
-          id: o.id
-        })
-      ),
+      if (
+        !responseOrdenes.ok ||
+        !responseSigas.ok
+      ) {
 
-      ...(sigas || []).map(
-        (s) => ({
-          tipo: "SIGA",
-          numero: s.numero_siga,
-          cliente: s.cliente,
-          linea: s.numero_linea,
-          estado: s.estados_siga?.nombre,
-          id: s.id
-        })
-      )
+        console.error(
+          "ERROR BUSCANDO INFORMACIÓN"
+        );
 
-    ]);
-  }*/
+        return;
+      }
 
-  /*useEffect(() => {
+      const ordenes =
+        await responseOrdenes.json();
+
+      const sigas =
+        await responseSigas.json();
+
+      const ordenesFiltradas =
+        ordenes.filter(
+          orden =>
+            (
+              orden.numero_ost || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+            ||
+            (
+              orden.cliente || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+            ||
+            (
+              orden.numero_linea || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+        );
+
+      const sigasFiltradas =
+        sigas.filter(
+          siga =>
+            (
+              siga.numero_siga || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+            ||
+            (
+              siga.cliente || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+            ||
+            (
+              siga.numero_linea || ""
+            )
+              .toLowerCase()
+              .includes(texto)
+        );
+
+      setResultadosBusqueda([
+
+        ...ordenesFiltradas.map(
+          orden => ({
+            tipo: "ORDEN",
+            numero:
+              orden.numero_ost,
+            cliente:
+              orden.cliente,
+            linea:
+              orden.numero_linea,
+            estado:
+              orden.estado,
+            id:
+              orden.id
+          })
+        ),
+
+        ...sigasFiltradas.map(
+          siga => ({
+            tipo: "SIGA",
+            numero:
+              siga.numero_siga,
+            cliente:
+              siga.cliente,
+            linea:
+              siga.numero_linea,
+            estado:
+              siga.estado,
+            id:
+              siga.id
+          })
+        )
+
+      ]);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR EN BÚSQUEDA GLOBAL:",
+        error
+      );
+
+    }
+
+  }
+
+  useEffect(() => {
     buscarGlobal();
-  }, [busquedaGlobal]);*/
+  }, [busquedaGlobal]);
 
   return (
     <div>

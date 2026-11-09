@@ -626,7 +626,9 @@ function SIGA() {
         return;
       }
 
-      const user = {id: 1 }; // Reemplaza con la lógica para obtener el usuario actual
+      const usuarioActual = JSON.parse(
+        localStorage.getItem("usuario")
+      );
 
       // Registrar cambios de estado en el historial si hubo un cambio
       if (
@@ -648,7 +650,7 @@ function SIGA() {
         const movimientos = [
             {
               siga_id: sigaEditando,
-              usuario_id: user.id,
+              usuario_id: usuarioActual?.id,
               tipo_movimiento: "Cambio Estado",
               estado_anterior: sigaActual.estado_siga_id,
               estado_nuevo: Number(formData.estado_siga_id),
@@ -660,7 +662,7 @@ function SIGA() {
         if (estadoNuevo?.nombre === "Diferido") {
             movimientos.push({
               siga_id: sigaEditando,
-              usuario_id: user.id,
+              usuario_id: usuarioActual?.id,
               tipo_movimiento: "Inicio Diferido",
               comentario: "El reporte fue colocado en estado Diferido"
             });
@@ -673,7 +675,7 @@ function SIGA() {
         ) {
             movimientos.push({
               siga_id: sigaEditando,
-              usuario_id: user.id,
+              usuario_id: usuarioActual?.id,
               tipo_movimiento: "Fin Diferido",
               comentario: "El reporte salió del estado Diferido"
             });
@@ -682,7 +684,7 @@ function SIGA() {
         if (estadoNuevo?.nombre === "Restablecimiento") {
             movimientos.push({
               siga_id: sigaEditando,
-              usuario_id: user.id,
+              usuario_id: usuarioActual?.id,
               tipo_movimiento: "Restablecimiento",
               comentario: "Servicio restablecido"
             });
@@ -691,10 +693,50 @@ function SIGA() {
         if (estadoNuevo?.nombre === "Cerrado") {
             movimientos.push({
               siga_id: sigaEditando,
-              usuario_id: user.id,
+              usuario_id: usuarioActual?.id,
               tipo_movimiento: "Cierre",
               comentario: "Reporte cerrado"
             });
+        }
+
+        const usuarioActual = JSON.parse(
+          localStorage.getItem("usuario")
+        );
+
+        if (
+          movimientos.length > 0 &&
+          usuarioActual?.id
+        ) {
+
+          for (const movimiento of movimientos) {
+
+            const responseHistorial = await fetch(
+              "/api/historial-siga",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  ...movimiento,
+                  usuario_id: usuarioActual.id
+                })
+              }
+            );
+
+            if (!responseHistorial.ok) {
+
+              console.error(
+                "ERROR GUARDANDO HISTORIAL DE ESTADO SIGA"
+              );
+
+              alert(
+                "El SIGA se actualizó, pero no se pudo guardar el historial."
+              );
+
+              return;
+            }
+          }
         }
 
         /*const { error: historialError } = await supabase
@@ -767,8 +809,7 @@ function SIGA() {
       const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
         sigaEditando,
         agregados,
-        removidos,
-        user
+        removidos
       );
       if (!historialTecnicosGuardado) {
         return;
@@ -870,9 +911,6 @@ function SIGA() {
       const data = await response.json();
 
       let usuarioCreacion = null;
-      const usuarioActual = JSON.parse(
-        localStorage.getItem("usuario")
-      );
 
       if (usuarioActual?.id) {
 
@@ -949,16 +987,19 @@ function SIGA() {
           alert(
             "El SIGA se creó, pero no se pudieron guardar los técnicos asignados."
           );
-        } else if (usuarioCreacion) {
-          /*const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(
-            data.id,
-            tecnicosSeleccionados,
-            [],
-            usuarioCreacion
-          );*/
+        } else {
+
+          const historialTecnicosGuardado =
+            await registrarCambiosTecnicosSIGA(
+              data.id,
+              tecnicosSeleccionados,
+              []
+            );
+
           if (!historialTecnicosGuardado) {
             return;
           }
+
         }
       }
     }

@@ -297,65 +297,188 @@ function SIGA() {
   }
 
   // Función para registrar los cambios de técnicos en el historial del SIGA
-  async function registrarCambiosTecnicosSIGA(sigaId, agregados, removidos, user) {
-    if (agregados.length === 0 && removidos.length === 0) {
+  // Función para registrar los cambios de técnicos en el historial del SIGA
+  async function registrarCambiosTecnicosSIGA(
+    sigaId,
+    agregados,
+    removidos
+  ) {
+
+    if (
+      agregados.length === 0 &&
+      removidos.length === 0
+    ) {
       return true;
     }
 
-    const idsTecnicos = [...new Set([...agregados, ...removidos])];
-    const { data: tecnicosNombres, error: errorTecnicos } = await supabase
-      .from("tecnicos")
-      .select("id, nombre")
-      .in("id", idsTecnicos);
+    const idsTecnicos = [
+      ...new Set([
+        ...agregados,
+        ...removidos
+      ])
+    ];
 
-    if (errorTecnicos) {
-      console.error("ERROR CONSULTANDO NOMBRES DE TÉCNICOS:", errorTecnicos);
-      alert("Los técnicos se actualizaron, pero no se pudieron obtener sus nombres para el historial.");
+    try {
+
+      const responseTecnicos =
+        await fetch("/api/tecnicos");
+
+      if (!responseTecnicos.ok) {
+
+        console.error(
+          "ERROR CONSULTANDO TÉCNICOS"
+        );
+
+        alert(
+          "Los técnicos se actualizaron, pero no se pudieron obtener sus nombres para el historial."
+        );
+
+        return false;
+      }
+
+      const tecnicosCatalogo =
+        await responseTecnicos.json();
+
+      const nombresPorId = new Map(
+        tecnicosCatalogo.map(
+          tecnico => [
+            Number(tecnico.id),
+            tecnico.nombre
+          ]
+        )
+      );
+
+      const idsSinNombre =
+        idsTecnicos.filter(
+          id =>
+            !nombresPorId.has(
+              Number(id)
+            )
+        );
+
+      if (idsSinNombre.length > 0) {
+
+        console.error(
+          "TÉCNICOS SIN NOMBRE PARA HISTORIAL:",
+          idsSinNombre
+        );
+
+        alert(
+          "Los técnicos se actualizaron, pero no se encontraron todos sus nombres para el historial."
+        );
+
+        return false;
+      }
+
+      const movimientos = [];
+
+      if (agregados.length > 0) {
+
+        const nombresAgregados =
+          agregados
+            .map(
+              id =>
+                nombresPorId.get(
+                  Number(id)
+                )
+            )
+            .join(", ");
+
+        movimientos.push({
+          siga_id: sigaId,
+          tipo_movimiento:
+            "Asignación Técnico",
+          comentario:
+            `Técnico(s) asignado(s): ${nombresAgregados}`
+        });
+
+      }
+
+      if (removidos.length > 0) {
+
+        const nombresRemovidos =
+          removidos
+            .map(
+              id =>
+                nombresPorId.get(
+                  Number(id)
+                )
+            )
+            .join(", ");
+
+        movimientos.push({
+          siga_id: sigaId,
+          tipo_movimiento:
+            "Asignación Técnico",
+          comentario:
+            `Técnico(s) removido(s): ${nombresRemovidos}`
+        });
+
+      }
+
+      const usuarioActual =
+        JSON.parse(
+          localStorage.getItem(
+            "usuario"
+          )
+        );
+
+      if (
+        movimientos.length > 0 &&
+        usuarioActual?.id
+      ) {
+
+        for (const movimiento of movimientos) {
+
+          const responseHistorial =
+            await fetch(
+              "/api/historial-siga",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+                body: JSON.stringify({
+                  ...movimiento,
+                  usuario_id:
+                    usuarioActual.id
+                })
+              }
+            );
+
+          if (
+            !responseHistorial.ok
+          ) {
+
+            console.error(
+              "ERROR REGISTRANDO CAMBIO DE TÉCNICOS EN HISTORIAL SIGA"
+            );
+
+            alert(
+              "Los técnicos se actualizaron, pero no se pudo guardar el cambio en el historial."
+            );
+
+            return false;
+          }
+
+        }
+
+      }
+
+      return true;
+
+    } catch (error) {
+
+      console.error(
+        "ERROR REGISTRANDO HISTORIAL DE TÉCNICOS SIGA:",
+        error
+      );
+
       return false;
+
     }
 
-    const nombresPorId = new Map(
-      (tecnicosNombres || []).map((tecnico) => [Number(tecnico.id), tecnico.nombre])
-    );
-    const idsSinNombre = idsTecnicos.filter((id) => !nombresPorId.has(Number(id)));
-    if (idsSinNombre.length > 0) {
-      console.error("TÉCNICOS SIN NOMBRE PARA HISTORIAL:", idsSinNombre);
-      alert("Los técnicos se actualizaron, pero no se encontraron todos sus nombres para el historial.");
-      return false;
-    }
-
-    const movimientos = [];
-    if (agregados.length > 0) {
-      const nombresAgregados = agregados.map((id) => nombresPorId.get(Number(id))).join(", ");
-      movimientos.push({
-        siga_id: sigaId,
-        usuario_id: user.id,
-        tipo_movimiento: "Asignación Técnico",
-        comentario: `Técnico(s) asignado(s): ${nombresAgregados}`
-      });
-    }
-
-    if (removidos.length > 0) {
-      const nombresRemovidos = removidos.map((id) => nombresPorId.get(Number(id))).join(", ");
-      movimientos.push({
-        siga_id: sigaId,
-        usuario_id: user.id,
-        tipo_movimiento: "Asignación Técnico",
-        comentario: `Técnico(s) removido(s): ${nombresRemovidos}`
-      });
-    }
-
-    /*const { error: historialError } = await supabase
-      .from("historial_siga")
-      .insert(movimientos);
-
-    if (historialError) {
-      console.error("ERROR REGISTRANDO CAMBIO DE TÉCNICOS EN HISTORIAL SIGA:", historialError);
-      alert("Los técnicos se actualizaron, pero no se pudo guardar el cambio en el historial.");
-      return false;
-    }*/
-
-    return true;
   }
 
   // Función para guardar un SIGA, ya sea creando uno nuevo o actualizando uno existente

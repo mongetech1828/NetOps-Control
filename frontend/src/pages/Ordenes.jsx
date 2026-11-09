@@ -581,6 +581,13 @@ function Ordenes() {
       }
 
     }
+
+    await cargarOrdenes();
+    setMostrarFormulario(false);
+    setFormData(formularioVacio);
+    setOrdenEditando(null);
+    setTecnicosSeleccionados([]);
+
   }
 
   // Función para cargar las órdenes desde la base de datos

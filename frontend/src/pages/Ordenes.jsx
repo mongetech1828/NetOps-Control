@@ -156,18 +156,29 @@ function Ordenes() {
     const ordenesCoincidentes = ordenes.filter(
       orden => orden.numero_ost === formData.numero_ost
     );
+
     if (ordenesCoincidentes.some(({ id }) => String(id) !== String(ordenEditando))) {
       alert("La OST ya existe. Utilice Editar o Reingresar.");
       return;
     }
+    
+    const { prioridad, puntaje } = calcularPrioridad();
 
-    let fechaMaxima = null;
+    let fechaMaxima = null;    
+
     if (!ordenEditando) {
       if (!formData.fecha_recepcion) {
         alert("Debe indicar la fecha de recepción.");
         return;
       }
-      fechaMaxima = sumarDiasHabiles(formData.fecha_recepcion, 4);
+
+      const diasSLA = obtenerDiasSLA(prioridad);
+
+      fechaMaxima = sumarDiasHabiles(
+        formData.fecha_recepcion,
+        diasSLA
+      );
+
       if (!fechaMaxima) {
         alert("La fecha de recepción no es válida.");
         return;
@@ -946,7 +957,7 @@ function Ordenes() {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     return Math.round((fecha - hoy) / (1000 * 60 * 60 * 24));
-  }
+  }  
 
   // Función para obtener el puntaje según el nivel
   function obtenerPuntaje(
@@ -986,6 +997,22 @@ function Ordenes() {
           puntaje.toFixed(2)
         )
     };
+  }
+
+  function obtenerDiasSLA(prioridad) {
+    switch (prioridad) {
+      case "ALTA":
+        return 2;
+
+      case "MEDIA":
+        return 4;
+
+      case "BAJA":
+        return 6;
+
+      default:
+        return 4;
+    }
   }
 
   // Función para obtener el texto y color según la prioridad

@@ -586,7 +586,9 @@ function SIGA() {
 
     // Si estamos editando, verificamos que el SIGA exista
     if (sigaEditando){
+
       const sigaActual = sigas.find(s => s.id ===sigaEditando);
+
       if (!sigaActual) {
         alert("No se encontró el SIGA que intenta actualizar.");
         return;
@@ -666,10 +668,6 @@ function SIGA() {
           estadosSIGA
         );
 
-        const usuarioActual = JSON.parse(
-          localStorage.getItem("usuario")
-        );
-
         const movimientos = [
             {
               siga_id: sigaEditando,
@@ -677,7 +675,15 @@ function SIGA() {
               tipo_movimiento: "Cambio Estado",
               estado_anterior: sigaActual.estado_siga_id,
               estado_nuevo: Number(formData.estado_siga_id),
-              comentario: `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
+              comentario:
+                `Estado cambiado de ${
+                  estadoAnterior?.nombre ||
+                  sigaActual.estado ||
+                  "Sin estado"
+                } a ${
+                  estadoNuevo?.nombre ||
+                  "Estado desconocido"
+                }`
             }
         ];
 
@@ -772,14 +778,6 @@ function SIGA() {
           );
 
         }
-
-        /*const { error: historialError } = await supabase
-            .from("historial_siga")
-            .insert(movimientos);
-
-        if (historialError) {
-          console.warn("Historial SIGA pendiente de migración");
-        }*/
       }
 
       // Registrar cambios de técnicos en el historial si hubo cambios
@@ -944,7 +942,9 @@ function SIGA() {
 
       const data = await response.json();
 
-      let usuarioCreacion = null;
+      const usuarioActual = JSON.parse(
+        localStorage.getItem("usuario")
+      );
 
       if (usuarioActual?.id) {
 

@@ -297,7 +297,6 @@ function SIGA() {
   }
 
   // Función para registrar los cambios de técnicos en el historial del SIGA
-  // Función para registrar los cambios de técnicos en el historial del SIGA
   async function registrarCambiosTecnicosSIGA(
     sigaId,
     agregados,
@@ -389,7 +388,7 @@ function SIGA() {
           tipo_movimiento:
             "Asignación Técnico",
           comentario:
-            `Técnico(s) asignado(s): ${nombresAgregados}`
+            `Técnico(s) asignado(s): ${nombresAgregados} por ${usuarioActual.nombre}`
         });
 
       }
@@ -411,7 +410,7 @@ function SIGA() {
           tipo_movimiento:
             "Asignación Técnico",
           comentario:
-            `Técnico(s) removido(s): ${nombresRemovidos}`
+            `Técnico(s) removido(s): ${nombresRemovidos} por ${usuarioActual.nombre}`
         });
 
       }

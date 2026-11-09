@@ -9,14 +9,6 @@ function parsearFechaMovimiento(fecha) {
   }
 
   let valor = fecha.trim().replace(" ", "T");
-  valor = valor.replace(
-    /(\.\d{3})\d+(?=Z|[+-]\d{2}(?::?\d{2})?$|$)/i,
-    "$1"
-  );
-
-  if (!/(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(valor)) {
-    valor = `${valor}Z`;
-  }
 
   const fechaParseada = new Date(valor);
   return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
@@ -193,7 +185,7 @@ function HistorialSIGAModal({
   const metricas = sigaHistorial
   ? calcularMetricasSIGA(
       historialSIGA,
-      sigaHistorial?.prioridades_siga?.horas_sla || 0
+      sigaHistorial?.horas_sla || 0
     )
   : null;
   const fechaCierreSIGA = (historialSIGA || [])
@@ -204,7 +196,7 @@ function HistorialSIGAModal({
         ? fechaMovimiento
         : fechaCierre;
     }, null);
-  const sigaCerrado = sigaHistorial?.estados_siga?.nombre === "Cerrado";
+  const sigaCerrado = sigaHistorial?.estado === "Cerrado";
   const slaCierre = sigaCerrado && !fechaCierreSIGA
     ? { texto: "⚪Sin registro de cierre", color: "#6b7280" }
     : obtenerSLASIGA(
@@ -241,7 +233,7 @@ function HistorialSIGAModal({
 
             <div>
             <strong>Prioridad:</strong><br />
-            {sigaHistorial?.prioridades_siga?.prioridad}
+            {sigaHistorial?.prioridad || "-"}
             </div>
 
             <div>
@@ -251,12 +243,12 @@ function HistorialSIGAModal({
 
             <div>
             <strong>Tipo Servicio:</strong><br />
-            {sigaHistorial?.tipo_servicio?.nombre}
+            {sigaHistorial?.tipo_servicio || "-"}
             </div>                
 
             <div>
             <strong>Estado:</strong><br />
-            {sigaHistorial?.estados_siga?.nombre}
+            {sigaHistorial?.estado || "-"}
             </div>
 
             <div>
@@ -266,7 +258,7 @@ function HistorialSIGAModal({
 
             <div>
             <strong>Grupo de gestión:</strong><br />
-            {sigaHistorial?.grupos_gestion?.nombre || "-"}
+            {sigaHistorial?.grupo_gestion || "-"}
             </div>
 
             <div>
@@ -279,10 +271,10 @@ function HistorialSIGAModal({
                 marginTop: "5px"
                 }}
             >
-                {sigaHistorial?.siga_tecnicos
-                ?.map((st) => (
+                {sigaHistorial?.tecnicos
+                ?.map((tecnico) => (
                     <span
-                    key={st.tecnico_id}
+                    key={tecnico.id}
                     style={{
                         backgroundColor: "#dbeafe",
                         color: "#1e40af",
@@ -291,7 +283,7 @@ function HistorialSIGAModal({
                         fontSize: "12px"
                     }}
                     >
-                    {st.tecnicos?.nombre}
+                    {tecnico.nombre}
                     </span>
                 ))}
             </div>
@@ -431,9 +423,9 @@ function HistorialSIGAModal({
                 color = "#8b5cf6"
             }              
             const comentario = mov.comentario || "";
-            const correo = mov.perfiles?.correo;
-            const mostrarCorreo = correo &&
-                !comentario.toLowerCase().includes(correo.toLowerCase());
+            const usuario = mov.usuario_nombre;
+            const mostrarUsuario = usuario &&
+                !comentario.toLowerCase().includes(usuario.toLowerCase());
 
             return (
                 <div
@@ -489,7 +481,7 @@ function HistorialSIGAModal({
                     <div>
                     <span style={{ overflowWrap: "anywhere" }}>
                         {comentario}
-                        {mostrarCorreo && ` por ${correo}`}
+                        {mostrarUsuario && ` por ${usuario}`}
                     </span>
                     </div>
 

@@ -464,6 +464,45 @@ function Ordenes() {
 
       const data = await response.json();
 
+      const usuarioActual = JSON.parse(
+        localStorage.getItem("usuario")
+      );
+
+      // HISTORIAL DE CREACIÓN
+      if (usuarioActual?.id) {
+
+        const responseHistorialCreacion =
+          await fetch(
+            "/api/historial-orden",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+              body: JSON.stringify({
+                orden_id: data.id,
+                usuario_id: usuarioActual.id,
+                estado_anterior: null,
+                estado_nuevo: Number(
+                  formData.estado_id
+                ),
+                comentario:
+                  `Creación de OST ${formData.numero_ost} por ${usuarioActual.nombre}`
+              })
+            }
+          );
+
+        if (!responseHistorialCreacion.ok) {
+
+          console.error(
+            "ERROR GUARDANDO HISTORIAL DE CREACIÓN"
+          );
+        }
+      }
+      
+
+      // ASIGNACIÓN DE TÉCNICOS
       if (tecnicosSeleccionados.length > 0) {
 
         const responseTecnicos = await fetch(
@@ -471,10 +510,12 @@ function Ordenes() {
           {
             method: "PUT",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type":
+                "application/json"
             },
             body: JSON.stringify({
-              tecnicos: tecnicosSeleccionados
+              tecnicos:
+                tecnicosSeleccionados
             })
           }
         );
@@ -492,16 +533,55 @@ function Ordenes() {
           return;
         }
 
+        // HISTORIAL DE TÉCNICOS
+        if (usuarioActual?.id) {
+
+          const nombresTecnicos =
+            tecnicos
+              .filter(
+                t =>
+                  tecnicosSeleccionados.includes(
+                    String(t.id)
+                  ) ||
+                  tecnicosSeleccionados.includes(
+                    t.id
+                  )
+              )
+              .map(
+                t => t.nombre
+              )
+              .join(", ");
+
+          const responseHistorialTecnicos =
+            await fetch(
+              "/api/historial-orden",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+                body: JSON.stringify({
+                  orden_id: data.id,
+                  usuario_id: usuarioActual.id,
+                  comentario:
+                    `Técnico(s) asignado(s): ${nombresTecnicos} por ${usuarioActual.nombre}`
+                })
+              }
+            );
+
+          if (!responseHistorialTecnicos.ok) {
+
+            console.error(
+              "ERROR GUARDANDO HISTORIAL DE TÉCNICOS"
+            );
+          }
+        }
+
       }
 
     }
-
-    await cargarOrdenes();
-    setMostrarFormulario(false);  
-    setFormData(formularioVacio);
-    setOrdenEditando(null);
-    setTecnicosSeleccionados([]);
-  } 
+  }
 
   // Función para cargar las órdenes desde la base de datos
   async function cargarOrdenes() {

@@ -1072,10 +1072,10 @@ function Ordenes() {
         Estado: orden.estado,
         Dias: diasRestantes(orden.fecha_maxima_atencion),
         Tecnicos:
-          orden.orden_tecnicos
+          orden.tecnicos
             ?.map(
               (t) =>
-                t.tecnicos?.nombre
+                t.nombre
             )
             .join(", "),
         Prioridad:

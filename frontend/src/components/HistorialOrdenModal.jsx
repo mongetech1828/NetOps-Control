@@ -99,27 +99,26 @@ function HistorialOrdenModal({
                     <div>
                         <strong>Técnico:</strong><br />
                         <div
-                        style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "6px",
-                            marginTop: "5px"
-                        }}
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "6px",
+                                marginTop: "5px"
+                            }}
                         >
-                        {ordenHistorial?.orden_tecnicos
-                            ?.map((ot) => (
-                            <span
-                                key={ot.tecnico_id}
-                                style={{
+                            {ordenHistorial?.tecnicos?.map((tecnico) => (
+                                <span
+                                    key={tecnico.id}
+                                    style={{
                                     backgroundColor: "#dbeafe",
                                     color: "#1e40af",
                                     padding: "4px 8px",
                                     borderRadius: "12px",
                                     fontSize: "12px"
-                                }}
-                            >
-                                {ot.tecnicos?.nombre}
-                            </span>
+                                    }}
+                                >
+                                    {tecnico.nombre}
+                                </span>
                             ))}
                         </div>
                     </div>

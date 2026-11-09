@@ -1208,20 +1208,19 @@ function SIGA() {
 
     const datos = sigasExportados.map(
       (siga) => ({
-
         SIGA: siga.numero_siga,
         Linea: siga.numero_linea,
         Evento_agil: siga.evento_agil,
         Cliente: siga.cliente,
-        Servicio: siga.tipo_servicio,        
+        Servicio: siga.tipo_servicio,
         Prioridad: siga.prioridad,
-        Estado: siga.estados_siga,
+        Estado: siga.estado,
         Grupo: siga.grupo_gestion,
         Tecnicos:
-          siga.siga_tecnicos
+          siga.tecnicos
             ?.map(
-              (t) =>
-                t.tecnicos?.nombre
+              tecnico =>
+                tecnico.nombre
             )
             .join(", ")
       })

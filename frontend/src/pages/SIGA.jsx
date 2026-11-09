@@ -637,7 +637,7 @@ function SIGA() {
           estadosSIGA.find(
             e =>
               Number(e.id) ===
-              sigaActual.estado_siga_id
+              Number(sigaActual.estado_siga_id)
           );
         const estadoNuevo =
           estadosSIGA.find(
@@ -645,6 +645,11 @@ function SIGA() {
               Number(e.id) ===
               Number(formData.estado_siga_id)
             );
+
+        console.log(
+          "estadoAnterior:",
+          estadoAnterior
+        );
 
         console.log(
           "estadoNuevo:",

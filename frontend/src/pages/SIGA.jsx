@@ -1096,7 +1096,8 @@ function SIGA() {
         if (filtroDashboard === "SIGAs En campo") {
           return (
             siga.estado !== "Cerrado" &&
-            siga.estado !== "Abierto"
+            siga.estado !== "Abierto-Verificación" &&
+            siga.tecnicos?.length > 0
           );
         }
         if (filtroDashboard === "SIGAs Por vencer") {

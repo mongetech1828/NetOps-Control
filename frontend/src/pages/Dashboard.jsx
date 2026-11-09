@@ -440,7 +440,8 @@ function Dashboard({perfil}) {
           // En Campo
           if (
             siga.estado !== "Cerrado" &&
-            siga.estado !== "Abierto"
+            siga.estado !== "Abierto-Verificación" &&
+            siga.tecnicos?.length > 0
           ) {
             enCampo++;
           }

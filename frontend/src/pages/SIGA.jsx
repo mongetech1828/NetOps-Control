@@ -1089,12 +1089,12 @@ function SIGA() {
         if (filtroDashboard === "Vencidos") {
           return (
             siga.horas_restantes_sla < 0 &&
-            siga.estado !== "Cerrado"
+            siga.estado !== "Cerrado" &&
+            siga.estado !== "Diferido"
           );
         }
         if (filtroDashboard === "SIGAs En campo") {
           return (
-            siga.tecnico_id &&
             siga.estado !== "Cerrado" &&
             siga.estado !== "Abierto - Verificación"
           );

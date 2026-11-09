@@ -719,33 +719,42 @@ function SIGA() {
       const data = await response.json();
 
       let usuarioCreacion = null;
-      /*const {
-        data: { user },
-        error: usuarioError
-      } = await supabase.auth.getUser();
+      const usuarioActual = JSON.parse(
+        localStorage.getItem("usuario")
+      );
 
-      if (usuarioError || !user) {
-        console.error("ERROR OBTENIENDO USUARIO PARA HISTORIAL:", usuarioError);
-        alert("El SIGA se creó, pero no se pudo identificar al usuario para guardar el historial.");
-      } else {
-        usuarioCreacion = user;
-        const { error: historialError } = await supabase
-          .from("historial_siga")
-          .insert([
+      if (usuarioActual?.id) {
+
+        const responseHistorial =
+          await fetch(
+            "/api/historial-siga",
             {
-              siga_id: data.id,
-              usuario_id: user.id,
-              tipo_movimiento: "Creación",
-              estado_nuevo: Number(formData.estado_siga_id),
-              comentario: `Creación del reporte SIGA ${formData.numero_siga}`
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                siga_id: data.id,
+                usuario_id: usuarioActual.id,
+                estado_anterior: null,
+                estado_nuevo:
+                  Number(formData.estado_siga_id),
+                tipo_movimiento:
+                  "Creación",
+                comentario:
+                  `Creación del reporte SIGA ${formData.numero_siga}`
+              })
             }
-          ]);
+          );
 
-        if (historialError) {
-          console.error("ERROR HISTORIAL SIGA:", historialError);
-          alert("El SIGA se creó, pero no se pudo guardar su inicio en el historial.");
+        if (!responseHistorial.ok) {
+
+          console.error(
+            "ERROR HISTORIAL SIGA"
+          );
+          alert("El SIGA se creó, pero no se pudo registrar el historial de creación.");
         }
-      }*/
+      }
 
       // Registrar los técnicos asignados al nuevo SIGA
       if (tecnicosSeleccionados.length > 0) {

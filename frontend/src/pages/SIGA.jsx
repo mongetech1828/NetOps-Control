@@ -65,27 +65,6 @@ function SIGA() {
   async function cargarSigas() {
     try {
 
-      console.log(
-        "fecha_recepcion:",
-        formData.fecha_recepcion
-      );
-
-      console.log(
-        "fechaMaxima:",
-        fechaMaxima
-      );
-
-      console.log(
-        "fechaMaxima ISO:",
-        fechaMaxima.toISOString()
-      );
-
-      console.log(
-        "fechaMaxima sv-SE:",
-        fechaMaxima
-          .toLocaleString("sv-SE")
-      );
-
       const response =
         await fetch("/api/sigas");
 
@@ -523,6 +502,33 @@ function SIGA() {
       formData.fecha_recepcion,
       prioridadSeleccionada.horas_sla
     );
+
+    console.log(
+      "fecha_recepcion:",
+      formData.fecha_recepcion
+    );
+
+    console.log(
+      "horas_sla:",
+      prioridadSeleccionada.horas_sla
+    );
+
+    console.log(
+      "fechaMaxima:",
+      fechaMaxima
+    );
+
+    console.log(
+      "fechaMaxima ISO:",
+      fechaMaxima.toISOString()
+    );
+
+    console.log(
+      "fechaMaxima sv-SE:",
+      fechaMaxima
+        .toLocaleString("sv-SE")
+    );
+
     const nivelCalculado =
       tecnicosSeleccionados.length > 0 ? "ST" : "GT";
 

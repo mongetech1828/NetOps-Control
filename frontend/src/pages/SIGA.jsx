@@ -569,7 +569,7 @@ function SIGA() {
 
       // Registrar cambios de estado en el historial si hubo un cambio
       if (
-        sigaActual.estado_siga_id !==
+        Number(sigaActual.estado_siga_id) !==
         Number(formData.estado_siga_id)
       ){
         const estadoAnterior =

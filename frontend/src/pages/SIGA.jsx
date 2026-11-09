@@ -348,6 +348,11 @@ function SIGA() {
 
     try {
 
+      const usuarioActual =
+        JSON.parse(
+          localStorage.getItem("usuario")
+        );
+
       const responseTecnicos =
         await fetch("/api/tecnicos");
 
@@ -443,13 +448,6 @@ function SIGA() {
         });
 
       }
-
-      const usuarioActual =
-        JSON.parse(
-          localStorage.getItem(
-            "usuario"
-          )
-        );
 
       if (
         movimientos.length > 0 &&

@@ -636,20 +636,35 @@ function SIGA() {
         const estadoAnterior =
           estadosSIGA.find(
             e =>
-              e.id ===
+              Number(e.id) ===
               sigaActual.estado_siga_id
           );
         const estadoNuevo =
           estadosSIGA.find(
             e =>
-              e.id ===
+              Number(e.id) ===
               Number(formData.estado_siga_id)
             );
+
+        console.log(
+          "estadoNuevo:",
+          estadoNuevo
+        );
+
+        console.log(
+          "formData.estado_siga_id:",
+          formData.estado_siga_id
+        );
+
+        console.log(
+          "estadosSIGA:",
+          estadosSIGA
+        );
 
         const usuarioActual = JSON.parse(
           localStorage.getItem("usuario")
         );
-        
+
         const movimientos = [
             {
               siga_id: sigaEditando,

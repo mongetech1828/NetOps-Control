@@ -645,6 +645,11 @@ function SIGA() {
               e.id ===
               Number(formData.estado_siga_id)
             );
+
+        const usuarioActual = JSON.parse(
+          localStorage.getItem("usuario")
+        );
+        
         const movimientos = [
             {
               siga_id: sigaEditando,
@@ -655,6 +660,10 @@ function SIGA() {
               comentario: `Estado cambiado de ${estadoAnterior?.nombre} a ${estadoNuevo?.nombre}`
             }
         ];
+
+        console.log(
+          "CAMBIO DE ESTADO DETECTADO"
+        );
 
         // Registrar movimientos específicos según el estado nuevo
         if (estadoNuevo?.nombre === "Diferido") {
@@ -695,16 +704,17 @@ function SIGA() {
               tipo_movimiento: "Cierre",
               comentario: "Reporte cerrado"
             });
-        }
-
-        const usuarioActual = JSON.parse(
-          localStorage.getItem("usuario")
-        );
+        }        
 
         if (
           movimientos.length > 0 &&
           usuarioActual?.id
         ) {
+
+          console.log(
+            "MOVIMIENTOS A GUARDAR:",
+            movimientos
+          );
 
           for (const movimiento of movimientos) {
 
@@ -735,6 +745,12 @@ function SIGA() {
               return;
             }
           }
+
+          console.log(
+            "USUARIO ACTUAL:",
+            usuarioActual
+          );
+
         }
 
         /*const { error: historialError } = await supabase

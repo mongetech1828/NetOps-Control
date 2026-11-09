@@ -1213,10 +1213,10 @@ function SIGA() {
         Linea: siga.numero_linea,
         Evento_agil: siga.evento_agil,
         Cliente: siga.cliente,
-        Servicio: siga.tipo_servicio?.nombre,        
-        Prioridad: siga.prioridades_siga?.prioridad,
-        Estado: siga.estados_siga?.nombre,
-        Grupo: siga.grupos_gestion?.nombre,
+        Servicio: siga.tipo_servicio,        
+        Prioridad: siga.prioridad,
+        Estado: siga.estados_siga,
+        Grupo: siga.grupo_gestion,
         Tecnicos:
           siga.siga_tecnicos
             ?.map(

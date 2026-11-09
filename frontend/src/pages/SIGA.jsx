@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { supabase } from "../services/supabase";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
 import * as XLSX from "xlsx";
 import {
@@ -139,59 +138,6 @@ function SIGA() {
       );
     }
   }
-
-
-  /*async function cargarSigas() {
-    const { data, error } = await supabase
-      .from("sigas")
-      .select(`
-        *,
-        estados_siga(nombre),
-        prioridades_siga(prioridad, horas_sla),
-        grupos_gestion(nombre),
-        siga_tecnicos(tecnico_id,tecnicos(id, nombre)),
-        tipo_servicio(nombre)
-      `)
-      .order("id", {
-        ascending: false
-      });
-
-    if (error) {
-      console.error("ERROR CARGANDO SIGAS:", error);
-      alert("No se pudieron cargar los SIGAs.");
-      return;
-    }
-
-    if (data.length === 0) {
-      setSigas([]);
-      return;
-    }
-
-    const { data: movimientos, error: errorMovimientos } =
-      await cargarMovimientosSIGA(data.map(siga => siga.id));
-
-    if (errorMovimientos) {
-      console.error("ERROR CARGANDO MOVIMIENTOS PARA CALCULAR SLA:", errorMovimientos);
-      alert("No se pudieron calcular las horas de SLA de los SIGAs.");
-      return;
-    }
-
-    const movimientosPorSiga = new Map();
-    movimientos.forEach(movimiento => {
-      const movimientosSiga = movimientosPorSiga.get(movimiento.siga_id) || [];
-      movimientosSiga.push(movimiento);
-      movimientosPorSiga.set(movimiento.siga_id, movimientosSiga);
-    });
-
-    setSigas(data.map(siga => ({
-      ...siga,
-      horas_restantes_sla: calcularHorasRestantesSIGA(
-        siga.fecha_maxima_atencion,
-        movimientosPorSiga.get(siga.id),
-        siga.estados_siga?.nombre
-      )
-    })));
-  }*/
 
   async function actualizarSigas() {
     if (actualizandoSigas) return;
@@ -1169,28 +1115,28 @@ function SIGA() {
         if (filtroDashboard === "Vencidos") {
           return (
             siga.horas_restantes_sla < 0 &&
-            siga.estados_siga?.nombre !== "Cerrado"
+            siga.estado !== "Cerrado"
           );
         }
         if (filtroDashboard === "SIGAs En campo") {
           return (
             siga.tecnico_id &&
-            siga.estados_siga?.nombre !== "Cerrado" &&
-            siga.estados_siga?.nombre !== "Abierto - Verificación"
+            siga.estado !== "Cerrado" &&
+            siga.estado !== "Abierto - Verificación"
           );
         }
         if (filtroDashboard === "SIGAs Por vencer") {
           return (
-            siga.estados_siga?.nombre !== "Cerrado" &&
-            siga.estados_siga?.nombre !== "Diferido" &&
+            siga.estado !== "Cerrado" &&
+            siga.estado !== "Diferido" &&
             siga.horas_restantes_sla <= 1 &&
             siga.horas_restantes_sla > 0
           );
         }
         if (filtroDashboard === "SIGAs Dentro SLA") {
           return (
-            siga.estados_siga?.nombre !== "Cerrado" &&
-            siga.estados_siga?.nombre !== "Diferido" &&
+            siga.estado !== "Cerrado" &&
+            siga.estado !== "Diferido" &&
             siga.horas_restantes_sla > 1
           );
         }
@@ -1471,7 +1417,7 @@ function SIGA() {
               const horasRestantes = siga.horas_restantes_sla;
               const sla = obtenerSLASIGA(
                 horasRestantes,
-                siga.estados_siga?.nombre
+                siga.estado
               );
               return (
               <tr key={siga.id}>

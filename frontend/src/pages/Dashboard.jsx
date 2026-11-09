@@ -363,35 +363,6 @@ function Dashboard({perfil}) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  function clasificarSLA(horasRestantes, estado) {
-
-    const sla =
-      obtenerSLASIGA(
-        horasRestantes,
-        estado
-      );
-
-    if (
-      sla.texto.includes("En tiempo")
-    ) {
-      return "DentroSLA";
-    }
-
-    if (
-      sla.texto.includes("Prox. vencer")
-    ) {
-      return "PorVencer";
-    }
-
-    if (
-      sla.texto.includes("Vencido")
-    ) {
-      return "Vencido";
-    }
-
-    return null;
-  }
-
   async function cargarSigasDashboard() {
 
     try {
@@ -466,12 +437,6 @@ function Dashboard({perfil}) {
               siga.estado
             );
 
-          console.log({
-            siga: siga.numero_siga,
-            estado: siga.estado,
-            horasRestantes
-          });
-
           // En Campo
           if (
             siga.estado !== "Cerrado" &&
@@ -494,32 +459,29 @@ function Dashboard({perfil}) {
             return;
           }
 
-          const clasificacion =
-            clasificarSLA(
-              horasRestantes,
-              siga.estado
-            );
+          if (
+            horasRestantes === null ||
+            horasRestantes === undefined
+          ) {
+            return;
+          }
 
           if (
-            clasificacion ===
-            "DentroSLA"
+            horasRestantes > 1
           ) {
 
             dentroSLA++;
 
           }
           else if (
-            clasificacion ===
-            "PorVencer"
+            horasRestantes > 0 &&
+            horasRestantes <= 1
           ) {
 
             porVencer++;
 
           }
-          else if (
-            clasificacion ===
-            "Vencido"
-          ) {
+          else {
 
             vencidos++;
 

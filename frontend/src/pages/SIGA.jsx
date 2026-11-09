@@ -1007,32 +1007,43 @@ function SIGA() {
   }
 
   // Función para cargar el historial de un SIGA y mostrarlo en un modal
-  /*async function cargarHistorialSIGA(siga) {
-    setSigaHistorial(siga);
-    const { data, error } = await supabase
-      .from("historial_siga")
-      .select(`
-        *,
-        estados_siga!estado_nuevo(nombre),
-        perfiles!usuario_id(nombre, correo)
-      `)
-      .eq("siga_id", siga.id)
-      .order("fecha_movimiento", {
-        ascending: true
-      })
-      .order("id", {
-        ascending: true
-      });
+  async function cargarHistorialSIGA(siga) {
 
-    if (error) {
-      console.error("ERROR CARGANDO HISTORIAL SIGA:", error);
-      alert("No fue posible cargar el historial de este SIGA.");
-      return;
+    try {
+
+      const response = await fetch(
+        `/api/historial-siga/${siga.id}`
+      );
+
+      if (!response.ok) {
+
+        alert(
+          "No fue posible cargar el historial de este SIGA."
+        );
+
+        return;
+      }
+
+      const data = await response.json();
+
+      setSigaHistorial(siga);
+      setHistorialSIGA(data || []);
+      setMostrarHistorialSIGA(true);
+
+    } catch (error) {
+
+      console.error(
+        "ERROR CARGANDO HISTORIAL SIGA:",
+        error
+      );
+
+      alert(
+        "No fue posible cargar el historial de este SIGA."
+      );
+
     }
 
-    setHistorialSIGA(data || []);
-    setMostrarHistorialSIGA(true);
-  }*/
+  }
 
   function obtenerSigasFiltrados() {
     return sigas

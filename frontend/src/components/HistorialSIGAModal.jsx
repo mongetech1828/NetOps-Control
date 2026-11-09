@@ -178,8 +178,6 @@ function HistorialSIGAModal({
 
 }) {
 
-    console.log("VISIBLE:", visible);
-
   if (!visible) return null;
 
   const metricas = sigaHistorial

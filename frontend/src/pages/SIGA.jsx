@@ -128,8 +128,6 @@ function SIGA() {
 
       setSigas(sigasProcesados);
 
-      console.log("SIGAS API:", data);
-
     } catch (error) {
 
       console.error(
@@ -481,10 +479,7 @@ function SIGA() {
     }
     if (!formData.fecha_recepcion) {alert("Debe indicar la fecha y hora de recepción");
       return;
-    }
-
-    console.log("formData.prioridad_id =", formData.prioridad_id);
-    console.log("prioridadesSIGA =", prioridadesSIGA);    
+    }  
 
     const prioridadSeleccionada =
       prioridadesSIGA.find((p) => Number(p.id) === Number(formData.prioridad_id));
@@ -493,40 +488,9 @@ function SIGA() {
       return;
     }
 
-    console.log("prioridadesSIGA completo:", prioridadesSIGA);
-    console.log("prioridadSeleccionada:", prioridadSeleccionada);
-
-    console.log("prioridadSeleccionada =", prioridadSeleccionada);
-
     const fechaMaxima = calcularFechaMaximaSIGA(
       formData.fecha_recepcion,
       prioridadSeleccionada.horas_sla
-    );
-
-    console.log(
-      "fecha_recepcion:",
-      formData.fecha_recepcion
-    );
-
-    console.log(
-      "horas_sla:",
-      prioridadSeleccionada.horas_sla
-    );
-
-    console.log(
-      "fechaMaxima:",
-      fechaMaxima
-    );
-
-    console.log(
-      "fechaMaxima ISO:",
-      fechaMaxima.toISOString()
-    );
-
-    console.log(
-      "fechaMaxima sv-SE:",
-      fechaMaxima
-        .toLocaleString("sv-SE")
     );
 
     const nivelCalculado =
@@ -621,26 +585,6 @@ function SIGA() {
               Number(formData.estado_siga_id)
             );
 
-        console.log(
-          "estadoAnterior:",
-          estadoAnterior
-        );
-
-        console.log(
-          "estadoNuevo:",
-          estadoNuevo
-        );
-
-        console.log(
-          "formData.estado_siga_id:",
-          formData.estado_siga_id
-        );
-
-        console.log(
-          "estadosSIGA:",
-          estadosSIGA
-        );
-
         const movimientos = [
             {
               siga_id: sigaEditando,
@@ -659,10 +603,6 @@ function SIGA() {
                 }`
             }
         ];
-
-        console.log(
-          "CAMBIO DE ESTADO DETECTADO"
-        );
 
         // Registrar movimientos específicos según el estado nuevo
         if (estadoNuevo?.nombre === "Diferido") {
@@ -710,11 +650,6 @@ function SIGA() {
           usuarioActual?.id
         ) {
 
-          console.log(
-            "MOVIMIENTOS A GUARDAR:",
-            movimientos
-          );
-
           for (const movimiento of movimientos) {
 
             const responseHistorial = await fetch(
@@ -744,11 +679,6 @@ function SIGA() {
               return;
             }
           }
-
-          console.log(
-            "USUARIO ACTUAL:",
-            usuarioActual
-          );
 
         }
       }
@@ -788,9 +718,6 @@ function SIGA() {
           })
         );
 
-        console.log("sigaEditando =", sigaEditando);
-        console.log("tecnicosSeleccionados =", tecnicosSeleccionados);
-
         const responseAsignacion = await fetch(
           `/api/siga-tecnicos/${sigaEditando}`,
           {
@@ -821,48 +748,78 @@ function SIGA() {
       }
 
       // Registrar cambios de grupo de gestión en el historial si hubo un cambio
-      /*if (
-        sigaActual.grupo_gestion_id !==
-        (
+      if (
+        Number(sigaActual.grupo_gestion_id) !==
+        Number(
           formData.grupo_gestion_id
-            ? Number(formData.grupo_gestion_id)
+            ? formData.grupo_gestion_id
             : null
         )
-      ){
-        const grupoAnterior = gruposGestion.find(
-          g =>
-            g.id ===
-            sigaActual.grupo_gestion_id
-        );
-        const grupoNuevo = gruposGestion.find(
-          g =>
-            g.id ===
-            Number(formData.grupo_gestion_id)
-        );
+      ) {
 
-        const {error: historialGrupoError} = await supabase
-        .from("historial_siga")
-        .insert([
-          {
-            siga_id: sigaEditando,
-            usuario_id: user.id,
-            tipo_movimiento:
-              "Cambio Grupo Gestión",
-            comentario:
-              `Grupo cambiado de ${
-                grupoAnterior?.nombre || "-"
-              } a ${
-                grupoNuevo?.nombre || "-"
-                }`
-            }
-        ]);
+        const grupoAnterior =
+          gruposGestion.find(
+            g =>
+              Number(g.id) ===
+              Number(
+                sigaActual.grupo_gestion_id
+              )
+          );
 
-        if (historialGrupoError) {
-            console.error("ERROR HISTORIAL GRUPO SIGA:", historialGrupoError);
-            alert("El grupo se actualizó, pero no se pudo guardar el cambio en el historial.");
+        const grupoNuevo =
+          gruposGestion.find(
+            g =>
+              Number(g.id) ===
+              Number(
+                formData.grupo_gestion_id
+              )
+          );
+
+        if (usuarioActual?.id) {
+
+          const responseHistorial =
+            await fetch(
+              "/api/historial-siga",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+                body: JSON.stringify({
+                  siga_id: sigaEditando,
+                  usuario_id:
+                    usuarioActual.id,
+                  tipo_movimiento:
+                    "Cambio Grupo Gestión",
+                  comentario:
+                    `Grupo cambiado de ${
+                      grupoAnterior?.nombre ||
+                      "-"
+                    } a ${
+                      grupoNuevo?.nombre ||
+                      "-"
+                    }`
+                })
+              }
+            );
+
+          if (!responseHistorial.ok) {
+
+            console.error(
+              "ERROR HISTORIAL GRUPO SIGA"
+            );
+
+            alert(
+              "El grupo se actualizó, pero no se pudo guardar el cambio en el historial."
+            );
+
             return;
+          }
+
         }
-      }     */ 
+
+      }
 
     }
     else {
@@ -963,11 +920,6 @@ function SIGA() {
             })
           );
 
-        console.log(
-          "ASIGNACIONES:",
-          asignaciones
-        );
-
         const responseAsignacion = await fetch(
           `/api/siga-tecnicos/${data.id}`,
           {
@@ -1046,11 +998,6 @@ function SIGA() {
       if (response.ok) {
 
         const tecnicos = await response.json();
-
-        console.log(
-          "TÉCNICOS DEL SIGA:",
-          tecnicos
-        );
 
         setTecnicosSeleccionados(
           tecnicos.map(
@@ -1244,15 +1191,6 @@ function SIGA() {
       );
     }
   }, [location]);
-
-  // Mostrar en consola el estado de mostrarHistorialSIGA cuando cambie
-  useEffect(() => {
-    console.log(
-      "mostrarHistorialSIGA:",
-      mostrarHistorialSIGA
-    );
-
-  }, [mostrarHistorialSIGA]);
 
   // Renderizado del componente
   return (

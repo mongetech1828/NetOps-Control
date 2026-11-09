@@ -65,6 +65,32 @@ function SIGA() {
   async function cargarSigas() {
     try {
 
+      console.log(
+        "fecha_recepcion:",
+        formData.fecha_recepcion
+      );
+
+      console.log(
+        "horas_sla:",
+        prioridadSeleccionada.horas_sla
+      );
+
+      console.log(
+        "fechaMaxima:",
+        fechaMaxima
+      );
+
+      console.log(
+        "fechaMaxima ISO:",
+        fechaMaxima.toISOString()
+      );
+
+      console.log(
+        "fechaMaxima sv-SE:",
+        fechaMaxima
+          .toLocaleString("sv-SE")
+      );
+
       const response =
         await fetch("/api/sigas");
 

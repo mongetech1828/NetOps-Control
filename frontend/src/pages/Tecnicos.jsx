@@ -52,8 +52,8 @@ function Tecnicos() {
       setTecnicoSeleccionado(tecnico);
 
       const [resSigas, resOrdenes] = await Promise.all([
-        fetch(`${API_URL}/api/tecnico-sigas/${tecnico.id}`),
-        fetch(`${API_URL}/api/tecnico-ordenes/${tecnico.id}`)
+        fetch(`/api/tecnico-sigas/${tecnico.id}`),
+        fetch(`/api/tecnico-ordenes/${tecnico.id}`)
       ]);
 
       console.log("SIGAS STATUS:", resSigas.status);

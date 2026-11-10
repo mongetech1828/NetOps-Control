@@ -227,6 +227,22 @@ function Tecnicos() {
       console.log("ORDEN:", orden);
       console.log("HISTORIAL ORDEN:", historial);
 
+      const ordenNormalizada = {
+        ...orden,
+
+        estado: orden.estado?.nombre,
+        tipo_servicio: orden.tipo_servicio?.nombre,
+        transporte: orden.transporte?.nombre,
+
+        tecnicos: orden.orden_tecnicos?.map(t => ({
+          nombre: t.tecnicos?.nombre
+        })) || []
+      };
+
+      console.log("ORDEN NORMALIZADA:", ordenNormalizada);
+
+      setOrdenHistorial(ordenNormalizada);
+
       setOrdenHistorial(orden);
       setHistorialOrden(historial || []);
       setMostrarHistorialOrden(true);

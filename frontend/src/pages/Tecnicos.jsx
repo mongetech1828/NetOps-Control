@@ -43,31 +43,7 @@ function Tecnicos() {
   }
 
   useEffect(() => {
-    const fetchTecnicos = async () => {
-      const { data, error } = await supabase
-        .from("tecnicos")
-        .select(`
-          *,
-          siga_tecnicos(
-            id,
-            sigas(estados_siga(nombre))
-          ),
-          orden_tecnicos(
-            id,
-            ordenes(estado(nombre))
-          )
-        `)
-
-      .order("id", { ascending: true });
-      if (error) {
-        console.error("Error fetching tecnicos:", error);
-        alert("No se pudo cargar la lista de técnicos.");
-      } else {
-        setTecnicos(data);
-      }
-    };
-
-    fetchTecnicos();
+    cargarTecnicos();
   }, []);
 
   async function verTecnico(tecnico) {
@@ -134,17 +110,31 @@ function Tecnicos() {
   async function guardarTecnico() {
 
     if (tecnicoEditando) {
-      const { error } = await supabase
-        .from("tecnicos")
-        .update({
-          nombre: formDataTecnico.nombre,
-          correo: formDataTecnico.correo,
-          telefono: formDataTecnico.telefono,
-          zona: formDataTecnico.zona,
-          especialidad: formDataTecnico.especialidad,
-          activo: formDataTecnico.activo
-        })
-        .eq("id", tecnicoEditando);
+      const response =
+        await fetch(
+          `/api/tecnicos/${tecnicoEditando}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify({
+              nombre:
+                formDataTecnico.nombre,
+              correo:
+                formDataTecnico.correo,
+              telefono:
+                formDataTecnico.telefono,
+              zona:
+                formDataTecnico.zona,
+              especialidad:
+                formDataTecnico.especialidad,
+              activo:
+                formDataTecnico.activo
+            })
+          }
+        );
 
       if (error) {
         console.error("Error updating tecnico:", error);
@@ -153,9 +143,17 @@ function Tecnicos() {
 
     } else {
 
-      const { error } = await supabase
-        .from("tecnicos")
-        .insert([formDataTecnico]);
+      const response =
+        await fetch("/api/tecnicos", {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify(
+            formDataTecnico
+          )
+        });
 
       if (error) {
         console.error("Error inserting tecnico:", error);
@@ -169,32 +167,30 @@ function Tecnicos() {
   }
 
   async function cargarTecnicos() {
-    const { data, error } =
-      await supabase
-        .from("tecnicos")
-        .select(`
-          *,
-          siga_tecnicos(
-            id,
-            sigas(estados_siga(nombre))
-          ),
-          orden_tecnicos(
-            id,
-            ordenes(estado(nombre))
-          )
-        `);
+    try {
 
-    if (error) {
+      const response =
+        await fetch("/api/tecnicos");
+
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      const data =
+        await response.json();
+
+      setTecnicos(data);
+
+    } catch (error) {
+
       console.error(
         "Error fetching tecnicos:",
         error
       );
-      alert("No se pudo actualizar la lista de técnicos.");
 
-    } else {
-
-      setTecnicos(data);
-
+      alert(
+        "No se pudo actualizar la lista de técnicos."
+      );
     }
   }
 
@@ -216,11 +212,21 @@ function Tecnicos() {
 
     const nuevoEstado = !tecnico.activo;
 
-    await supabase
-      .from("tecnicos")
-      .update({ activo: nuevoEstado })
-      .eq("id", tecnico.id);
-
+    await fetch(
+      `/api/tecnicos/${tecnico.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+        body: JSON.stringify({
+          ...tecnico,
+          activo: nuevoEstado
+        })
+      }
+    );
+    
     await cargarTecnicos();
   }
 

@@ -227,8 +227,6 @@ function Tecnicos() {
       console.log("ORDEN:", orden);
       console.log("HISTORIAL ORDEN:", historial);
 
-      setOrdenHistorial(ordenNormalizada);
-
       setOrdenHistorial(orden);
       setHistorialOrden(historial || []);
       setMostrarHistorialOrden(true);

@@ -48,19 +48,23 @@ function Tecnicos() {
 
   async function verTecnico(tecnico) {
     try {
-      setTecnicoSeleccionado(tecnico);
 
       const [resSigas, resOrdenes] = await Promise.all([
         fetch(`${API_URL}/api/tecnico-sigas/${tecnico.id}`),
         fetch(`${API_URL}/api/tecnico-ordenes/${tecnico.id}`)
       ]);
 
+      console.log("SIGAS STATUS:", resSigas.status);
+      console.log("ORDENES STATUS:", resOrdenes.status);
+
       const sigasData = await resSigas.json();
       const ordenesData = await resOrdenes.json();
 
+      console.log("SIGAS:", sigasData);
+      console.log("ORDENES:", ordenesData);
+
       setSigasTecnico(sigasData || []);
       setOrdenesTecnico(ordenesData || []);
-
       setMostrarDetalleTecnico(true);
 
     } catch (error) {

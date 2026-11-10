@@ -220,6 +220,8 @@ function Tecnicos() {
         throw new Error("Error obteniendo historial de la orden");
       }
 
+      console.log("ORDEN TECNICOS:", orden);
+      
       const orden = await resOrden.json();
       const historial = await resHistorial.json();
 

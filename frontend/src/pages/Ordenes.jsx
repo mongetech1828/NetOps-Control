@@ -815,9 +815,11 @@ function Ordenes() {
         );
 
         return;
-      }
+      }      
 
       const data = await response.json();
+
+      console.log("ORDEN DESDE ORDENES:", orden);
 
       setHistorialOrden(data);
       setOrdenHistorial(orden);

@@ -49,6 +49,8 @@ function Tecnicos() {
   async function verTecnico(tecnico) {
     try {
 
+      setTecnicoSeleccionado(tecnico);
+
       const [resSigas, resOrdenes] = await Promise.all([
         fetch(`${API_URL}/api/tecnico-sigas/${tecnico.id}`),
         fetch(`${API_URL}/api/tecnico-ordenes/${tecnico.id}`)
@@ -60,17 +62,19 @@ function Tecnicos() {
       const sigasData = await resSigas.json();
       const ordenesData = await resOrdenes.json();
 
-      console.log("SIGAS:", sigasData);
-      console.log("ORDENES:", ordenesData);
+      console.log("SIGAS RECIBIDAS:", sigasData);
+      console.log("ORDENES RECIBIDAS:", ordenesData);
 
       setSigasTecnico(sigasData || []);
       setOrdenesTecnico(ordenesData || []);
       setMostrarDetalleTecnico(true);
 
     } catch (error) {
-      console.error("Error cargando detalle del técnico:", error);
-      alert("No se pudieron cargar las asignaciones del técnico.");
-    }
+        console.error("ERROR COMPLETO:", error);
+        console.error("STACK:", error?.stack);
+
+        alert("No se pudieron cargar las asignaciones del técnico.");
+      }
   }
 
   function nuevoTecnico() {
@@ -624,13 +628,13 @@ function Tecnicos() {
                                       fontWeight: "600"
                                     }}
                                   >
-                                    {item.sigas?.numero_siga}
+                                    {item.numero_siga}
                                   </button>
                                   {" - "}
-                                  {item.sigas?.cliente}
+                                  {item.cliente}
                                   {" | "}
                                   <strong>
-                                    {item.sigas?.estados_siga?.nombre}
+                                    {item.estado}
                                   </strong>
                                 </li>
 
@@ -680,13 +684,13 @@ function Tecnicos() {
                                       fontWeight: "600"
                                     }}
                                   >
-                                    {item.ordenes?.numero_ost}
+                                    {item.numero_ost}
                                   </button>
                                   {" - "}
-                                  {item.ordenes?.cliente}
+                                  {item.cliente}
                                   {" | "}
                                   <strong>
-                                    {item.ordenes?.estado?.nombre}
+                                    {item.estado}
                                   </strong>
                                 </li>
 

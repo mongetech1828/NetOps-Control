@@ -47,39 +47,26 @@ function Tecnicos() {
   }, []);
 
   async function verTecnico(tecnico) {
+    try {
+      setTecnicoSeleccionado(tecnico);
 
-    setTecnicoSeleccionado(tecnico);
+      const [resSigas, resOrdenes] = await Promise.all([
+        fetch(`${API_URL}/api/tecnico-sigas/${tecnico.id}`),
+        fetch(`${API_URL}/api/tecnico-ordenes/${tecnico.id}`)
+      ]);
 
-    const {
-      data: sigasData,
-      error: errorSigas
-    } = await supabase
-      .from("siga_tecnicos")
-      .select(`sigas(id,numero_siga,cliente,estados_siga(nombre))`)
-      .eq("tecnico_id",tecnico.id);
+      const sigasData = await resSigas.json();
+      const ordenesData = await resOrdenes.json();
 
-    const {
-      data: ordenesData,
-      error: errorOrdenes
-    } = await supabase
-      .from("orden_tecnicos")
-      .select(`ordenes(id,numero_ost,cliente,estado(nombre))`)
-      .eq("tecnico_id",tecnico.id);
+      setSigasTecnico(sigasData || []);
+      setOrdenesTecnico(ordenesData || []);
 
-    if (errorSigas || errorOrdenes) {
-      console.error("Error fetching technician assignments:", errorSigas || errorOrdenes);
-      alert("No se pudieron cargar las asignaciones abiertas del técnico.");
-      return;
+      setMostrarDetalleTecnico(true);
+
+    } catch (error) {
+      console.error("Error cargando detalle del técnico:", error);
+      alert("No se pudieron cargar las asignaciones del técnico.");
     }
-
-    setSigasTecnico((sigasData || []).filter(
-      ({ sigas }) => sigas && sigas.estados_siga?.nombre !== "Cerrado"
-    ));
-    setOrdenesTecnico((ordenesData || []).filter(
-      ({ ordenes }) => ordenes && ordenes.estado?.nombre !== "Cerrado"
-    ));
-    setMostrarDetalleTecnico(true);
-
   }
 
   function nuevoTecnico() {

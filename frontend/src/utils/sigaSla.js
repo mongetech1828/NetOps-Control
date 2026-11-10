@@ -1,5 +1,3 @@
-import { supabase } from "../services/supabase";
-
 export async function cargarMovimientosSIGA() {
 
   try {

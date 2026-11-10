@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../services/supabase";
 import HistorialOrdenModal from "../components/HistorialOrdenModal";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
 
@@ -166,6 +165,8 @@ function Tecnicos() {
 
       setTecnicos(data);
 
+      console.log("TECNICOS:", data);
+
     } catch (error) {
 
       console.error(
@@ -216,80 +217,67 @@ function Tecnicos() {
   }
 
   async function abrirOrdenDesdeTecnico(idOrden) {
-    const { data, error } =
-      await supabase
-        .from("ordenes")
-        .select(`
-          *,
-          estado(nombre),
-          tipo_servicio(nombre),
-          transporte(nombre),
-          orden_tecnicos(tecnico_id,tecnicos(nombre))
-        `)
-        .eq("id", idOrden)
-        .single();
+    try {
 
-    if (error) {
+      const [resOrden, resHistorial] = await Promise.all([
+        fetch(`/api/ordenes/${idOrden}`),
+        fetch(`/api/historial-orden/${idOrden}`)
+      ]);
+
+      if (!resOrden.ok) {
+        throw new Error("Error obteniendo la orden");
+      }
+
+      if (!resHistorial.ok) {
+        throw new Error("Error obteniendo historial de la orden");
+      }
+
+      const orden = await resOrden.json();
+      const historial = await resHistorial.json();
+
+      console.log("ORDEN:", orden);
+      console.log("HISTORIAL ORDEN:", historial);
+
+      setOrdenHistorial(orden);
+      setHistorialOrden(historial || []);
+      setMostrarHistorialOrden(true);
+
+    } catch (error) {
       console.error(error);
-      return;
+      alert("No se pudo cargar el detalle de la orden.");
     }
-
-    console.log(data);
-    setOrdenHistorial(data);
-
-    const { data: historial } =
-      await supabase
-        .from("historial_movimientos")
-        .select(`
-          *,
-          estado!estado_nuevo(nombre),
-          perfiles!usuario_id(nombre,correo)
-        `)
-        .eq("orden_id", idOrden)
-        .order("fecha_movimiento", {
-          ascending: false
-        });
-    
-    setHistorialOrden(historial || []);
-    setMostrarHistorialOrden(true);
   }
 
   async function abrirSIGADesdeTecnico(idSIGA) {
-    const { data, error } =
-      await supabase
-        .from("sigas")
-        .select(`
-          *,
-          estados_siga(nombre),
-          prioridades_siga(prioridad, horas_sla),
-          grupos_gestion(nombre),
-          tipo_servicio(nombre),
-          siga_tecnicos(tecnico_id, tecnicos(nombre))
-        `)
-        .eq("id", idSIGA)
-        .single();
+    try {
 
-    if (error) {
+      const [resSIGA, resHistorial] = await Promise.all([
+        fetch(`/api/sigas/${idSIGA}`),
+        fetch(`/api/historial-siga/${idSIGA}`)
+      ]);
+
+      if (!resSIGA.ok) {
+        throw new Error("Error obteniendo el SIGA");
+      }
+
+      if (!resHistorial.ok) {
+        throw new Error("Error obteniendo historial del SIGA");
+      }
+
+      const siga = await resSIGA.json();
+      const historial = await resHistorial.json();
+
+      console.log("SIGA:", siga);
+      console.log("HISTORIAL SIGA:", historial);
+
+      setSigaHistorial(siga);
+      setHistorialSIGA(historial || []);
+      setMostrarHistorialSIGA(true);
+
+    } catch (error) {
       console.error(error);
-      return;
+      alert("No se pudo cargar el detalle del SIGA.");
     }
-
-    setSigaHistorial(data);
-
-    const { data: historial } =
-      await supabase
-        .from ("historial_siga")
-        .select(`
-          *,
-          estados_siga!estado_nuevo(nombre),
-          perfiles!usuario_id(nombre, correo)
-        `)
-        .eq("siga_id", idSIGA)
-        .order("fecha_movimiento", {
-          ascending: false
-        });
-    setHistorialSIGA(historial || []);
-    setMostrarHistorialSIGA(true);
   }
 
   const tecnicosFiltrados = tecnicos.filter((tecnico) =>

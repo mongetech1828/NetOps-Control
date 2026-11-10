@@ -136,11 +136,6 @@ function Tecnicos() {
           }
         );
 
-      if (error) {
-        console.error("Error updating tecnico:", error);
-        return;
-      }
-
     } else {
 
       const response =
@@ -154,11 +149,6 @@ function Tecnicos() {
             formDataTecnico
           )
         });
-
-      if (error) {
-        console.error("Error inserting tecnico:", error);
-        return;
-      }
     }
 
     await cargarTecnicos();
@@ -226,7 +216,7 @@ function Tecnicos() {
         })
       }
     );
-    
+
     await cargarTecnicos();
   }
 

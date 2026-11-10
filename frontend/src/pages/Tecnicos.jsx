@@ -616,7 +616,7 @@ function Tecnicos() {
                                     type="button"
                                     onClick={() =>
                                       abrirSIGADesdeTecnico(
-                                        item.sigas?.id
+                                        item.id
                                       )
                                     }
                                     style={{
@@ -672,7 +672,7 @@ function Tecnicos() {
                                     type="button"
                                     onClick={() =>
                                       abrirOrdenDesdeTecnico(
-                                        item.ordenes?.id
+                                        item.id
                                       )
                                     }
                                     style={{

@@ -29,18 +29,6 @@ function Tecnicos() {
   };
   const [formDataTecnico, setFormDataTecnico] = useState(tecnicoVacio);
 
-  function contarSigasAbiertos(tecnico) {
-    return tecnico.siga_tecnicos?.filter(
-      ({ sigas }) => sigas && sigas.estados_siga?.nombre !== "Cerrado"
-    ).length || 0;
-  }
-
-  function contarOrdenesAbiertas(tecnico) {
-    return tecnico.orden_tecnicos?.filter(
-      ({ ordenes }) => ordenes && ordenes.estado?.nombre !== "Cerrado"
-    ).length || 0;
-  }
-
   useEffect(() => {
     cargarTecnicos();
   }, []);
@@ -398,9 +386,12 @@ function Tecnicos() {
               <tr key={tecnico.id}>
 
                 <td>{tecnico.nombre}</td>          
-                <td>{contarSigasAbiertos(tecnico)}</td>
-                <td>{contarOrdenesAbiertas(tecnico)}</td>
-                <td>{contarSigasAbiertos(tecnico) + contarOrdenesAbiertas(tecnico)}</td>
+                <td>{Number(tecnico.cantidad_sigas || 0)}</td>
+                <td>{Number(tecnico.cantidad_ordenes || 0)}</td>
+                <td>
+                  {Number(tecnico.cantidad_sigas || 0) + 
+                  Number(tecnico.cantidad_ordenes || 0)}
+                </td>
                 <td>{tecnico.activo ? (
                   <span style={{ color: "#16a34a", fontWeight: "600" }}>● Activo</span>) : (<span style={{ color: "#6b7280", fontWeight: "600" }}>● Inactivo</span>
                 )}</td>

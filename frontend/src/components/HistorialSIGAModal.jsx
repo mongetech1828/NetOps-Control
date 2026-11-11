@@ -188,7 +188,7 @@ function HistorialSIGAModal({
   : null;
 
   console.log("HORAS SLA:", sigaHistorial?.horas_sla);
-  
+
   const fechaCierreSIGA = (historialSIGA || [])
     .filter(movimiento => movimiento.tipo_movimiento === "Cierre")
     .reduce((fechaCierre, movimiento) => {
@@ -197,13 +197,41 @@ function HistorialSIGAModal({
         ? fechaMovimiento
         : fechaCierre;
     }, null);
+
+  const fechaRestablecimientoSIGA = (historialSIGA || [])
+    .filter(
+      movimiento =>
+        movimiento.tipo_movimiento === "Restablecimiento"
+    )
+    .reduce((fechaRestablecimiento, movimiento) => {
+
+      const fechaMovimiento =
+        parsearFechaMovimiento(
+          movimiento.fecha_movimiento
+        );
+
+      return fechaMovimiento &&
+        (!fechaRestablecimiento ||
+          fechaMovimiento > fechaRestablecimiento)
+        ? fechaMovimiento
+        : fechaRestablecimiento;
+
+    }, null);
+
   const sigaCerrado = sigaHistorial?.estado === "Cerrado";
-  const slaCierre = sigaCerrado && !fechaCierreSIGA
-    ? { texto: "⚪Sin registro de cierre", color: "#6b7280" }
-    : obtenerSLASIGA(
-        sigaHistorial?.fecha_maxima_atencion,
-        sigaCerrado ? fechaCierreSIGA : new Date()
-      );
+
+  const fechaReferencia =
+    sigaHistorial?.estado === "Cerrado"
+      ? fechaCierreSIGA
+      : sigaHistorial?.estado === "Restablecimiento"
+      ? fechaRestablecimientoSIGA
+      : new Date();
+
+  const slaCierre =
+    obtenerSLASIGA(
+      sigaHistorial?.fecha_maxima_atencion,
+      fechaReferencia
+    );
 
   return (
 

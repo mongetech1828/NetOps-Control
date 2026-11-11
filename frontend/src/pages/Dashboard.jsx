@@ -35,19 +35,19 @@ function Dashboard({perfil}) {
 
     async function cargarKpis() {
       try {
+
         const response = await fetch("/api/ordenes");
         const ordenes = await response.json();
 
+        // Solo órdenes activas para el Dashboard
+        const ordenesActivas = ordenes.filter(
+          orden =>
+            orden.estado !== "Ejecutada" &&
+            orden.estado !== "Devuelta"
+        );
+
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
-
-        console.log(
-          ordenes.map(o => ({
-            estado: o.estado,
-            estado_nombre: o.estado_nombre,
-            estado_id: o.estado_id
-          }))
-        );
 
         let dentroSLA = 0;
         let porVencer = 0;
@@ -56,12 +56,7 @@ function Dashboard({perfil}) {
         let reingresadas = 0;
         let enCampo = 0;
 
-        ordenes.forEach((orden) => {
-
-          // No considerar órdenes ejecutadas para KPI SLA
-          /*if (orden.estado === "Ejecutada") {
-            return;
-          }*/
+        ordenesActivas.forEach((orden) => {
 
           // Reingresadas
           if ((orden.cantidad_reingresos || 0) > 0) {
@@ -69,9 +64,7 @@ function Dashboard({perfil}) {
           }
 
           // En Campo
-          if (
-            Number(orden.estado_id) === 7
-          ) {
+          if (Number(orden.estado_id) === 7) {
             enCampo++;
           }
 
@@ -92,7 +85,10 @@ function Dashboard({perfil}) {
             if (diferenciaDias > 2) {
               dentroSLA++;
             }
-            else if (diferenciaDias >= 1 && diferenciaDias <= 2) {
+            else if (
+              diferenciaDias >= 1 &&
+              diferenciaDias <= 2
+            ) {
               porVencer++;
             }
             else if (diferenciaDias === 0) {
@@ -102,9 +98,10 @@ function Dashboard({perfil}) {
               vencidas++;
             }
           }
+
         });
 
-        setTotalOrdenes(ordenes.length);
+        setTotalOrdenes(ordenesActivas.length);
         setDentroSLA(dentroSLA);
         setPorVencer(porVencer);
         setVencenHoy(vencenHoy);
@@ -112,8 +109,12 @@ function Dashboard({perfil}) {
         setTotalReingresadas(reingresadas);
         setEnCampo(enCampo);
 
-      } catch (error) {
-        console.error("ERROR CARGANDO KPIs:", error);
+      }
+      catch (error) {
+        console.error(
+          "ERROR CARGANDO KPIs:",
+          error
+        );
       }
     }
 

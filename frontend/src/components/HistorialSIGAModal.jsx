@@ -186,6 +186,9 @@ function HistorialSIGAModal({
       sigaHistorial?.horas_sla || 0
     )
   : null;
+
+  console.log("HORAS SLA:", sigaHistorial?.horas_sla);
+  
   const fechaCierreSIGA = (historialSIGA || [])
     .filter(movimiento => movimiento.tipo_movimiento === "Cierre")
     .reduce((fechaCierre, movimiento) => {

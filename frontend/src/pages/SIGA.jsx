@@ -552,6 +552,7 @@ function SIGA() {
           grupo_gestion_id: formData.grupo_gestion_id
             ? parseInt(formData.grupo_gestion_id)
             : null,
+          nivel: nivelCalculado,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
         }),

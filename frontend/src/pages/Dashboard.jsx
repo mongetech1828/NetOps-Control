@@ -41,6 +41,14 @@ function Dashboard({perfil}) {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
 
+        console.log(
+          ordenes.map(o => ({
+            estado: o.estado,
+            estado_nombre: o.estado_nombre,
+            estado_id: o.estado_id
+          }))
+        );
+
         let dentroSLA = 0;
         let porVencer = 0;
         let vencenHoy = 0;
@@ -49,6 +57,11 @@ function Dashboard({perfil}) {
         let enCampo = 0;
 
         ordenes.forEach((orden) => {
+
+          // No considerar órdenes ejecutadas para KPI SLA
+          /*if (orden.estado === "Ejecutada") {
+            return;
+          }*/
 
           // Reingresadas
           if ((orden.cantidad_reingresos || 0) > 0) {
@@ -106,8 +119,6 @@ function Dashboard({perfil}) {
 
     cargarKpis();
     cargarSigasDashboard();
-    
-    /*cargarSLA();*/
 
   }, []);
 

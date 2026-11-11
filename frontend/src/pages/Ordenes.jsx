@@ -712,7 +712,23 @@ function Ordenes() {
     }
 
     const fechaRecepcion = new Date();
-    const fechaMaxima = sumarDiasHabiles(fechaRecepcion,4);
+
+    const diasPorPrioridad = {
+      ALTA: 2,
+      MEDIA: 4,
+      BAJA: 6
+    };
+
+    const diasSLA =
+      diasPorPrioridad[
+        orden.prioridad_calculada?.toUpperCase()
+      ] || 4;
+
+    const fechaMaxima = sumarDiasHabiles(
+      fechaRecepcion,
+      diasSLA
+    );
+
     if (!fechaMaxima) {
       alert("No se pudo calcular la fecha máxima de atención.");
       return;

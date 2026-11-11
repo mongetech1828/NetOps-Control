@@ -1073,6 +1073,17 @@ function Ordenes() {
           .includes(filtroEvento.toLowerCase())
       )
       .filter((orden) => {
+
+        //Si viene desde Dahboard, aplicar el filtro correspondiente
+        if (filtroDashboard &&
+          (
+              orden.estado === "Ejecutada" ||
+              orden.estado === "Devuelta"
+          )
+        ) {
+          return false;
+        }
+        
         if (filtroDashboard === "Vencidas") {
           return diasRestantes(orden.fecha_maxima_atencion) < 0;
         }

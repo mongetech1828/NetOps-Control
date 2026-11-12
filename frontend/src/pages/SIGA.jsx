@@ -531,6 +531,16 @@ function SIGA() {
         return;
       }
 
+      console.log(
+        "TECNICOS SELECCIONADOS:",
+        tecnicosSeleccionados
+      );
+
+      console.log(
+        "NIVEL CALCULADO:",
+        nivelCalculado
+      );
+
       const response = await fetch(`/api/sigas/${sigaEditando}`, {
         method: "PUT",
         headers: {

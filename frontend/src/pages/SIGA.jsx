@@ -737,6 +737,11 @@ function SIGA() {
         }
       );
 
+      console.log(
+        "RESPUESTA PUT TECNICOS:",
+        responseAsignacion.status
+      );
+
       if (!responseAsignacion.ok) {
         alert("No se pudieron actualizar los técnicos asignados.");
         return;

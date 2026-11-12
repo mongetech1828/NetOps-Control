@@ -1121,22 +1121,22 @@ function Ordenes() {
   function obtenerPrioridadEstadoOrden(estado) {
     switch (estado) {
 
-      case "Pendiente Cliente":
+      case "Pendiente cliente":
         return 1;
 
-      case "Pendiente Asignación":
+      case "Pendiente asignación":
         return 2;
 
-      case "Pendiente Cuadrilla":
+      case "Pendiente cuadrilla":
         return 3;
 
-      case "Pendiente Red Ip":
+      case "Pendiente Red IP":
         return 4;
 
       case "Asignada":
         return 5;
 
-      case "En Campo":
+      case "En campo":
         return 6;
 
       case "Devuelta":

@@ -612,7 +612,25 @@ function Ordenes() {
       const data =
         await response.json();
 
-      setOrdenes(data || []);
+      const ordenesOrdenadas =
+        [...(data || [])].sort((a, b) => {
+
+          const prioridad =
+            obtenerPrioridadEstadoOrden(a.estado) -
+            obtenerPrioridadEstadoOrden(b.estado);
+
+          if (prioridad !== 0) {
+            return prioridad;
+          }
+
+          return (
+            new Date(b.fecha_recepcion) -
+            new Date(a.fecha_recepcion)
+          );
+
+        });
+
+      setOrdenes(ordenesOrdenadas);
 
     } catch (error) {
 

@@ -43,14 +43,8 @@ function Tecnicos() {
         fetch(`/api/tecnico-ordenes/${tecnico.id}`)
       ]);
 
-      console.log("SIGAS STATUS:", resSigas.status);
-      console.log("ORDENES STATUS:", resOrdenes.status);
-
       const sigasData = await resSigas.json();
       const ordenesData = await resOrdenes.json();
-
-      console.log("SIGAS RECIBIDAS:", sigasData);
-      console.log("ORDENES RECIBIDAS:", ordenesData);
 
       setSigasTecnico(sigasData || []);
       setOrdenesTecnico(ordenesData || []);
@@ -153,8 +147,6 @@ function Tecnicos() {
 
       setTecnicos(data);
 
-      console.log("TECNICOS:", data);
-
     } catch (error) {
 
       console.error(
@@ -223,10 +215,6 @@ function Tecnicos() {
       const orden = await resOrden.json();
       const historial = await resHistorial.json();
 
-      console.log("ORDEN TECNICOS:", orden);
-      console.log("ORDEN:", orden);
-      console.log("HISTORIAL ORDEN:", historial);
-
       setOrdenHistorial(orden);
       setHistorialOrden(historial || []);
       setMostrarHistorialOrden(true);
@@ -255,9 +243,6 @@ function Tecnicos() {
 
       const siga = await resSIGA.json();
       const historial = await resHistorial.json();
-
-      console.log("SIGA:", siga);
-      console.log("HISTORIAL SIGA:", historial);
 
       setSigaHistorial(siga);
       setHistorialSIGA(historial || []);

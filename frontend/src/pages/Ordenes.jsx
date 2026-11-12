@@ -672,11 +672,6 @@ function Ordenes() {
 
         const tecnicos = await response.json();
 
-        console.log(
-          "TÉCNICOS DE LA ORDEN:",
-          tecnicos
-        );
-
         setTecnicosSeleccionados(
           tecnicos.map(
             t => String(t.tecnico_id)
@@ -834,8 +829,6 @@ function Ordenes() {
       }      
 
       const data = await response.json();
-
-      console.log("ORDEN DESDE ORDENES:", orden);
 
       setHistorialOrden(data);
       setOrdenHistorial(orden);

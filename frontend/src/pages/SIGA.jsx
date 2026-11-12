@@ -531,16 +531,6 @@ function SIGA() {
         return;
       }
 
-      console.log(
-        "TECNICOS SELECCIONADOS:",
-        tecnicosSeleccionados
-      );
-
-      console.log(
-        "NIVEL CALCULADO:",
-        nivelCalculado
-      );
-
       const response = await fetch(`/api/sigas/${sigaEditando}`, {
         method: "PUT",
         headers: {
@@ -717,12 +707,6 @@ function SIGA() {
         (id) => !idsTecnicosSeleccionados.includes(id)
       );
 
-      console.log(
-        "VOY A LLAMAR PUT SIGA-TECNICOS",
-        sigaEditando,
-        tecnicosSeleccionados
-      );
-
       // Insertar o remover los técnicos seleccionados nuevamente
       const responseAsignacion = await fetch(
         `/api/siga-tecnicos/${sigaEditando}`,
@@ -735,11 +719,6 @@ function SIGA() {
             tecnicos: tecnicosSeleccionados,
           }),
         }
-      );
-
-      console.log(
-        "RESPUESTA PUT TECNICOS:",
-        responseAsignacion.status
       );
 
       if (!responseAsignacion.ok) {

@@ -1100,6 +1100,41 @@ function Ordenes() {
       });
   }
 
+  function obtenerPrioridadEstadoOrden(estado) {
+    switch (estado) {
+
+      case "Pendiente Cliente":
+        return 1;
+
+      case "Pendiente Asignación":
+        return 2;
+
+      case "Pendiente Cuadrilla":
+        return 3;
+
+      case "Pendiente Red Ip":
+        return 4;
+
+      case "Asignada":
+        return 5;
+
+      case "En Campo":
+        return 6;
+
+      case "Devuelta":
+        return 7;
+
+      case "Ejecutada":
+        return 8;
+
+      case "Cancelada":
+        return 9;
+
+      default:
+        return 99;
+    }
+  }
+
   // Función para exportar los datos a un archivo Excel
   function exportarExcel() {
 

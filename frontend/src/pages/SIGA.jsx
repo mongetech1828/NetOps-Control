@@ -126,7 +126,25 @@ function SIGA() {
             )
         }));
 
-      setSigas(sigasProcesados);
+      const sigasOrdenados =
+        [...sigasProcesados].sort((a, b) => {
+
+          const prioridad =
+            obtenerPrioridadEstadoSIGA(a.estado) -
+            obtenerPrioridadEstadoSIGA(b.estado);
+
+          if (prioridad !== 0) {
+            return prioridad;
+          }
+
+          return (
+            new Date(b.fecha_recepcion) -
+            new Date(a.fecha_recepcion)
+          );
+
+        });
+
+      setSigas(sigasOrdenados);
 
     } catch (error) {
 
@@ -1107,6 +1125,31 @@ function SIGA() {
         }
         return true;
       });
+  }
+
+  function obtenerPrioridadEstadoSIGA(estado) {
+    switch (estado) {
+      case "Abierto":
+        return 1;
+
+      case "En Campo":
+        return 2;
+
+      case "Restablecimiento":
+        return 3;
+
+      case "Diferido":
+        return 4;
+
+      case "Abierto-Verificación":
+        return 5;
+
+      case "Cerrado":
+        return 6;
+
+      default:
+        return 99;
+    }
   }
 
   // Función para exportar los SIGAs a un archivo Excel

@@ -717,36 +717,25 @@ function SIGA() {
         (id) => !idsTecnicosSeleccionados.includes(id)
       );
 
-      // Insertar los técnicos seleccionados nuevamente
-      if (
-        tecnicosSeleccionados.length > 0
-      ) {
-        const asignaciones = tecnicosSeleccionados.map(
-          tecnicoId => ({
-            siga_id: sigaEditando,
-            tecnico_id: tecnicoId,
-            activo: true
-          })
-        );
-
-        const responseAsignacion = await fetch(
-          `/api/siga-tecnicos/${sigaEditando}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              tecnicos: tecnicosSeleccionados,
-            }),
-          }
-        );
-
-        if (!responseAsignacion.ok) {
-          alert("No se pudieron actualizar los técnicos asignados.");
-          return;
+      // Insertar o remover los técnicos seleccionados nuevamente
+      const responseAsignacion = await fetch(
+        `/api/siga-tecnicos/${sigaEditando}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tecnicos: tecnicosSeleccionados,
+          }),
         }
+      );
+
+      if (!responseAsignacion.ok) {
+        alert("No se pudieron actualizar los técnicos asignados.");
+        return;
       }
+      
 
       // Registrar cambios de técnicos en el historial
       const historialTecnicosGuardado = await registrarCambiosTecnicosSIGA(

@@ -717,6 +717,12 @@ function SIGA() {
         (id) => !idsTecnicosSeleccionados.includes(id)
       );
 
+      console.log(
+        "VOY A LLAMAR PUT SIGA-TECNICOS",
+        sigaEditando,
+        tecnicosSeleccionados
+      );
+
       // Insertar o remover los técnicos seleccionados nuevamente
       const responseAsignacion = await fetch(
         `/api/siga-tecnicos/${sigaEditando}`,

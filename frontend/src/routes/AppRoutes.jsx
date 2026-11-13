@@ -46,7 +46,7 @@ function AppRoutes({ perfil, onLogout }) {
 
         <Route
           path="/administracion"
-          element={<administracion />}
+          element={<Administracion />}
         />
 
       </Routes>

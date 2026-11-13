@@ -29,6 +29,11 @@ function Administracion() {
       <h1 style={{ color: "red" }}>
         ADMINISTRACION FUNCIONANDO
       </h1>
+
+      <p>
+        Usuarios cargados: {usuarios.length}
+      </p>
+
     </div>
   );
 }

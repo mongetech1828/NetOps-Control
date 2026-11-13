@@ -6,25 +6,23 @@ function Administracion() {
 
     console.log("CARGANDO USUARIOS");
 
-    const response =
-      await fetch("/api/perfiles");
+    const response = await fetch("/api/perfiles");
 
-    console.log(
-      "STATUS:",
-      response.status
-    );
+    console.log("STATUS:", response.status);
 
-    const data =
-      await response.json();
+    const data = await response.json();
 
-    console.log(
-      "USUARIOS:",
-      data
-    );
+    console.log("DATA:", data);
 
     setUsuarios(data);
 
   }
+
+  useEffect(() => {
+    console.log("USEEFFECT ADMIN");
+
+    cargarUsuarios();
+  }, []);
 
   return (
     <div>

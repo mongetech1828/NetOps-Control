@@ -7,6 +7,7 @@ import Ordenes from "../pages/Ordenes";
 import SIGA from "../pages/SIGA";
 import Tecnicos from "../pages/Tecnicos";
 import Reportes from "../pages/Reportes";
+import Administracion from "../pages/Administracion";
 
 function AppRoutes({ perfil, onLogout }) {
 

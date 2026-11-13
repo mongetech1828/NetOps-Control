@@ -115,7 +115,7 @@ function Login() {
             marginBottom: "30px"
           }}
         >
-          Gestión Servicios Especializadosn
+          Gestión Servicios Especializados
         </p>
 
         <input

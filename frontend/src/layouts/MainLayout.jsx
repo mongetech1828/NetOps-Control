@@ -12,6 +12,11 @@ function MainLayout({
   children,
   onLogout
 }) {
+
+  const usuario = JSON.parse(
+    localStorage.getItem("usuario")
+  );
+
   return (
     <div
       style={{
@@ -73,6 +78,17 @@ function MainLayout({
           >
             Reportes
           </Link>
+
+          {
+            usuario?.rol === "administrador" && (
+              <Link to="/administracion"
+                style={menuLinkStyle}
+              >
+                Administración
+              </Link>
+            )
+          }
+
         </div>
 
         <hr />

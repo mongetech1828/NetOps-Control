@@ -81,7 +81,7 @@ function MainLayout({
 
           {
             usuario?.rol === "administrador" && (
-              <Link to="/Administracion"
+              <Link to="/administracion"
                 style={menuLinkStyle}
               >
                 Administración

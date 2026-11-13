@@ -44,6 +44,11 @@ function AppRoutes({ perfil, onLogout }) {
           element={<Reportes />}
         />
 
+        <Route
+          path="/administracion"
+          element={<administracion />}
+        />
+
       </Routes>
     </MainLayout>
   );

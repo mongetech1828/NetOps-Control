@@ -4,6 +4,89 @@ function Administracion() {
 
   const [usuarios, setUsuarios] = useState([]);
 
+  async function crearUsuario() {
+
+    const nombre =
+      window.prompt("Nombre");
+
+    if (!nombre) {
+      return;
+    }
+
+    const correo =
+      window.prompt("Correo ICE");
+
+    if (!correo) {
+      return;
+    }
+
+    const rol =
+      window.prompt(
+        "Rol (administrador o usuario)",
+        "usuario"
+      );
+
+    const response = await fetch(
+      "/api/perfiles",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+        body: JSON.stringify({
+          nombre,
+          correo,
+          rol
+        })
+      }
+    );
+
+    if (!response.ok) {
+
+      alert(
+        "No se pudo crear el usuario"
+      );
+
+      return;
+    }
+
+    await cargarUsuarios();
+
+  }
+
+  async function cambiarEstadoUsuario(
+    id,
+    activo
+  ) {
+
+    const response = await fetch(
+      `/api/perfiles/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+        body: JSON.stringify({
+          activo
+        })
+      }
+    );
+
+    if (!response.ok) {
+
+      alert(
+        "No se pudo actualizar el usuario"
+      );
+
+      return;
+    }
+
+    await cargarUsuarios();
+
+  }
+
   async function cargarUsuarios() {
 
     try {
@@ -49,6 +132,15 @@ function Administracion() {
         Usuarios cargados: {usuarios.length}
       </p>
 
+      <button
+        onClick={crearUsuario}
+        style={{
+          marginBottom: "20px"
+        }}
+      >
+        + Nuevo Usuario
+      </button>
+
       <table
         style={{
           width: "100%",
@@ -62,6 +154,7 @@ function Administracion() {
             <th>Correo</th>
             <th>Rol</th>
             <th>Activo</th>
+            <th>Acciones</th>
           </tr>
         </thead>
 
@@ -87,6 +180,23 @@ function Administracion() {
                 {usuario.activo
                   ? "Sí"
                   : "No"}
+              </td>
+
+              <td>
+                <button
+                  onClick={() =>
+                    cambiarEstadoUsuario(
+                      usuario.id,
+                      !usuario.activo
+                    )
+                  }
+                >
+                  {
+                    usuario.activo
+                      ? "Desactivar"
+                      : "Activar"
+                  }
+                </button>
               </td>
 
             </tr>

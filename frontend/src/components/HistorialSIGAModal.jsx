@@ -40,7 +40,8 @@ function formatoFechaHora(fecha) {
 
 function calcularMetricasSIGA(
     historialSIGA,
-    horasSLA
+    horasSLA,
+    fechaRecepcion
   ) {
     const movimientos = [...(historialSIGA || [])]
       .sort(
@@ -50,7 +51,7 @@ function calcularMetricasSIGA(
       );
     let tiempoConsumido = 0;
     let tiempoDiferido = 0;
-    let inicioActivo = null;
+    let inicioActivo = fechaRecepcion ? new Date(fechaRecepcion) : null;
     let inicioDiferido = null;
     let finalizado = false;
 
@@ -61,9 +62,6 @@ function calcularMetricasSIGA(
       }
 
       switch (mov.tipo_movimiento) {
-        case "Creación":
-          inicioActivo = fecha;
-          break;
         case "Inicio Diferido":
           if (inicioActivo) {
             tiempoConsumido += fecha - inicioActivo;
@@ -183,7 +181,8 @@ function HistorialSIGAModal({
   const metricas = sigaHistorial
   ? calcularMetricasSIGA(
       historialSIGA,
-      sigaHistorial?.horas_sla || 0
+      sigaHistorial?.horas_sla || 0,
+      sigaHistorial?.fecha_recepcion
     )
   : null;
 

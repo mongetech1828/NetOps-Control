@@ -1404,7 +1404,7 @@ function SIGA() {
               <th>Servicio</th>
               <th>Prioridad</th>
               <th>Estado</th>
-              <th>Grupo</th>
+              <th>Técnicos</th>
               <th>Horas</th>
               <th>Cumplimiento</th>
               <th>Acciones</th>
@@ -1427,7 +1427,7 @@ function SIGA() {
                 <td>{siga.tipo_servicio || "-"}</td>
                 <td>{siga.prioridad}</td>
                 <td>{siga.estado}</td>
-                <td>{siga.grupo_gestion}</td>
+                <td>{siga.tecnicos?.map(t => t.nombre).join(", ") || "-"}</td>
                 <td>{horasRestantes === null ? "-" : Number(horasRestantes).toFixed(1)}</td>
                 <td>
                   <span

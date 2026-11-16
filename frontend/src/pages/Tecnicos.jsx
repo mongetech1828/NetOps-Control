@@ -470,7 +470,7 @@ function Tecnicos() {
 
                   <div>
 
-                    <strong>Especialidad</strong>
+                    <strong>Modalidad</strong>
 
                     <br />
 
@@ -807,14 +807,13 @@ function Tecnicos() {
                 }}
               >
 
-                <input
+                <select
                   style={{
                     width: "90%",
                     padding: "10px",
                     borderRadius: "6px",
                     border: "1px solid #d1d5db"
                   }}
-                  placeholder="Especialidad"
                   value={formDataTecnico.especialidad}
                   onChange={(e) =>
                     setFormDataTecnico({
@@ -822,7 +821,19 @@ function Tecnicos() {
                       especialidad: e.target.value
                     })
                   }
-                />
+                >
+                  <option value="">
+                    Seleccionar modalidad
+                  </option>
+
+                  <option value="ICE">
+                    ICE
+                  </option>
+
+                  <option value="DISA">
+                    DISA
+                  </option>
+                </select>
 
               </div>
 

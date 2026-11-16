@@ -543,7 +543,7 @@ function Dashboard({perfil}) {
 
   async function buscarGlobal() {
 
-    if (!busquedaGlobal.trim().length < 3) {
+    if (busquedaGlobal.trim().length < 3) {
 
       setResultadosBusqueda([]);
 

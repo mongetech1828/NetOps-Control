@@ -96,6 +96,17 @@ function HistorialOrdenModal({
                         )}
                     </div>
 
+                    {
+                        ordenHistorial?.fecha_compromiso_cliente && (
+                            <div>
+                            <strong>Compromiso Cliente:</strong><br />
+                            {formatoFechaHora(
+                                ordenHistorial.fecha_compromiso_cliente
+                            )}
+                            </div>
+                        )
+                    }
+
                     <div>
                         <strong>Técnico:</strong><br />
                         <div

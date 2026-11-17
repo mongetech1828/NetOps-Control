@@ -253,7 +253,7 @@ function Ordenes() {
             crc: formData.crc,
             prioridad_calculada: prioridadCalculada.prioridad,
             puntaje_prioridad: prioridadCalculada.puntaje,
-
+            fecha_compromiso_cliente: formData.fecha_compromiso_cliente || null,
             fecha_recepcion: ordenActual.fecha_recepcion,
             fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
             cantidad_reingresos: ordenActual.cantidad_reingresos,
@@ -472,7 +472,8 @@ function Ordenes() {
             fo: formData.fo,
             crc: formData.crc,
             prioridad_calculada: prioridadCalculada.prioridad,
-            puntaje_prioridad: prioridadCalculada.puntaje
+            puntaje_prioridad: prioridadCalculada.puntaje,
+            fecha_compromiso_cliente: formData.fecha_compromiso_cliente || null
           })
         }
       );
@@ -622,7 +623,7 @@ function Ordenes() {
   // Función para cargar las órdenes desde la base de datos
   async function cargarOrdenes() {
 
-    try {
+    try {      
 
       const response =
         await fetch("/api/ordenes");
@@ -695,7 +696,11 @@ function Ordenes() {
       ivc: orden.ivc || "",
       uc: orden.uc || "",
       fo: orden.fo || "",
-      crc: orden.crc || ""
+      crc: orden.crc || "",
+      fecha_compromiso_cliente:
+        orden.fecha_compromiso_cliente
+          ? orden.fecha_compromiso_cliente.substring(0, 16)
+          : ""
     });
 
     try {
@@ -795,6 +800,7 @@ function Ordenes() {
           puntaje_prioridad: orden.puntaje_prioridad,
           fecha_recepcion: formatearFechaDB(fechaRecepcion),
           fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
+          fecha_compromiso_cliente: orden.fecha_compromiso_cliente || null,
           cantidad_reingresos:
             (orden.cantidad_reingresos || 0) + 1,
           fecha_ultimo_reingreso:
@@ -994,6 +1000,14 @@ function Ordenes() {
     }
 
     return resultado;
+  }
+
+  // Obtener la fecha objetivo para calcular los días restantes
+  function obtenerFechaObjetivo(orden) {
+    return (
+      orden.fecha_compromiso_cliente ||
+      orden.fecha_maxima_atencion
+    );
   }
 
   // Función para calcular los días restantes hasta la fecha máxima de atención
@@ -1614,6 +1628,21 @@ function Ordenes() {
                           {prioridadCalculada.puntaje}
                         </span>
 
+                        <br /> <br />
+
+                        <strong>Fecha Compromiso Cliente</strong>
+                        <input
+                          type="datetime-local"
+                          value={formData.fecha_compromiso_cliente || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              fecha_compromiso_cliente: e.target.value
+                            })
+                          }
+                          style={{width: "180px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db"}}
+                        />
+
                       </div>
 
                     </div>
@@ -2170,7 +2199,11 @@ function Ordenes() {
                   <td>{orden.tipo_servicio || "-"}</td>
                   <td>{orden.transporte || "-"}</td>
                   <td>{orden.estado}</td>
-                  <td>{diasRestantes(orden.fecha_maxima_atencion)}</td>
+                  <td>
+                    {diasRestantes(
+                      obtenerFechaObjetivo(orden)
+                    )}
+                  </td>
                   <td
                     style={{
                       color: prioridad.color,

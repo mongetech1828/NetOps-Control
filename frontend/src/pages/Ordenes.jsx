@@ -87,6 +87,34 @@ function Ordenes() {
     return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
   }
 
+  function formatearFechaHoraInput(fechaTexto) {
+
+    if (!fechaTexto) {
+      return "";
+    }
+
+    const fecha = new Date(fechaTexto);
+    const anio = fecha.getFullYear();
+
+    const mes = String(
+      fecha.getMonth() + 1
+    ).padStart(2, "0");
+
+    const dia = String(
+      fecha.getDate()
+    ).padStart(2, "0");
+
+    const horas = String(
+      fecha.getHours()
+    ).padStart(2, "0");
+
+    const minutos = String(
+      fecha.getMinutes()
+    ).padStart(2, "0");
+
+    return `${anio}-${mes}-${dia}T${horas}:${minutos}`;
+  }
+
   function crearFechaLocal(fecha) {
     const fechaISO = fecha instanceof Date
       ? formatearFechaDB(fecha)
@@ -698,9 +726,9 @@ function Ordenes() {
       fo: orden.fo || "",
       crc: orden.crc || "",
       fecha_compromiso_cliente:
-        orden.fecha_compromiso_cliente
-          ? orden.fecha_compromiso_cliente.substring(0, 16)
-          : ""
+        formatearFechaHoraInput(
+          orden.fecha_compromiso_cliente
+        )
     });
 
     try {

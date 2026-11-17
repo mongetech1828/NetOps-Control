@@ -213,6 +213,24 @@ function Ordenes() {
         return;
       }
 
+      const prioridadCalculada = calcularPrioridad();
+
+      const diasPorPrioridad = {
+        ALTA: 2,
+        MEDIA: 4,
+        BAJA: 6
+      };
+
+      const diasSLA =
+        diasPorPrioridad[
+          prioridadCalculada.prioridad
+        ] || 4;
+
+      const fechaMaxima = sumarDiasHabiles(
+        new Date(ordenActual.fecha_recepcion),
+        diasSLA
+      );
+
       const response = await fetch(
         `/api/ordenes/${ordenEditando}`,
         {
@@ -237,7 +255,7 @@ function Ordenes() {
             puntaje_prioridad: prioridadCalculada.puntaje,
 
             fecha_recepcion: ordenActual.fecha_recepcion,
-            fecha_maxima_atencion: ordenActual.fecha_maxima_atencion,
+            fecha_maxima_atencion: formatearFechaDB(fechaMaxima),
             cantidad_reingresos: ordenActual.cantidad_reingresos,
             fecha_ultimo_reingreso: ordenActual.fecha_ultimo_reingreso,
             motivo_reingreso: ordenActual.motivo_reingreso

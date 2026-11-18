@@ -15,6 +15,7 @@ function SIGA() {
   const [filtroLinea, setFiltroLinea] = useState("");
   const [filtroEvento, setFiltroEvento] = useState("");
   const [estadosSIGA, setEstadosSIGA] = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroDashboard, setFiltroDashboard] = useState("");
   const [prioridadesSIGA, setPrioridadesSIGA] = useState([]);
   const [gruposGestion, setGruposGestion] = useState([]);
@@ -1093,6 +1094,7 @@ function SIGA() {
           .toLowerCase()
           .includes(filtroEvento.toLowerCase())
       )
+      .filter((siga) => !filtroEstado || siga.estado === filtroEstado)
       .filter((siga) => {
         if (filtroDashboard === "Vencidos") {
           return (
@@ -1325,6 +1327,23 @@ function SIGA() {
             value={filtroEvento}
             onChange={(e) => setFiltroEvento(e.target.value)}
           />
+
+          <select
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db"
+            }}
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            {estadosSIGA.map((estado) => (
+              <option key={estado.id} value={estado.nombre}>
+                {estado.nombre}
+              </option>
+            ))}
+          </select>
 
           <button 
             style={{

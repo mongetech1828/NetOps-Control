@@ -11,6 +11,7 @@ function Ordenes() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroLinea, setFiltroLinea] = useState("");
   const [filtroEvento, setFiltroEvento] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
   const [estados, setEstados] = useState([]);
   const [tiposServicio, setTiposServicio] = useState([]);
   const [transporte, setTransporte] = useState([]);
@@ -1143,6 +1144,7 @@ function Ordenes() {
           .toLowerCase()
           .includes(filtroEvento.toLowerCase())
       )
+      .filter((orden) => !filtroEstado || orden.estado === filtroEstado)
       .filter((orden) => {
 
         //Si viene desde Dahboard, aplicar el filtro correspondiente
@@ -2131,6 +2133,23 @@ function Ordenes() {
             value={filtroEvento}
             onChange={(e) => setFiltroEvento(e.target.value)}
           />
+
+          <select
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db"
+            }}
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            {estados.map((estado) => (
+              <option key={estado.id} value={estado.nombre}>
+                {estado.nombre}
+              </option>
+            ))}
+          </select>
 
           <button 
             style={{

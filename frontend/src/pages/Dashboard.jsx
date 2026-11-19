@@ -68,17 +68,22 @@ function Dashboard({perfil}) {
             enCampo++;
           }
 
-          // SLA
-          if (orden.fecha_maxima_atencion) {
+          // Fecha objetivo:
+          // Si existe compromiso cliente se usa.
+          // Si no existe se usa la fecha máxima SLA.
 
-            const fechaMaxima = new Date(
-              orden.fecha_maxima_atencion
-            );
+          const fechaObjetivo =
+            orden.fecha_compromiso_cliente ||
+            orden.fecha_maxima_atencion;
 
-            fechaMaxima.setHours(0, 0, 0, 0);
+          if (fechaObjetivo) {
+
+            const fecha = new Date(fechaObjetivo);
+
+            fecha.setHours(0, 0, 0, 0);
 
             const diferenciaDias = Math.ceil(
-              (fechaMaxima - hoy) /
+              (fecha - hoy) /
               (1000 * 60 * 60 * 24)
             );
 
@@ -97,6 +102,7 @@ function Dashboard({perfil}) {
             else {
               vencidas++;
             }
+
           }
 
         });

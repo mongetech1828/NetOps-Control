@@ -1158,10 +1158,10 @@ function Ordenes() {
         }
         
         if (filtroDashboard === "Vencidas") {
-          return diasRestantes(orden.fecha_maxima_atencion) < 0;
+          return diasRestantes(obtenerFechaObjetivo(orden)) < 0;
         }
         if (filtroDashboard === "Dentro SLA") {
-          return diasRestantes(orden.fecha_maxima_atencion) > 2;
+          return diasRestantes(obtenerFechaObjetivo(orden)) > 2;
         }
         if (filtroDashboard === "En Campo") {
           return orden.estado === "En campo";
@@ -1170,11 +1170,11 @@ function Ordenes() {
           return orden.cantidad_reingresos > 0;
         }
         if (filtroDashboard === "Por vencer") {
-          const dias = diasRestantes(orden.fecha_maxima_atencion);
+          const dias = diasRestantes(obtenerFechaObjetivo(orden));
           return dias >= 1 && dias <= 2;
         }
         if (filtroDashboard === "Vencen hoy") {
-          return diasRestantes(orden.fecha_maxima_atencion) === 0;
+          return diasRestantes(obtenerFechaObjetivo(orden)) === 0;
         }
         return true;
       });

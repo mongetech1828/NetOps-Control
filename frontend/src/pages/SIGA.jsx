@@ -645,7 +645,7 @@ function SIGA() {
             ? parseInt(formData.grupo_gestion_id)
             : null,
           nivel: nivelCalculado,
-          fecha_compromiso_cliente: formData.fecha_compromiso_cliente,
+          fecha_compromiso_cliente: formData.fecha_compromiso_cliente || null,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
         }),
@@ -938,7 +938,7 @@ function SIGA() {
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
           evento_agil: formData.evento_agil,
-          fecha_compromiso_cliente: formData.fecha_compromiso_cliente
+          fecha_compromiso_cliente: formData.fecha_compromiso_cliente || null
         }),
       });
 

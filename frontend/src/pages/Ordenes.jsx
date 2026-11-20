@@ -1892,7 +1892,7 @@ function Ordenes() {
                         onChange={(e) =>
                           setFormData({
                           ...formData,
-                          evento_agil: e.target.value.replace(/\D/g, "").slice(0, 6)
+                          evento_agil: e.target.value.slice(0, 30)
                         })
                       }
                     />

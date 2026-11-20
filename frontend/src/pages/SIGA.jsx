@@ -186,6 +186,79 @@ function SIGA() {
     return {texto: "🟢En tiempo",color: "#16a34a",};
   }
 
+  function diasRestantesSIGA(siga) {
+
+    const fechaObjetivo =
+      siga.fecha_compromiso_cliente ||
+      siga.fecha_maxima_atencion;
+
+    if (!fechaObjetivo) {
+      return null;
+    }
+
+    const fecha = new Date(fechaObjetivo);
+
+    fecha.setHours(0, 0, 0, 0);
+
+    const hoy = new Date();
+
+    hoy.setHours(0, 0, 0, 0);
+
+    return Math.round(
+      (fecha - hoy) /
+      (1000 * 60 * 60 * 24)
+    );
+
+  }
+
+  function formatearFechaHora(fechaTexto) {
+    if (!fechaTexto) {
+      return "-";
+    }
+
+    const fecha = new Date(fechaTexto);
+
+    return fecha.toLocaleString(
+      "es-CR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }
+    );
+  }
+
+  function formatearFechaHoraInput(fechaTexto) {
+
+    if (!fechaTexto) {
+      return "";
+    }
+
+    const fecha = new Date(fechaTexto);
+    const anio = fecha.getFullYear();
+
+    const mes = String(
+      fecha.getMonth() + 1
+    ).padStart(2, "0");
+
+    const dia = String(
+      fecha.getDate()
+    ).padStart(2, "0");
+
+    const horas = String(
+      fecha.getHours()
+    ).padStart(2, "0");
+
+    const minutos = String(
+      fecha.getMinutes()
+    ).padStart(2, "0");
+
+    return `${anio}-${mes}-${dia}T${horas}:${minutos}`;
+  }
+
   // Funciones para cargar datos de estado, prioridad, grupo de gestión y tipo de servicio desde la base de datos
   async function cargarEstadosSIGA() {
     try {
@@ -572,6 +645,7 @@ function SIGA() {
             ? parseInt(formData.grupo_gestion_id)
             : null,
           nivel: nivelCalculado,
+          fecha_compromiso_cliente: formData.fecha_compromiso_cliente,
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
         }),
@@ -863,7 +937,8 @@ function SIGA() {
             .replace(" ", "T"),
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
-          evento_agil: formData.evento_agil
+          evento_agil: formData.evento_agil,
+          fecha_compromiso_cliente: formData.fecha_compromiso_cliente
         }),
       });
 
@@ -987,6 +1062,12 @@ function SIGA() {
       evento_agil: siga.evento_agil || "",
       cliente: siga.cliente || "",
       tipo_servicio_id: siga.tipo_servicio_id || "",
+      fecha_compromiso_cliente:
+        siga.fecha_compromiso_cliente
+          ? formatearFechaHoraInput(
+              siga.fecha_compromiso_cliente
+            )
+          : "",
       prioridad_id: siga.prioridad_id || "",
       estado_siga_id: siga.estado_siga_id || "",
       grupo_gestion_id: siga.grupo_gestion_id || "",
@@ -1096,6 +1177,7 @@ function SIGA() {
       )
       .filter((siga) => !filtroEstado || siga.estado === filtroEstado)
       .filter((siga) => {
+
         if (filtroDashboard === "Vencidos") {
           return (
             siga.horas_restantes_sla < 0 &&
@@ -1103,13 +1185,15 @@ function SIGA() {
             siga.estado !== "Diferido"
           );
         }
+
         if (filtroDashboard === "SIGAs En campo") {
           return (
-            siga.estado !== "Cerrado" &&
-            siga.estado !== "Abierto-Verificación" &&
+            siga.estado !== "Cerrado" && 
+            siga.estado !== "Abierto-Verificación" && 
             siga.tecnicos?.length > 0
           );
         }
+
         if (filtroDashboard === "SIGAs Por vencer") {
           return (
             siga.estado !== "Cerrado" &&
@@ -1118,6 +1202,7 @@ function SIGA() {
             siga.horas_restantes_sla > 0
           );
         }
+
         if (filtroDashboard === "SIGAs Dentro SLA") {
           return (
             siga.estado !== "Cerrado" &&
@@ -1125,6 +1210,7 @@ function SIGA() {
             siga.horas_restantes_sla > 1
           );
         }
+
         return true;
       });
   }
@@ -1420,7 +1506,7 @@ function SIGA() {
               <th>Línea</th>
               <th>Evento AGIL</th>
               <th>Cliente</th>
-              <th>Servicio</th>
+              <th>F. Coordinada</th>
               <th>Prioridad</th>
               <th>Estado</th>
               <th>Técnicos</th>
@@ -1443,7 +1529,7 @@ function SIGA() {
                 <td>{siga.numero_linea}</td>
                 <td>{siga.evento_agil}</td>
                 <td>{siga.cliente}</td>
-                <td>{siga.tipo_servicio || "-"}</td>
+                <td>{siga.fecha_compromiso_cliente? formatearFechaHora(siga.fecha_compromiso_cliente) : "-"}</td>
                 <td>{siga.prioridad}</td>
                 <td>{siga.estado}</td>
                 <td>{siga.tecnicos?.map(t => t.nombre).join(", ") || "-"}</td>
@@ -1523,19 +1609,6 @@ function SIGA() {
                       }
                     />
 
-                    {/* FECHA */}
-                    <input        
-                      type="datetime-local"
-                      value={formData.fecha_recepcion || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          fecha_recepcion: e.target.value})
-                      }
-                      disabled={sigaEditando !== null}
-                      style={{width: "180px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
-                    />
-
                     {/* LÍNEA */}
                     <input
                       style={{
@@ -1555,158 +1628,10 @@ function SIGA() {
                       }
                     />
 
-                    {/* TÉCNICOS */}
-                    <div style = {{ position: "relative" }}>
-                      <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
-                      style={{
-                          width: "100%",
-                          padding: "8px",
-                          borderRadius: "6px",
-                          border: "1px solid #d1d5db",
-                          cursor: "pointer"
-                        }}
-                      >
-                        {tecnicosSeleccionados.length > 0
-                          ? `👷 Técnicos (${tecnicosSeleccionados.length})`
-                          : "👷 Sin técnicos asignados"
-                        }
-                      </button>
-
-                      {/* CHIPS */}
-                      {tecnicosSeleccionados.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "6px",
-                            marginTop: "8px"
-                          }}
-                        >
-                          {tecnicos
-                            .filter(t =>
-                              tecnicosSeleccionados.includes(t.id)
-                            )
-                            .map(t => (
-                              <span
-                                key={t.id}
-                                style={{
-                                  backgroundColor: "#dbeafe",
-                                  color: "#1e40af",
-                                  padding: "4px 8px",
-                                  borderRadius: "12px",
-                                  fontSize: "12px",
-                                  fontWeight: "500"
-                                }}
-                              >
-                                {t.nombre}
-                              </span>
-                            ))
-                          }
-                        </div>
-                      )}
-
-                      {/* DESPLEGABLE */}
-                      {mostrarTecnicos && (                  
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: 0,
-                            marginTop: "5px",
-                            background: "white",
-                            width: "320px",
-                            maxHeight: "220px",
-                            overflowY: "auto",
-                            zIndex: 1000,
-                            border: "1px solid #ccc",
-                            padding: "10px",
-                            borderRadius: "8px",
-                            boxShadow:
-                                "0 2px 8px rgba(0,0,0,0.15)"
-                          }}
-                        >
-
-                          {tecnicos.map((tecnico) => (
-
-                            <label
-                              key={tecnico.id}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                                textAlign: "left",
-                                fontSize: "14px",
-                                cursor: "pointer",
-                              }}
-                            >
-
-                              <input
-                                type="checkbox"
-                                checked={
-                                  tecnicosSeleccionados.includes(
-                                    tecnico.id
-                                  )
-                                }
-                                onChange={(e) => {
-
-                                  if (e.target.checked) {
-                                    setTecnicosSeleccionados([
-                                      ...tecnicosSeleccionados,
-                                      tecnico.id
-                                    ]);
-                                  }
-                                  else {
-                                    setTecnicosSeleccionados(
-                                      tecnicosSeleccionados.filter(
-                                        id => id !== tecnico.id
-                                      )
-                                    );
-                                  }
-                                }}
-                              />
-                              {" "}
-                              {tecnico.nombre}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* EVENTO AGIL */}
-                  <div
-                    style={{
-                      marginTop: "15px"
-                    }}
-                  >
+                    {/* CLIENTE */}                    
                     <input
                       style={{
-                        width: "98%",
-                        padding: "10px",
-                        borderRadius: "6px",
-                        border: "1px solid #d1d5db"
-                      }}
-                      type="text"
-                      placeholder="Evento AGIL"
-                      value={formData.evento_agil || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          evento_agil: e.target.value.replace(/\D/g, "").slice(0, 6)
-                        })
-                      }
-                    />
-                  </div>
-
-                  {/* CLIENTE */}
-                  <div
-                    style={{
-                      marginTop: "15px"
-                    }}
-                  >
-                    <input
-                      style={{
-                        width: "98%",
+                        width: "90%",
                         padding: "10px",
                         borderRadius: "6px",
                         border: "1px solid #d1d5db"
@@ -1721,7 +1646,197 @@ function SIGA() {
                         })
                       }
                     />
-                  </div>
+
+                    {/* EVENTO AGIL */}
+                    <input
+                      style={{
+                        width: "90%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db"
+                      }}
+                      type="text"
+                      placeholder="Evento AGIL"
+                      value={formData.evento_agil || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          evento_agil: e.target.value.replace(/\D/g, "").slice(0, 6)
+                        })
+                      }
+                    />                  
+
+                    {/* FECHA RECEPCIÓN */}
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "5px",
+                          fontWeight: "bold",
+                          color: "#4b5563"
+                        }}
+                      >
+                        Fecha Recepción
+                      </label>
+
+                      <input
+                        type="datetime-local"
+                        value={formData.fecha_recepcion || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            fecha_recepcion: e.target.value
+                          })
+                        }
+                        disabled={sigaEditando !== null}
+                        style={{width: "180px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: sigaEditando !== null ? "#f3f4f6" : "white" }}
+                      />
+                    </div>                    
+
+                    {/* FECHA COMPROMISO CLIENTE */}
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "5px",
+                          fontWeight: "bold",
+                          color: "#4b5563"
+                        }}
+                      >
+                        F. Coordinada
+                      </label>
+
+                      <input
+                        type="datetime-local"
+                        value={formData.fecha_compromiso_cliente || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            fecha_compromiso_cliente: e.target.value
+                          })
+                        }
+                        style={{width: "180px", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db"}}
+                      />
+                    </div>
+
+                  </div>                                                  
+
+                  {/* TÉCNICOS */}
+                  <div style = {{ position: "relative" }}>
+                    <button type="button" onClick={() => setMostrarTecnicos(!mostrarTecnicos)}
+                    style={{
+                        width: "100%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        border: "1px solid #d1d5db",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {tecnicosSeleccionados.length > 0
+                        ? `👷 Técnicos (${tecnicosSeleccionados.length})`
+                        : "👷 Sin técnicos asignados"
+                      }
+                    </button>
+
+                    {/* CHIPS */}
+                    {tecnicosSeleccionados.length > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginTop: "8px"
+                        }}
+                      >
+                        {tecnicos
+                          .filter(t =>
+                            tecnicosSeleccionados.includes(t.id)
+                          )
+                          .map(t => (
+                            <span
+                              key={t.id}
+                              style={{
+                                backgroundColor: "#dbeafe",
+                                color: "#1e40af",
+                                padding: "4px 8px",
+                                borderRadius: "12px",
+                                fontSize: "12px",
+                                fontWeight: "500"
+                              }}
+                            >
+                              {t.nombre}
+                            </span>
+                          ))
+                        }
+                      </div>
+                    )}
+
+                    {/* DESPLEGABLE */}
+                    {mostrarTecnicos && (                  
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          marginTop: "5px",
+                          background: "white",
+                          width: "320px",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          zIndex: 1000,
+                          border: "1px solid #ccc",
+                          padding: "10px",
+                          borderRadius: "8px",
+                          boxShadow:
+                              "0 2px 8px rgba(0,0,0,0.15)"
+                        }}
+                      >
+
+                        {tecnicos.map((tecnico) => (
+
+                          <label
+                            key={tecnico.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              textAlign: "left",
+                              fontSize: "14px",
+                              cursor: "pointer",
+                            }}
+                          >
+
+                            <input
+                              type="checkbox"
+                              checked={
+                                tecnicosSeleccionados.includes(
+                                  tecnico.id
+                                )
+                              }
+                              onChange={(e) => {
+
+                                if (e.target.checked) {
+                                  setTecnicosSeleccionados([
+                                    ...tecnicosSeleccionados,
+                                    tecnico.id
+                                  ]);
+                                }
+                                else {
+                                  setTecnicosSeleccionados(
+                                    tecnicosSeleccionados.filter(
+                                      id => id !== tecnico.id
+                                    )
+                                  );
+                                }
+                              }}
+                            />
+                            {" "}
+                            {tecnico.nombre}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>                  
 
                   {/* ESTADO, TIPO SERVICIO + PRIORIDAD */}
                   <div

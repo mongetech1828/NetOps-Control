@@ -113,6 +113,28 @@ function calcularMetricasSIGA(
     };
   }
 
+function formatearFechaHora(fechaTexto) {
+
+  if (!fechaTexto) {
+    return "-";
+  }
+
+  const fecha = new Date(fechaTexto);
+
+  return fecha.toLocaleString(
+    "es-CR",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }
+  );
+
+}
+
 function formatoFechaHistorial(fecha) {
   if (!fecha) {
     return "-";
@@ -346,6 +368,19 @@ function HistorialSIGAModal({
             )}
             </div>
 
+            {
+              sigaHistorial?.fecha_compromiso_cliente && (
+                <div>
+                  <strong>F. Coordinada:</strong><br />
+                  {
+                    formatearFechaHora(
+                      sigaHistorial.fecha_compromiso_cliente
+                    )
+                  }
+                </div>
+              )
+            }
+
             <div>
             <strong>Tiempo Total:</strong><br />
             {formatearHoras(
@@ -371,7 +406,7 @@ function HistorialSIGAModal({
                 marginBottom: "10px"
                 }}
             >
-                Cumplimiento
+                Cumplimiento SLA
             </strong>
 
             <span

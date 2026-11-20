@@ -381,6 +381,30 @@ function Dashboard({perfil}) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
+  /*function diasRestantesSIGA(siga) {
+
+    const fechaObjetivo =
+      siga.fecha_compromiso_cliente ||
+      siga.fecha_maxima_atencion;
+
+    if (!fechaObjetivo) {
+      return null;
+    }
+
+    const fecha = new Date(fechaObjetivo);
+
+    fecha.setHours(0, 0, 0, 0);
+
+    const hoy = new Date();
+
+    hoy.setHours(0, 0, 0, 0);
+
+    return Math.round(
+      (fecha - hoy) /
+      (1000 * 60 * 60 * 24)
+    );
+  }*/
+
   async function cargarSigasDashboard() {
 
     try {

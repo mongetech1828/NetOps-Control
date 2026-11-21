@@ -1493,6 +1493,7 @@ function SIGA() {
 
         {/* Tabla de SIGAs */}
         <table
+          className="siga-table"
           style={{
             width: "100%",
             borderCollapse: "collapse",

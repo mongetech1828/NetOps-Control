@@ -138,3 +138,50 @@ code {
 
   overflow-y: auto;
 }
+
+.siga-table,
+.ordenes-table {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.siga-table th,
+.siga-table td,
+.ordenes-table th,
+.ordenes-table td {
+  padding: 10px 8px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.siga-table th,
+.ordenes-table th {
+  background-color: #1e3a5f;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.siga-table th:last-child,
+.siga-table td:last-child,
+.ordenes-table th:last-child,
+.ordenes-table td:last-child {
+  border-right: none;
+}
+
+.siga-table tbody tr:nth-child(even),
+.ordenes-table tbody tr:nth-child(even) {
+  background-color: #f1f5f9;
+}
+
+.siga-table tbody tr:hover,
+.ordenes-table tbody tr:hover {
+  background-color: #dbeafe;
+}
+
+.siga-table tbody td:first-child,
+.ordenes-table tbody td:first-child {
+  color: #1e3a8a;
+  font-weight: 700;
+  white-space: nowrap;
+}

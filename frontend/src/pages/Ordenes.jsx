@@ -2212,6 +2212,7 @@ function Ordenes() {
 
         {/* Tabla de órdenes */}
         <table
+          className="ordenes-table"
           style={{
             borderCollapse: "collapse",
             width: "100%",

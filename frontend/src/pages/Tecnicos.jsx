@@ -347,6 +347,7 @@ function Tecnicos() {
         </div>
 
         <table
+          className="tecnicos-table"
           style={{
             width: "100%",
             borderCollapse: "collapse",

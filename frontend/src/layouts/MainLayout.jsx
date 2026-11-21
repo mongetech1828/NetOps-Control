@@ -1,11 +1,4 @@
-import { Link } from "react-router-dom";
-
-const menuLinkStyle = {
-  color: "#ffffff",
-  textDecoration: "none",
-  fontSize: "18px",
-  fontWeight: "500"
-};
+import { NavLink } from "react-router-dom";
 
 function MainLayout({
   perfil,
@@ -24,87 +17,50 @@ function MainLayout({
         minHeight: "100vh"
       }}
     >
-      <aside
-        style={{
-          width: "180px",
-          background: "linear-gradient(135deg, #1e3a8a, #0f172a)",
-          color: "white",
-          padding: "20px"
-        }}
-      >
-        <h2>PMOST EASE</h2>
+      <aside className="main-sidebar">
+        <h2 className="sidebar-brand">PMOST EASE</h2>
 
-        <hr />
+        <hr className="sidebar-divider" />
 
-        <p>{perfil?.nombre}</p>
-        <p>{perfil?.rol}</p>
+        <div className="sidebar-user">
+          <p className="sidebar-user-name">{perfil?.nombre}</p>
+          <p className="sidebar-user-role">{perfil?.rol}</p>
+        </div>
 
-        <hr />
+        <hr className="sidebar-divider" />
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "25px",
-            alignItems: "center"
-          }}
-        >
-          <Link to="/"
-            style={menuLinkStyle}
-          >
+        <nav className="sidebar-nav" aria-label="Navegación principal">
+          <NavLink to="/" className="sidebar-link">
             Dashboard
-          </Link>
+          </NavLink>
           
-          <Link to="/ordenes"
-            style={menuLinkStyle}
-          >
+          <NavLink to="/ordenes" className="sidebar-link">
             Órdenes
-          </Link>
+          </NavLink>
           
-          <Link to="/siga"
-            style={menuLinkStyle}
-          >
+          <NavLink to="/siga" className="sidebar-link">
             SIGA
-          </Link>
+          </NavLink>
           
-          <Link to="/tecnicos"
-            style={menuLinkStyle}
-          >
+          <NavLink to="/tecnicos" className="sidebar-link">
             Técnicos
-          </Link>
+          </NavLink>
           
-          <Link to="/reportes"
-            style={menuLinkStyle}
-          >
+          <NavLink to="/reportes" className="sidebar-link">
             Reportes
-          </Link>
+          </NavLink>
 
           {
             usuario?.rol === "administrador" && (
-              <Link to="/administracion"
-                style={menuLinkStyle}
-              >
+              <NavLink to="/administracion" className="sidebar-link">
                 Administración
-              </Link>
+              </NavLink>
             )
           }
-
-        </div>
-
-        <hr />
+        </nav>
 
         <button 
-          style={{
-            width: "100%",
-            padding: "12px",
-            border: "none",
-            borderRadius: "8px",
-            background: "#2563eb",
-            color: "white",
-            fontWeight: "600",
-            cursor: "pointer",
-            fontSize: "15px"
-          }}
+          className="sidebar-logout"
           onClick={onLogout}>
           Cerrar Sesión
         </button>

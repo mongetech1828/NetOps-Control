@@ -142,6 +142,7 @@ function Administracion() {
       </button>
 
       <table
+        className="admin-table"
         style={{
           width: "100%",
           borderCollapse: "collapse",

@@ -139,8 +139,224 @@ code {
   overflow-y: auto;
 }
 
+.dashboard-page {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 24px;
+  border-radius: 16px;
+  background-color: #f1f5f9;
+  color: #1f2937;
+  text-align: left;
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #1e3a5f, #0f172a);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+  text-align: center;
+}
+
+.dashboard-title {
+  margin: 0;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.dashboard-search {
+  margin-bottom: 18px;
+}
+
+.dashboard-search-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #1f2937;
+  font: inherit;
+}
+
+.dashboard-search-input:focus-visible {
+  border-color: #1e3a5f;
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
+.dashboard-search-results h3 {
+  color: #1e3a5f;
+}
+
+.dashboard-search-result {
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.dashboard-divider {
+  border: 0;
+  border-top: 1px solid #cbd5e1;
+}
+
+.dashboard-section-title {
+  padding: 12px 16px;
+  border-left: 5px solid #1e3a5f;
+  border-radius: 8px;
+  background-color: #dbeafe;
+  color: #1e3a5f;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.dashboard-kpi-grid > div {
+  border-color: #cbd5e1;
+}
+
+.dashboard-kpi-grid > div h1 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    padding: 18px;
+  }
+
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 220px;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 24px 16px;
+  color: #fff;
+  background: linear-gradient(160deg, #1e3a5f 0%, #0f172a 100%);
+  box-shadow: 4px 0 16px rgba(15, 23, 42, 0.16);
+}
+
+.sidebar-brand {
+  margin: 4px 0 16px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-divider {
+  width: 100%;
+  margin: 8px 0 16px;
+  border: 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.2);
+}
+
+.sidebar-user {
+  padding: 4px 8px 8px;
+  text-align: left;
+}
+
+.sidebar-user-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-user-role {
+  margin-top: 4px;
+  color: #cbd5e1;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 -4px;
+}
+
+.sidebar-link {
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-link:hover,
+.sidebar-link:focus-visible {
+  background-color: rgba(226, 232, 240, 0.14);
+  color: #fff;
+}
+
+.sidebar-link:focus-visible,
+.sidebar-logout:focus-visible {
+  outline: 2px solid #bfdbfe;
+  outline-offset: 2px;
+}
+
+.sidebar-link.active {
+  background-color: #dbeafe;
+  color: #1e3a5f;
+  font-weight: 700;
+}
+
+.sidebar-logout {
+  width: 100%;
+  margin-top: 16px;
+  padding: 11px 12px;
+  border: 1px solid rgba(191, 219, 254, 0.35);
+  border-radius: 8px;
+  background-color: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.sidebar-logout:hover {
+  background-color: #1d4ed8;
+}
+
 .siga-table,
-.ordenes-table {
+.ordenes-table,
+.tecnicos-table,
+.admin-table {
   color: #1f2937;
   font-size: 14px;
 }
@@ -148,14 +364,20 @@ code {
 .siga-table th,
 .siga-table td,
 .ordenes-table th,
-.ordenes-table td {
+.ordenes-table td,
+.tecnicos-table th,
+.tecnicos-table td,
+.admin-table th,
+.admin-table td {
   padding: 10px 8px;
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .siga-table th,
-.ordenes-table th {
+.ordenes-table th,
+.tecnicos-table th,
+.admin-table th {
   background-color: #1e3a5f;
   color: #fff;
   font-weight: 700;
@@ -165,22 +387,32 @@ code {
 .siga-table th:last-child,
 .siga-table td:last-child,
 .ordenes-table th:last-child,
-.ordenes-table td:last-child {
+.ordenes-table td:last-child,
+.tecnicos-table th:last-child,
+.tecnicos-table td:last-child,
+.admin-table th:last-child,
+.admin-table td:last-child {
   border-right: none;
 }
 
 .siga-table tbody tr:nth-child(even),
-.ordenes-table tbody tr:nth-child(even) {
+.ordenes-table tbody tr:nth-child(even),
+.tecnicos-table tbody tr:nth-child(even),
+.admin-table tbody tr:nth-child(even) {
   background-color: #f1f5f9;
 }
 
 .siga-table tbody tr:hover,
-.ordenes-table tbody tr:hover {
+.ordenes-table tbody tr:hover,
+.tecnicos-table tbody tr:hover,
+.admin-table tbody tr:hover {
   background-color: #dbeafe;
 }
 
 .siga-table tbody td:first-child,
-.ordenes-table tbody td:first-child {
+.ordenes-table tbody td:first-child,
+.tecnicos-table tbody td:first-child,
+.admin-table tbody td:first-child {
   color: #1e3a8a;
   font-weight: 700;
   white-space: nowrap;

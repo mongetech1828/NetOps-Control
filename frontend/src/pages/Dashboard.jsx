@@ -563,8 +563,9 @@ function Dashboard({perfil}) {
   const cardStyle = {
     backgroundColor: "#ffffff",
     borderRadius: "14px",
-    padding: "14px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    border: "1px solid #dbe4f0",
+    padding: "18px",
+    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.1)",
     textAlign: "center",
     transition: "all 0.2s ease"
   };
@@ -709,45 +710,37 @@ function Dashboard({perfil}) {
   }, [busquedaGlobal]);
 
   return (
-    <div>
-      <h1>Dashboard</h1>
-
-      <p>
-        Bienvenido {perfil?.nombre}
-      </p>
-
-      <br/>
+    <div className="dashboard-page">
+      <header className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">
+            Bienvenido {perfil?.nombre}
+          </h1>
+        </div>
+      </header>
 
       <div
-        style={{
-          marginBottom: "20px"
-        }}
+        className="dashboard-search"
       >
         <input
+          className="dashboard-search-input"
           type="text"
-          placeholder="🔍 Buscar OST, SIGA o Cliente..."
+          placeholder="🔍 Buscar OST, SIGA, línea o cliente..."
           value={busquedaGlobal}
           onChange={(e) =>
             setBusquedaGlobal(
               e.target.value
             )
           }
-          style={{
-            width: "100%",
-            padding: "12px",
-            borderRadius: "8px",
-            border: "1px solid #d1d5db",
-            boxSizing: "border-box"
-          }}
         />
       </div>
 
       {
         busquedaGlobal.trim() !== "" && (
 
-          <div>
+          <div className="dashboard-search-results">
 
-            <h3>Resultados de busqueda</h3>
+            <h3>Resultados de búsqueda</h3>
 
             {        
               resultadosBusqueda.length > 0 
@@ -755,14 +748,7 @@ function Dashboard({perfil}) {
 
                   <div
                     key={`${item.tipo}-${item.id}`}
-                    style={{
-                      background: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "10px",
-                      padding: "12px",
-                      marginBottom: "10px",
-                      cursor: "pointer"
-                    }}
+                    className="dashboard-search-result"
                   >
                     <strong>
                       {item.tipo === "SIGA"
@@ -794,12 +780,14 @@ function Dashboard({perfil}) {
       }
 
       <hr
+        className="dashboard-divider"
         style={{
           margin: "40px 0"
         }}
       />
 
       <h2
+        className="dashboard-section-title"
         style={{
           textAlign: "center",
           marginBottom: "20px"
@@ -809,12 +797,7 @@ function Dashboard({perfil}) {
       </h2>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "20px",
-          marginTop: "15px",
-        }}
+        className="dashboard-kpi-grid"
       >
         <div style={{
           ...cardStyle,
@@ -1088,12 +1071,14 @@ function Dashboard({perfil}) {
       </div>
 
       <hr
+        className="dashboard-divider"
         style={{
           margin: "40px 0"
         }}
       />
 
       <h2
+        className="dashboard-section-title"
         style={{
           textAlign: "center",
           marginBottom: "20px"
@@ -1103,12 +1088,7 @@ function Dashboard({perfil}) {
       </h2>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "20px",
-          marginTop: "15px",
-        }}
+        className="dashboard-kpi-grid"
       >
         <div style={{
             ...cardStyle,

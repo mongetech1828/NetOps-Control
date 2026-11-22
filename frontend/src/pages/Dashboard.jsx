@@ -483,6 +483,7 @@ function Dashboard({perfil}) {
           if (
             siga.estado !== "Cerrado" &&
             siga.estado !== "Abierto-Verificación" &&
+            siga.estado !== "Diferido" &&
             siga.tecnicos?.length > 0
           ) {
             enCampo++;

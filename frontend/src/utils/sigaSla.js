@@ -52,6 +52,118 @@ export function parsearFechaMovimientoSIGA(fecha) {
   return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
 }
 
+function parsearFechaMovimiento(fecha) {
+  if (!fecha) {
+    return null;
+  }
+
+  if (typeof fecha !== "string") {
+    const fechaParseada = new Date(fecha);
+    return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
+  }
+
+  let valor = fecha.trim().replace(" ", "T");
+
+  const fechaParseada = new Date(valor);
+  return Number.isNaN(fechaParseada.getTime()) ? null : fechaParseada;
+}
+
+export function calcularMetricasSIGA(
+  historialSIGA,
+  horasSLA,
+  fechaRecepcion
+) {
+  const movimientos = [...(historialSIGA || [])]
+    .sort(
+      (a, b) =>
+        parsearFechaMovimiento(a.fecha_movimiento) -
+        parsearFechaMovimiento(b.fecha_movimiento)
+    );
+  let tiempoConsumido = 0;
+  let tiempoDiferido = 0;
+  let inicioActivo = fechaRecepcion ? new Date(fechaRecepcion) : null;
+  let inicioDiferido = null;
+  let finalizado = false;
+
+  movimientos.forEach((mov) => {
+    const fecha = parsearFechaMovimiento(mov.fecha_movimiento);
+    if (!fecha) {
+      return;
+    }
+
+    switch (mov.tipo_movimiento) {
+      case "Inicio Diferido":
+        if (inicioActivo) {
+          tiempoConsumido += fecha - inicioActivo;
+          inicioActivo = null;
+        }
+        inicioDiferido = fecha;
+        break;
+      case "Fin Diferido":
+        if (inicioDiferido) {
+          tiempoDiferido += fecha - inicioDiferido;
+          inicioDiferido = null;
+        }
+        inicioActivo = fecha;
+        break;
+      case "Restablecimiento":
+      case "Cierre":
+        if (inicioActivo && !finalizado) {
+          tiempoConsumido += fecha - inicioActivo;
+          inicioActivo = null;
+        }
+        if (inicioDiferido && !finalizado) {
+          tiempoDiferido += fecha - inicioDiferido;
+          inicioDiferido = null;
+        }
+        finalizado = true;
+        break;
+      default:
+        break;
+    }
+  });
+
+  const ahora = new Date();
+  if (!finalizado && inicioActivo) {
+    tiempoConsumido += ahora - inicioActivo;
+  }
+  if (!finalizado && inicioDiferido) {
+    tiempoDiferido += ahora - inicioDiferido;
+  }
+
+  const tiempoConsumidoHoras = tiempoConsumido / (1000 * 60 * 60);
+  const tiempoDiferidoHoras = tiempoDiferido / (1000 * 60 * 60);
+  const tiempoTotalHoras = tiempoConsumidoHoras + tiempoDiferidoHoras;
+
+  return {
+    tiempoConsumidoHoras,
+    tiempoDiferidoHoras,
+    tiempoTotalHoras,
+    cumpleSLA: tiempoConsumidoHoras <= horasSLA
+  };
+}
+
+export function calcularFechaMaximaDinamicaSIGA(
+  tiempoConsumidoHoras,
+  horasSLA,
+  ahora = Date.now()
+) {
+  const horasConsumidas = Number(tiempoConsumidoHoras);
+  const horasDisponibles = Number(horasSLA);
+  if (
+    !Number.isFinite(horasConsumidas) ||
+    !Number.isFinite(horasDisponibles)
+  ) {
+    return null;
+  }
+
+  const horasRestantes = Math.max(
+    0,
+    horasDisponibles - horasConsumidas
+  );
+  return new Date(ahora + horasRestantes * 60 * 60 * 1000);
+}
+
 export function calcularHorasRestantesSIGA(
   fechaMaxima,
   movimientos = [],

@@ -1,3 +1,8 @@
+import {
+  calcularFechaMaximaDinamicaSIGA,
+  calcularMetricasSIGA
+} from "../utils/sigaSla";
+
 function parsearFechaMovimiento(fecha) {
   if (!fecha) {
     return null;
@@ -37,81 +42,6 @@ function formatoFechaHora(fecha) {
 
 }
 
-
-function calcularMetricasSIGA(
-    historialSIGA,
-    horasSLA,
-    fechaRecepcion
-  ) {
-    const movimientos = [...(historialSIGA || [])]
-      .sort(
-        (a, b) =>
-          parsearFechaMovimiento(a.fecha_movimiento) -
-          parsearFechaMovimiento(b.fecha_movimiento)
-      );
-    let tiempoConsumido = 0;
-    let tiempoDiferido = 0;
-    let inicioActivo = fechaRecepcion ? new Date(fechaRecepcion) : null;
-    let inicioDiferido = null;
-    let finalizado = false;
-
-    movimientos.forEach((mov) => {
-      const fecha = parsearFechaMovimiento(mov.fecha_movimiento);
-      if (!fecha) {
-        return;
-      }
-
-      switch (mov.tipo_movimiento) {
-        case "Inicio Diferido":
-          if (inicioActivo) {
-            tiempoConsumido += fecha - inicioActivo;
-            inicioActivo = null;
-          }
-          inicioDiferido = fecha;
-          break;
-        case "Fin Diferido":
-          if (inicioDiferido) {
-            tiempoDiferido += fecha - inicioDiferido;
-            inicioDiferido = null;
-          }
-          inicioActivo = fecha;
-          break;
-        case "Restablecimiento":
-        case "Cierre":
-          if (inicioActivo && !finalizado) {
-            tiempoConsumido += fecha - inicioActivo;
-            inicioActivo = null;
-          }
-          if (inicioDiferido && !finalizado) {
-            tiempoDiferido += fecha - inicioDiferido;
-            inicioDiferido = null;
-          }
-          finalizado = true;
-          break;
-        default:
-          break;
-      }
-    });
-
-    const ahora = new Date();
-    if (!finalizado && inicioActivo) {
-      tiempoConsumido += ahora - inicioActivo;
-    }
-    if (!finalizado && inicioDiferido) {
-      tiempoDiferido += ahora - inicioDiferido;
-    }
-
-    const tiempoConsumidoHoras = tiempoConsumido / (1000 * 60 * 60);
-    const tiempoDiferidoHoras = tiempoDiferido / (1000 * 60 * 60);
-    const tiempoTotalHoras = tiempoConsumidoHoras + tiempoDiferidoHoras;
-
-    return {
-      tiempoConsumidoHoras,
-      tiempoDiferidoHoras,
-      tiempoTotalHoras,
-      cumpleSLA: tiempoConsumidoHoras <= horasSLA
-    };
-  }
 
 function formatearFechaHora(fechaTexto) {
 
@@ -207,6 +137,12 @@ function HistorialSIGAModal({
       sigaHistorial?.fecha_recepcion
     )
   : null;
+  const fechaMaximaDinamica = metricas
+    ? calcularFechaMaximaDinamicaSIGA(
+        metricas.tiempoConsumidoHoras,
+        sigaHistorial?.horas_sla || 0
+      )
+    : null;
 
   const fechaCierreSIGA = (historialSIGA || [])
     .filter(movimiento => movimiento.tipo_movimiento === "Cierre")
@@ -246,11 +182,14 @@ function HistorialSIGAModal({
       ? fechaRestablecimientoSIGA
       : new Date();
 
-  const slaCierre =
-    obtenerSLASIGA(
-      sigaHistorial?.fecha_maxima_atencion,
-      fechaReferencia
-    );
+  const slaCierre = metricas
+    ? metricas.cumpleSLA
+      ? obtenerSLASIGA(fechaMaximaDinamica)
+      : { texto: "⚫Vencido", color: "#dc2626" }
+    : obtenerSLASIGA(
+        sigaHistorial?.fecha_maxima_atencion,
+        fechaReferencia
+      );
 
   return (
 
@@ -344,7 +283,10 @@ function HistorialSIGAModal({
 
             <div>
             <strong>F. Máxima Atención:</strong><br />
-            {formatoFechaHora(sigaHistorial?.fecha_maxima_atencion)}
+            {formatoFechaHora(
+              fechaMaximaDinamica?.toISOString() ||
+              sigaHistorial?.fecha_maxima_atencion
+            )}
             </div>
 
             <div>

@@ -3,13 +3,16 @@ import { useLocation } from "react-router-dom";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
 import * as XLSX from "xlsx";
 import {
+  calcularFechaMaximaDinamicaSIGA,
   calcularHorasRestantesSIGA,
+  calcularMetricasSIGA,
   cargarMovimientosSIGA
 } from "../utils/sigaSla";
 
 function SIGA() {
 
   const [sigas, setSigas] = useState([]);
+  const [ahoraSLA, setAhoraSLA] = useState(null);
   const [actualizandoSigas, setActualizandoSigas] = useState(false);
   const [filtroSIGA, setFiltroSIGA] = useState("");
   const [filtroLinea, setFiltroLinea] = useState("");
@@ -46,14 +49,6 @@ function SIGA() {
   const [formData, setFormData] =
     useState(formularioVacio);
 
-  // Función para calcular la fecha máxima de atención según la fecha de recepción y las horas SLA
-  function calcularFechaMaximaSIGA(fechaRecepcion,horasSLA) {
-    const fecha = new Date(fechaRecepcion);
-    const milisegundosSLA = horasSLA * 60 * 60 * 1000;
-
-    return new Date(fecha.getTime() + milisegundosSLA);
-  }
-
   // Función para cerrar el formulario de SIGA y resetear los datos
   function cerrarFormularioSIGA() {
     setMostrarFormulario(false);
@@ -63,7 +58,7 @@ function SIGA() {
   }
 
   // Función para cargar los SIGAs desde la base de datos
-  async function cargarSigas() {
+  async function cargarSigas(prioridadesDisponibles = prioridadesSIGA) {
     try {
 
       const response =
@@ -99,7 +94,7 @@ function SIGA() {
 
           const movimientosSiga =
             movimientosPorSiga.get(
-              movimiento.siga_id
+              Number(movimiento.siga_id)
             ) || [];
 
           movimientosSiga.push(
@@ -107,25 +102,57 @@ function SIGA() {
           );
 
           movimientosPorSiga.set(
-            movimiento.siga_id,
+            Number(movimiento.siga_id),
             movimientosSiga
           );
 
         }
       );
 
-      const sigasProcesados =
-        data.map(siga => ({
-          ...siga,
-          horas_restantes_sla:
-            calcularHorasRestantesSIGA(
-              siga.fecha_maxima_atencion,
-              movimientosPorSiga.get(
-                siga.id
-              ),
-              siga.estado
+      const sigasProcesados = data.map((siga) => {
+        const prioridad = prioridadesDisponibles.find(
+          (item) => Number(item.id) === Number(siga.prioridad_id)
+        );
+        const horasSLA = Number(prioridad?.horas_sla);
+        const movimientosSiga =
+          movimientosPorSiga.get(Number(siga.id)) || [];
+        const fechaRecepcionValida =
+          Number.isFinite(new Date(siga.fecha_recepcion).getTime());
+        const metricas = Number.isFinite(horasSLA) &&
+          fechaRecepcionValida
+          ? calcularMetricasSIGA(
+              movimientosSiga,
+              horasSLA,
+              siga.fecha_recepcion
             )
-        }));
+          : null;
+        const horasRestantes = metricas
+          ? Math.max(0, horasSLA - metricas.tiempoConsumidoHoras)
+          : calcularHorasRestantesSIGA(
+              siga.fecha_maxima_atencion,
+              movimientosSiga,
+              siga.estado
+            );
+        const fechaMaximaDinamica = metricas
+          ? calcularFechaMaximaDinamicaSIGA(
+              metricas.tiempoConsumidoHoras,
+              horasSLA
+            )
+          : null;
+
+        return {
+          ...siga,
+          horas_sla: prioridad?.horas_sla ?? siga.horas_sla,
+          fecha_maxima_atencion:
+            fechaMaximaDinamica || siga.fecha_maxima_atencion,
+          horas_restantes_sla: horasRestantes,
+          cumple_sla: metricas
+            ? metricas.cumpleSLA
+            : horasRestantes === null
+              ? null
+              : horasRestantes >= 0
+        };
+      });
 
       const sigasOrdenados =
         [...sigasProcesados].sort((a, b) => {
@@ -168,7 +195,7 @@ function SIGA() {
   }
 
   // Función para obtener el estado del SLA de un SIGA según la fecha máxima de atención
-  function obtenerSLASIGA(horas, estado) {
+  function obtenerSLASIGA(horas, estado, cumpleSLA) {
     if (horas === null) {
       const mensaje = estado === "Cerrado"
         ? "⚪Sin registro de cierre"
@@ -179,11 +206,48 @@ function SIGA() {
             : "⚪No disponible";
       return { texto: mensaje, color: "#6b7280" };
     }
-    if (horas < 0) {
+    if (cumpleSLA === false || horas < 0) {
       return {texto: "⚫Vencido",color: "#dc2626",};}
     if (horas <= 1) {
       return {texto: "🟡Prox. vencer",color: "#eab308",};}
     return {texto: "🟢En tiempo",color: "#16a34a",};
+  }
+
+  function obtenerHorasRestantesActualesSIGA(siga, ahora = ahoraSLA) {
+    if (
+      siga.horas_restantes_sla === null ||
+      siga.horas_restantes_sla === undefined
+    ) {
+      return null;
+    }
+
+    const horasIniciales = Number(siga.horas_restantes_sla);
+    if (!Number.isFinite(horasIniciales)) {
+      return null;
+    }
+
+    const slaCongelado =
+      siga.estado === "Diferido" ||
+      siga.estado === "Cerrado" ||
+      siga.estado === "Restablecimiento";
+    if (slaCongelado || ahora === null) {
+      return horasIniciales;
+    }
+
+    const fechaMaxima = new Date(siga.fecha_maxima_atencion);
+    if (Number.isNaN(fechaMaxima.getTime())) {
+      return horasIniciales;
+    }
+
+    return (fechaMaxima.getTime() - ahora) / (1000 * 60 * 60);
+  }
+
+  function obtenerCumplimientoActualSIGA(siga, horasRestantes) {
+    if (siga.cumple_sla === false || horasRestantes < 0) {
+      return false;
+    }
+
+    return siga.cumple_sla;
   }
 
   function diasRestantesSIGA(siga) {
@@ -290,6 +354,7 @@ function SIGA() {
         await response.json();
 
       setPrioridadesSIGA(data);
+      return data;
 
     } catch (error) {
 
@@ -580,9 +645,15 @@ function SIGA() {
       return;
     }
 
-    const fechaMaxima = calcularFechaMaximaSIGA(
-      formData.fecha_recepcion,
-      prioridadSeleccionada.horas_sla
+    const horasSLA = Number(prioridadSeleccionada.horas_sla);
+    const metricasIniciales = calcularMetricasSIGA(
+      [],
+      horasSLA,
+      formData.fecha_recepcion
+    );
+    const fechaMaxima = calcularFechaMaximaDinamicaSIGA(
+      metricasIniciales.tiempoConsumidoHoras,
+      horasSLA
     );
 
     const nivelCalculado =
@@ -1179,8 +1250,10 @@ function SIGA() {
       .filter((siga) => {
 
         if (filtroDashboard === "Vencidos") {
+          const horasRestantes =
+            obtenerHorasRestantesActualesSIGA(siga);
           return (
-            siga.horas_restantes_sla < 0 &&
+            obtenerCumplimientoActualSIGA(siga, horasRestantes) === false &&
             siga.estado !== "Cerrado" &&
             siga.estado !== "Diferido"
           );
@@ -1190,24 +1263,29 @@ function SIGA() {
           return (
             siga.estado !== "Cerrado" && 
             siga.estado !== "Abierto-Verificación" && 
+            siga.estado !== "Diferido" &&
             siga.tecnicos?.length > 0
           );
         }
 
         if (filtroDashboard === "SIGAs Por vencer") {
+          const horasRestantes =
+            obtenerHorasRestantesActualesSIGA(siga);
           return (
             siga.estado !== "Cerrado" &&
             siga.estado !== "Diferido" &&
-            siga.horas_restantes_sla <= 1 &&
-            siga.horas_restantes_sla > 0
+            horasRestantes <= 1 &&
+            horasRestantes > 0
           );
         }
 
         if (filtroDashboard === "SIGAs Dentro SLA") {
+          const horasRestantes =
+            obtenerHorasRestantesActualesSIGA(siga);
           return (
             siga.estado !== "Cerrado" &&
             siga.estado !== "Diferido" &&
-            siga.horas_restantes_sla > 1
+            horasRestantes > 1
           );
         }
 
@@ -1294,12 +1372,30 @@ function SIGA() {
 
   // Cargar datos iniciales al montar el componente
   useEffect(() => {
-    cargarSigas();
+    async function cargarDatosIniciales() {
+      const prioridades = await cargarPrioridades();
+      await cargarSigas(prioridades || []);
+    }
+
+    cargarDatosIniciales();
     cargarEstadosSIGA();
-    cargarPrioridades();
     cargarGrupos();
     cargarTecnicos();
     cargarTiposServicio();
+  }, []);
+
+  useEffect(() => {
+    const actualizarAhora = () => setAhoraSLA(Date.now());
+    const inicio = setTimeout(actualizarAhora, 0);
+    const intervalo = setInterval(
+      actualizarAhora,
+      15 * 1000
+    );
+
+    return () => {
+      clearTimeout(inicio);
+      clearInterval(intervalo);
+    };
   }, []);
 
   const location = useLocation();
@@ -1519,10 +1615,19 @@ function SIGA() {
 
           <tbody>
             {obtenerSigasFiltrados().map((siga) => {
-              const horasRestantes = siga.horas_restantes_sla;
+              const horasRestantesCalculadas =
+                obtenerHorasRestantesActualesSIGA(siga);
+              const horasRestantes =
+                horasRestantesCalculadas === null
+                  ? null
+                  : Math.max(0, horasRestantesCalculadas);
               const sla = obtenerSLASIGA(
                 horasRestantes,
-                siga.estado
+                siga.estado,
+                obtenerCumplimientoActualSIGA(
+                  siga,
+                  horasRestantesCalculadas
+                )
               );
               return (
               <tr key={siga.id}>

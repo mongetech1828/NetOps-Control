@@ -6,6 +6,8 @@ function Tecnicos() {
 
   const [tecnicos, setTecnicos] = useState([]);
   const [filtroTecnico, setFiltroTecnico] = useState("");
+  const [filtroSubProceso, setFiltroSubProceso] = useState("");
+  const [filtroModalidad, setFiltroModalidad] = useState("");
   const [actualizandoTecnicos, setActualizandoTecnicos] = useState(false);
   const [mostrarDetalleTecnico, setMostrarDetalleTecnico] = useState(false);
   const [tecnicoSeleccionado, setTecnicoSeleccionado] = useState(null);
@@ -254,11 +256,19 @@ function Tecnicos() {
     }
   }
 
-  const tecnicosFiltrados = tecnicos.filter((tecnico) =>
-    (tecnico.nombre || "")
+  const tecnicosFiltrados = tecnicos.filter((tecnico) => {
+    const coincideNombre = (tecnico.nombre || "")
       .toLowerCase()
-      .includes(filtroTecnico.trim().toLowerCase())
-  );
+      .includes(filtroTecnico.trim().toLowerCase());
+    const coincideSubProceso = !filtroSubProceso ||
+      (tecnico.zona || "") === filtroSubProceso;
+    const coincideModalidad = !filtroModalidad ||
+      (tecnico.especialidad || "") === filtroModalidad;
+
+    return coincideNombre &&
+      coincideSubProceso &&
+      coincideModalidad;
+  });
 
   return (
 
@@ -315,7 +325,9 @@ function Tecnicos() {
             display: "flex",
             gap: "10px",
             marginTop: "20px",
-            marginBottom: "15px"
+            marginBottom: "15px",
+            alignItems: "center",
+            flexWrap: "wrap"
           }}
         >
           <input
@@ -330,6 +342,35 @@ function Tecnicos() {
               flex: 1
             }}
           />
+          <select
+            value={filtroSubProceso}
+            onChange={(e) => setFiltroSubProceso(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              flex: 1,
+              minWidth: "180px"
+            }}
+          >
+            <option value="">Todos los sub-procesos</option>
+            <option value="Entrega">Entrega</option>
+            <option value="Aseguramiento">Aseguramiento</option>
+          </select>
+          <select
+            value={filtroModalidad}
+            onChange={(e) => setFiltroModalidad(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              minWidth: "160px"
+            }}
+          >
+            <option value="">Todas las modalidades</option>
+            <option value="ICE">ICE</option>
+            <option value="DISA">DISA</option>
+          </select>
           <button
             type="button"
             onClick={actualizarTecnicos}
@@ -400,7 +441,7 @@ function Tecnicos() {
             {tecnicosFiltrados.length === 0 && (
               <tr>
                 <td colSpan="6" style={{ textAlign: "center", padding: "16px" }}>
-                  No se encontraron técnicos con ese nombre.
+                  No se encontraron técnicos con los filtros seleccionados.
                 </td>
               </tr>
             )}
@@ -461,7 +502,7 @@ function Tecnicos() {
 
                   <div>
 
-                    <strong>Zona</strong>
+                    <strong>Sub-Proceso</strong>
 
                     <br />
 
@@ -781,14 +822,13 @@ function Tecnicos() {
                   }
                 />
 
-                <input
+                <select
                   style={{
                     width: "90%",
                     padding: "10px",
                     borderRadius: "6px",
                     border: "1px solid #d1d5db"
                   }}
-                  placeholder="Zona"
                   value={
                     formDataTecnico.zona
                   }
@@ -798,7 +838,17 @@ function Tecnicos() {
                       zona: e.target.value
                     })
                   }
-                />
+                >
+                  <option value="">
+                    Seleccionar sub-proceso
+                  </option>
+                  <option value="Entrega">
+                    Entrega
+                  </option>
+                  <option value="Aseguramiento">
+                    Aseguramiento
+                  </option>
+                </select>
 
               </div>
 

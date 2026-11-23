@@ -116,6 +116,29 @@ function Ordenes() {
     return `${anio}-${mes}-${dia}T${horas}:${minutos}`;
   }
 
+  function formatearFechaCompromiso(fechaTexto) {
+    if (!fechaTexto) {
+      return "-";
+    }
+
+    const fecha = new Date(fechaTexto);
+    if (Number.isNaN(fecha.getTime())) {
+      return "-";
+    }
+
+    return fecha.toLocaleString(
+      "es-CR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }
+    );
+  }
+
   function crearFechaLocal(fecha) {
     const fechaISO = fecha instanceof Date
       ? formatearFechaDB(fecha)
@@ -1246,7 +1269,10 @@ function Ordenes() {
           orden.prioridad_calculada,
         Puntaje:
           orden.puntaje_prioridad,
-        Reingresos: orden.cantidad_reingresos
+        "F. Compromiso":
+          orden.fecha_compromiso_cliente
+            ? formatearFechaCompromiso(orden.fecha_compromiso_cliente)
+            : "-"
       })
     );
 
@@ -2228,9 +2254,9 @@ function Ordenes() {
               <th>Servicio</th>
               <th>Transporte</th>
               <th>Estado</th>
-              <th>Cumplimiento</th>
+              <th>Cumpl.</th>
               <th>Prioridad</th>
-              <th>Reing.</th>
+              <th>F. Compromiso</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -2260,7 +2286,11 @@ function Ordenes() {
                   >
                     {prioridad.texto}
                   </td>
-                  <td>{orden.cantidad_reingresos}</td>
+                  <td>
+                    {formatearFechaCompromiso(
+                      orden.fecha_compromiso_cliente
+                    )}
+                  </td>
                   <td>
                     <div style={{
                       display: "flex",

@@ -1,14 +1,15 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
 
-import Dashboard from "../pages/Dashboard";
-import Ordenes from "../pages/Ordenes";
-import SIGA from "../pages/SIGA";
-import Tecnicos from "../pages/Tecnicos";
-import ReporteAgentes from "../pages/ReporteAgentes";
-import Reportes from "../pages/Reportes";
-import Administracion from "../pages/Administracion";
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Ordenes = lazy(() => import("../pages/Ordenes"));
+const SIGA = lazy(() => import("../pages/SIGA"));
+const Tecnicos = lazy(() => import("../pages/Tecnicos"));
+const ReporteAgentes = lazy(() => import("../pages/ReporteAgentes"));
+const Reportes = lazy(() => import("../pages/Reportes"));
+const Administracion = lazy(() => import("../pages/Administracion"));
 
 function AppRoutes({ perfil, onLogout }) {
 
@@ -17,46 +18,48 @@ function AppRoutes({ perfil, onLogout }) {
       perfil={perfil}
       onLogout={onLogout}
     >
-      <Routes>
+      <Suspense fallback={<div role="status">Cargando página...</div>}>
+        <Routes>
 
-        <Route
-          path="/"
-          element={<Dashboard
-            perfil={perfil}
-          />}
-        />
+          <Route
+            path="/"
+            element={<Dashboard
+              perfil={perfil}
+            />}
+          />
 
-        <Route
-          path="/ordenes"
-          element={<Ordenes />}
-        />
+          <Route
+            path="/ordenes"
+            element={<Ordenes />}
+          />
 
-        <Route
-          path="/siga"
-          element={<SIGA />}
-        />
+          <Route
+            path="/siga"
+            element={<SIGA />}
+          />
 
-        <Route
-          path="/tecnicos"
-          element={<Tecnicos />}
-        />
+          <Route
+            path="/tecnicos"
+            element={<Tecnicos />}
+          />
 
-        <Route
-          path="/reporte-agentes"
-          element={<ReporteAgentes />}
-        />
+          <Route
+            path="/reporte-agentes"
+            element={<ReporteAgentes />}
+          />
 
-        <Route
-          path="/reportes"
-          element={<Reportes />}
-        />
+          <Route
+            path="/reportes"
+            element={<Reportes />}
+          />
 
-        <Route
-          path="/administracion"
-          element={<Administracion />}
-        />
+          <Route
+            path="/administracion"
+            element={<Administracion />}
+          />
 
-      </Routes>
+        </Routes>
+      </Suspense>
     </MainLayout>
   );
 }

@@ -71,7 +71,8 @@ function parsearFechaMovimiento(fecha) {
 export function calcularMetricasSIGA(
   historialSIGA,
   horasSLA,
-  fechaRecepcion
+  fechaRecepcion,
+  ahora = new Date()
 ) {
   const movimientos = [...(historialSIGA || [])]
     .sort(
@@ -123,7 +124,6 @@ export function calcularMetricasSIGA(
     }
   });
 
-  const ahora = new Date();
   if (!finalizado && inicioActivo) {
     tiempoConsumido += ahora - inicioActivo;
   }
@@ -141,6 +141,74 @@ export function calcularMetricasSIGA(
     tiempoTotalHoras,
     cumpleSLA: tiempoConsumidoHoras <= horasSLA
   };
+}
+
+export function calcularDatosSLAActualSIGA(
+  siga,
+  movimientos = [],
+  horasSLA,
+  ahora = new Date()
+) {
+  const horasSLAValidas = Number(horasSLA);
+  const fechaRecepcion = siga.fecha_recepcion
+    ? new Date(siga.fecha_recepcion)
+    : null;
+  const fechaRecepcionValida =
+    fechaRecepcion && Number.isFinite(fechaRecepcion.getTime());
+  const metricas = Number.isFinite(horasSLAValidas) && fechaRecepcionValida
+    ? calcularMetricasSIGA(
+      movimientos,
+      horasSLAValidas,
+      fechaRecepcion,
+      ahora
+    )
+    : null;
+  const horasRestantes = metricas
+    ? Math.max(0, horasSLAValidas - metricas.tiempoConsumidoHoras)
+    : calcularHorasRestantesSIGA(
+      siga.fecha_maxima_atencion,
+      movimientos,
+      siga.estado,
+      ahora
+    );
+  const fechaMaximaDinamica = metricas
+    ? calcularFechaMaximaDinamicaSIGA(
+      metricas.tiempoConsumidoHoras,
+      horasSLAValidas,
+      ahora.getTime()
+    )
+    : null;
+
+  return {
+    metricas,
+    horasRestantes,
+    fechaMaximaDinamica,
+    cumpleSLA: metricas
+      ? metricas.cumpleSLA
+      : horasRestantes === null
+        ? null
+        : horasRestantes >= 0
+  };
+}
+
+export function clasificarSLAActualSIGA(siga, horasRestantes, cumpleSLA) {
+  if (
+    siga.estado === "Cerrado" ||
+    siga.estado === "Diferido" ||
+    horasRestantes === null ||
+    horasRestantes === undefined ||
+    !Number.isFinite(Number(horasRestantes))
+  ) {
+    return null;
+  }
+
+  if (cumpleSLA === false || horasRestantes <= 0) {
+    return "vencido";
+  }
+  if (horasRestantes <= 1) {
+    return "por-vencer";
+  }
+  return "dentro-sla";
 }
 
 export function calcularFechaMaximaDinamicaSIGA(

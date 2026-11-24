@@ -1,16 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import HistorialSIGAModal from "../components/HistorialSIGAModal";
 import * as XLSX from "xlsx";
 import {
+  calcularDatosSLAActualSIGA,
   calcularFechaMaximaDinamicaSIGA,
-  calcularHorasRestantesSIGA,
   calcularMetricasSIGA,
+  clasificarSLAActualSIGA,
   cargarMovimientosSIGA
 } from "../utils/sigaSla";
 
+async function obtenerLista(url) {
+  const respuesta = await fetch(url);
+  if (!respuesta.ok) {
+    throw new Error(`No se pudo consultar ${url} (${respuesta.status}).`);
+  }
+
+  const datos = await respuesta.json();
+  if (!Array.isArray(datos)) {
+    throw new Error(`La respuesta de ${url} no tiene un formato válido.`);
+  }
+
+  return datos;
+}
+
+async function cargarCatalogo(url, nombreCatalogo) {
+  try {
+    return await obtenerLista(url);
+  } catch (error) {
+    console.error(`ERROR CARGANDO ${nombreCatalogo}:`, error);
+    return null;
+  }
+}
+
+function obtenerPrioridadEstadoSIGA(estado) {
+  switch (estado) {
+    case "Abierto":
+      return 1;
+    case "En Campo":
+      return 2;
+    case "Restablecimiento":
+      return 3;
+    case "Diferido":
+      return 4;
+    case "Abierto-Verificación":
+      return 5;
+    case "Cerrado":
+      return 6;
+    default:
+      return 99;
+  }
+}
+
 function SIGA() {
 
+  const location = useLocation();
   const [sigas, setSigas] = useState([]);
   const [ahoraSLA, setAhoraSLA] = useState(null);
   const [actualizandoSigas, setActualizandoSigas] = useState(false);
@@ -19,7 +63,9 @@ function SIGA() {
   const [filtroEvento, setFiltroEvento] = useState("");
   const [estadosSIGA, setEstadosSIGA] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroDashboard, setFiltroDashboard] = useState("");
+  const [filtroDashboard, setFiltroDashboard] = useState(
+    () => location.state?.filtroDashboard || ""
+  );
   const [prioridadesSIGA, setPrioridadesSIGA] = useState([]);
   const [gruposGestion, setGruposGestion] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
@@ -58,7 +104,7 @@ function SIGA() {
   }
 
   // Función para cargar los SIGAs desde la base de datos
-  async function cargarSigas(prioridadesDisponibles = prioridadesSIGA) {
+  const cargarSigas = useCallback(async (prioridadesDisponibles) => {
     try {
 
       const response =
@@ -109,36 +155,23 @@ function SIGA() {
         }
       );
 
+      const ahora = new Date();
       const sigasProcesados = data.map((siga) => {
         const prioridad = prioridadesDisponibles.find(
           (item) => Number(item.id) === Number(siga.prioridad_id)
         );
-        const horasSLA = Number(prioridad?.horas_sla);
         const movimientosSiga =
           movimientosPorSiga.get(Number(siga.id)) || [];
-        const fechaRecepcionValida =
-          Number.isFinite(new Date(siga.fecha_recepcion).getTime());
-        const metricas = Number.isFinite(horasSLA) &&
-          fechaRecepcionValida
-          ? calcularMetricasSIGA(
-              movimientosSiga,
-              horasSLA,
-              siga.fecha_recepcion
-            )
-          : null;
-        const horasRestantes = metricas
-          ? Math.max(0, horasSLA - metricas.tiempoConsumidoHoras)
-          : calcularHorasRestantesSIGA(
-              siga.fecha_maxima_atencion,
-              movimientosSiga,
-              siga.estado
-            );
-        const fechaMaximaDinamica = metricas
-          ? calcularFechaMaximaDinamicaSIGA(
-              metricas.tiempoConsumidoHoras,
-              horasSLA
-            )
-          : null;
+        const {
+          horasRestantes,
+          fechaMaximaDinamica,
+          cumpleSLA
+        } = calcularDatosSLAActualSIGA(
+          siga,
+          movimientosSiga,
+          prioridad?.horas_sla,
+          ahora
+        );
 
         return {
           ...siga,
@@ -146,11 +179,7 @@ function SIGA() {
           fecha_maxima_atencion:
             fechaMaximaDinamica || siga.fecha_maxima_atencion,
           horas_restantes_sla: horasRestantes,
-          cumple_sla: metricas
-            ? metricas.cumpleSLA
-            : horasRestantes === null
-              ? null
-              : horasRestantes >= 0
+          cumple_sla: cumpleSLA
         };
       });
 
@@ -181,14 +210,14 @@ function SIGA() {
         error
       );
     }
-  }
+  }, []);
 
   async function actualizarSigas() {
     if (actualizandoSigas) return;
 
     setActualizandoSigas(true);
     try {
-      await cargarSigas();
+      await cargarSigas(prioridadesSIGA);
     } finally {
       setActualizandoSigas(false);
     }
@@ -250,31 +279,6 @@ function SIGA() {
     return siga.cumple_sla;
   }
 
-  function diasRestantesSIGA(siga) {
-
-    const fechaObjetivo =
-      siga.fecha_compromiso_cliente ||
-      siga.fecha_maxima_atencion;
-
-    if (!fechaObjetivo) {
-      return null;
-    }
-
-    const fecha = new Date(fechaObjetivo);
-
-    fecha.setHours(0, 0, 0, 0);
-
-    const hoy = new Date();
-
-    hoy.setHours(0, 0, 0, 0);
-
-    return Math.round(
-      (fecha - hoy) /
-      (1000 * 60 * 60 * 24)
-    );
-
-  }
-
   function formatearFechaHora(fechaTexto) {
     if (!fechaTexto) {
       return "-";
@@ -321,109 +325,6 @@ function SIGA() {
     ).padStart(2, "0");
 
     return `${anio}-${mes}-${dia}T${horas}:${minutos}`;
-  }
-
-  // Funciones para cargar datos de estado, prioridad, grupo de gestión y tipo de servicio desde la base de datos
-  async function cargarEstadosSIGA() {
-    try {
-
-      const response =
-        await fetch("/api/estados-siga");
-
-      const data =
-        await response.json();
-
-      setEstadosSIGA(data);
-
-    } catch (error) {
-
-      console.error(
-        "ERROR CARGANDO ESTADOS SIGA:",
-        error
-      );
-    }
-  }
-
-  async function cargarPrioridades() {
-    try {
-
-      const response =
-        await fetch("/api/prioridades-siga");
-
-      const data =
-        await response.json();
-
-      setPrioridadesSIGA(data);
-      return data;
-
-    } catch (error) {
-
-      console.error(
-        "ERROR CARGANDO PRIORIDADES SIGA:",
-        error
-      );
-    }
-  }
-
-  async function cargarGrupos() {
-    try {
-
-      const response =
-        await fetch("/api/grupos-gestion");
-
-      const data =
-        await response.json();
-
-      setGruposGestion(data);
-
-    } catch (error) {
-
-      console.error(
-        "ERROR CARGANDO GRUPOS:",
-        error
-      );
-    }
-  }
-
-  async function cargarTiposServicio() {
-    try {
-
-      const response =
-        await fetch("/api/tipo-servicio");
-
-      const data =
-        await response.json();
-
-      setTiposServicio(data);
-
-    } catch (error) {
-
-      console.error(
-        "ERROR CARGANDO TIPOS DE SERVICIO:",
-        error
-      );
-    }
-  }
-
-  // Función para cargar los técnicos desde la base de datos
-  async function cargarTecnicos() {
-    try {
-
-      const response =
-        await fetch("/api/tecnicos");
-
-      const data =
-        await response.json();
-
-      setTecnicos(data);
-
-    } catch (error) {
-
-      console.error(
-        "ERROR CARGANDO TECNICOS:",
-        error
-      );
-    }
   }
 
   // Función para registrar los cambios de técnicos en el historial del SIGA
@@ -1008,7 +909,6 @@ function SIGA() {
             .replace(" ", "T"),
           descripcion: formData.descripcion,
           observaciones: formData.observaciones,
-          evento_agil: formData.evento_agil,
           fecha_compromiso_cliente: formData.fecha_compromiso_cliente || null
         }),
       });
@@ -1066,15 +966,6 @@ function SIGA() {
 
       // Registrar los técnicos asignados al nuevo SIGA
       if (tecnicosSeleccionados.length > 0) {
-        const asignaciones =
-          tecnicosSeleccionados.map(
-            tecnicoId => ({
-              siga_id: data.id,
-              tecnico_id: tecnicoId,
-              activo: true
-            })
-          );
-
         const responseAsignacion = await fetch(
           `/api/siga-tecnicos/${data.id}`,
           {
@@ -1118,7 +1009,7 @@ function SIGA() {
       }
     }
 
-    await cargarSigas();
+    await cargarSigas(prioridadesSIGA);
     cerrarFormularioSIGA();
   }
 
@@ -1253,9 +1144,11 @@ function SIGA() {
           const horasRestantes =
             obtenerHorasRestantesActualesSIGA(siga);
           return (
-            obtenerCumplimientoActualSIGA(siga, horasRestantes) === false &&
-            siga.estado !== "Cerrado" &&
-            siga.estado !== "Diferido"
+            clasificarSLAActualSIGA(
+              siga,
+              horasRestantes,
+              siga.cumple_sla
+            ) === "vencido"
           );
         }
 
@@ -1272,10 +1165,11 @@ function SIGA() {
           const horasRestantes =
             obtenerHorasRestantesActualesSIGA(siga);
           return (
-            siga.estado !== "Cerrado" &&
-            siga.estado !== "Diferido" &&
-            horasRestantes <= 1 &&
-            horasRestantes > 0
+            clasificarSLAActualSIGA(
+              siga,
+              horasRestantes,
+              siga.cumple_sla
+            ) === "por-vencer"
           );
         }
 
@@ -1283,39 +1177,16 @@ function SIGA() {
           const horasRestantes =
             obtenerHorasRestantesActualesSIGA(siga);
           return (
-            siga.estado !== "Cerrado" &&
-            siga.estado !== "Diferido" &&
-            horasRestantes > 1
+            clasificarSLAActualSIGA(
+              siga,
+              horasRestantes,
+              siga.cumple_sla
+            ) === "dentro-sla"
           );
         }
 
         return true;
       });
-  }
-
-  function obtenerPrioridadEstadoSIGA(estado) {
-    switch (estado) {
-      case "Abierto":
-        return 1;
-
-      case "En Campo":
-        return 2;
-
-      case "Restablecimiento":
-        return 3;
-
-      case "Diferido":
-        return 4;
-
-      case "Abierto-Verificación":
-        return 5;
-
-      case "Cerrado":
-        return 6;
-
-      default:
-        return 99;
-    }
   }
 
   // Función para exportar los SIGAs a un archivo Excel
@@ -1373,19 +1244,42 @@ function SIGA() {
     );
   }
 
-  // Cargar datos iniciales al montar el componente
   useEffect(() => {
+    let cancelado = false;
+
     async function cargarDatosIniciales() {
-      const prioridades = await cargarPrioridades();
+      const [
+        prioridades,
+        estados,
+        grupos,
+        tecnicosCatalogo,
+        tiposServicioCatalogo
+      ] = await Promise.all([
+        cargarCatalogo("/api/prioridades-siga", "PRIORIDADES SIGA"),
+        cargarCatalogo("/api/estados-siga", "ESTADOS SIGA"),
+        cargarCatalogo("/api/grupos-gestion", "GRUPOS DE GESTIÓN"),
+        cargarCatalogo("/api/tecnicos", "TÉCNICOS"),
+        cargarCatalogo("/api/tipo-servicio", "TIPOS DE SERVICIO")
+      ]);
+
+      if (cancelado) {
+        return;
+      }
+
+      if (prioridades) setPrioridadesSIGA(prioridades);
+      if (estados) setEstadosSIGA(estados);
+      if (grupos) setGruposGestion(grupos);
+      if (tecnicosCatalogo) setTecnicos(tecnicosCatalogo);
+      if (tiposServicioCatalogo) setTiposServicio(tiposServicioCatalogo);
       await cargarSigas(prioridades || []);
     }
 
     cargarDatosIniciales();
-    cargarEstadosSIGA();
-    cargarGrupos();
-    cargarTecnicos();
-    cargarTiposServicio();
-  }, []);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [cargarSigas]);
 
   useEffect(() => {
     const actualizarAhora = () => setAhoraSLA(Date.now());
@@ -1400,18 +1294,6 @@ function SIGA() {
       clearInterval(intervalo);
     };
   }, []);
-
-  const location = useLocation();
-
-  useEffect(() => {
-    if (
-      location.state?.filtroDashboard
-    ) {
-      setFiltroDashboard(
-        location.state.filtroDashboard
-      );
-    }
-  }, [location]);
 
   // Renderizado del componente
   return (

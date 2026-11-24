@@ -1,9 +1,85 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  calcularHorasRestantesSIGA,
+  calcularDatosSLAActualSIGA,
+  clasificarSLAActualSIGA,
   cargarMovimientosSIGA
 } from "../utils/sigaSla";
+
+async function cargarSigasDashboard(onKpisLoaded) {
+  try {
+    const [response, responsePrioridades] = await Promise.all([
+      fetch("/api/sigas"),
+      fetch("/api/prioridades-siga")
+    ]);
+
+    if (!response.ok || !responsePrioridades.ok) {
+      throw new Error("No se pudieron cargar los SIGAs o las prioridades.");
+    }
+
+    const [sigas, prioridades] = await Promise.all([
+      response.json(),
+      responsePrioridades.json()
+    ]);
+    const { data: movimientos, error: errorMovimientos } =
+      await cargarMovimientosSIGA();
+
+    if (errorMovimientos) {
+      throw new Error("No se pudieron cargar los movimientos de los SIGAs.");
+    }
+
+    const movimientosPorSiga = new Map();
+    movimientos.forEach((movimiento) => {
+      const lista = movimientosPorSiga.get(Number(movimiento.siga_id)) || [];
+      lista.push(movimiento);
+      movimientosPorSiga.set(Number(movimiento.siga_id), lista);
+    });
+
+    let dentroSLA = 0;
+    let porVencer = 0;
+    let vencidos = 0;
+    let enCampo = 0;
+    const ahora = new Date();
+
+    sigas.forEach((siga) => {
+      const prioridad = prioridades.find(
+        (item) => Number(item.id) === Number(siga.prioridad_id)
+      );
+      const { horasRestantes, cumpleSLA } = calcularDatosSLAActualSIGA(
+        siga,
+        movimientosPorSiga.get(Number(siga.id)) || [],
+        prioridad?.horas_sla,
+        ahora
+      );
+      const categoriaSLA = clasificarSLAActualSIGA(
+        siga,
+        horasRestantes,
+        cumpleSLA
+      );
+
+      if (
+        siga.estado !== "Cerrado" &&
+        siga.estado !== "Abierto-Verificación" &&
+        siga.estado !== "Diferido" &&
+        siga.tecnicos?.length > 0
+      ) {
+        enCampo += 1;
+      }
+
+      if (categoriaSLA === "dentro-sla") {
+        dentroSLA += 1;
+      } else if (categoriaSLA === "por-vencer") {
+        porVencer += 1;
+      } else if (categoriaSLA === "vencido") {
+        vencidos += 1;
+      }
+    });
+
+    onKpisLoaded({ dentroSLA, porVencer, vencidos, enCampo });
+  } catch (error) {
+    console.error("ERROR KPI SIGA:", error);
+  }
+}
 
 function Dashboard({perfil}) {
 
@@ -14,22 +90,13 @@ function Dashboard({perfil}) {
   const [totalReingresadas, setTotalReingresadas] = useState (0);
   const [vencenHoy, setVencenHoy] = useState(0);
   const [enCampo, setEnCampo] = useState(0);
-  const [mostrarVencenHoy, setMostrarVencenHoy] = useState(false);
-  const [ordenesVencenHoy, setOrdenesVencenHoy] = useState([]);
-  const [mostrarReingresadas, setMostrarReingresadas] = useState(false);
-  const [ordenesReingresadas, setOrdenesReingresadas] = useState([]);
-  const [mostrarEnCampo, setMostrarEnCampo] = useState(false);
-  const [ordenesEnCampo, setOrdenesEnCampo] = useState([]);
-  const [mostrarPorVencer, setMostrarPorVencer] = useState(false);
-  const [ordenesPorVencer, setOrdenesPorVencer] = useState([]);
-  const [mostrarVencidas, setMostrarVencidas] = useState(false);
-  const [ordenesVencidas, setOrdenesVencidas] = useState([]);
   const [sigasDentroSLA, setSigasDentroSLA] = useState(0);
   const [sigasEnCampo, setSigasEnCampo] = useState(0);
   const [sigasPorVencer, setSigasPorVencer] = useState(0);
   const [sigasVencidos, setSigasVencidos] = useState(0);
   const [busquedaGlobal, setBusquedaGlobal] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
+  const solicitudBusqueda = useRef(0);
 
   useEffect(() => {
 
@@ -125,441 +192,14 @@ function Dashboard({perfil}) {
     }
 
     cargarKpis();
-    cargarSigasDashboard();
+    cargarSigasDashboard(({ dentroSLA, porVencer, vencidos, enCampo }) => {
+      setSigasDentroSLA(dentroSLA);
+      setSigasPorVencer(porVencer);
+      setSigasVencidos(vencidos);
+      setSigasEnCampo(enCampo);
+    });
 
   }, []);
-
-  function formatearFechaDB(fecha) {
-
-    const anio = fecha.getFullYear();
-
-    const mes = String(
-      fecha.getMonth() + 1
-    ).padStart(2, "0");
-
-    const dia = String(
-      fecha.getDate()
-    ).padStart(2, "0");
-
-    return `${anio}-${mes}-${dia}`;
-  }
-
-  // Mostrar Ordenes Vencen Hoy
-  async function mostrarOrdenesHoy() {
-
-    try {
-
-      const response =
-        await fetch("/api/ordenes");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const ordenes =
-        await response.json();
-
-      const hoy = new Date();
-
-      hoy.setHours(
-        0, 0, 0, 0
-      );
-
-      const filtradas =
-        ordenes.filter(
-          orden => {
-
-            if (
-              !orden.fecha_maxima_atencion
-            ) {
-              return false;
-            }
-
-            const fecha =
-              new Date(
-                orden.fecha_maxima_atencion
-              );
-
-            fecha.setHours(
-              0, 0, 0, 0
-            );
-
-            return (
-              fecha.getTime() ===
-              hoy.getTime()
-            );
-
-          }
-        );
-
-      setOrdenesVencenHoy(
-        filtradas
-      );
-
-      setMostrarVencenHoy(
-        true
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  //Mostrar Ordenes reingresadas
-  async function mostrarReingresos() {
-
-    try {
-
-      const response =
-        await fetch("/api/ordenes");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const ordenes =
-        await response.json();
-
-      const filtradas =
-        ordenes.filter(
-          orden =>
-            (
-              orden.cantidad_reingresos || 0
-            ) > 0
-        );
-
-      setOrdenesReingresadas(
-        filtradas
-      );
-
-      setMostrarReingresadas(
-        true
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  //Mostrar Ordenes en campo
-  async function mostrarOrdenesEnCampo() {
-
-    try {
-
-      const response =
-        await fetch("/api/ordenes");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const ordenes =
-        await response.json();
-
-      const filtradas =
-        ordenes.filter(
-          orden =>
-            Number(
-              orden.estado_id
-            ) === 7
-        );
-
-      setOrdenesEnCampo(
-        filtradas
-      );
-
-      setMostrarEnCampo(
-        true
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  //Mostrar Ordenes Por Vencer
-  async function mostrarOrdenesPorVencer() {
-
-    try {
-
-      const response =
-        await fetch("/api/ordenes");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const ordenes =
-        await response.json();
-
-      const filtradas =
-        ordenes.filter(
-          orden => {
-
-            const dias =
-              diasRestantes(
-                orden.fecha_maxima_atencion
-              );
-
-            return (
-              dias >= 1 &&
-              dias <= 2
-            );
-
-          }
-        );
-
-      setOrdenesPorVencer(
-        filtradas
-      );
-
-      setMostrarPorVencer(
-        true
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  //Mostrar Ordenes Vencidas
-  async function mostrarOrdenesVencidas() {
-
-    try {
-
-      const response =
-        await fetch("/api/ordenes");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const ordenes =
-        await response.json();
-
-      const filtradas =
-        ordenes.filter(
-          orden =>
-            diasRestantes(
-              orden.fecha_maxima_atencion
-            ) < 0
-        );
-
-      setOrdenesVencidas(
-        filtradas
-      );
-
-      setMostrarVencidas(
-        true
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  function diasRestantes(fechaMaxima) {
-    const hoy = new Date();
-    const fecha = new Date(fechaMaxima);
-
-    const diffTime = fecha - hoy;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  /*function diasRestantesSIGA(siga) {
-
-    const fechaObjetivo =
-      siga.fecha_compromiso_cliente ||
-      siga.fecha_maxima_atencion;
-
-    if (!fechaObjetivo) {
-      return null;
-    }
-
-    const fecha = new Date(fechaObjetivo);
-
-    fecha.setHours(0, 0, 0, 0);
-
-    const hoy = new Date();
-
-    hoy.setHours(0, 0, 0, 0);
-
-    return Math.round(
-      (fecha - hoy) /
-      (1000 * 60 * 60 * 24)
-    );
-  }*/
-
-  async function cargarSigasDashboard() {
-
-    try {
-
-      const response =
-        await fetch("/api/sigas");
-
-      if (!response.ok) {
-
-        console.error(
-          "ERROR CARGANDO SIGAS"
-        );
-
-        return;
-      }
-
-      const sigas =
-        await response.json();
-
-      const {
-        data: movimientos,
-        error: errorMovimientos
-      } = await cargarMovimientosSIGA();
-
-      if (errorMovimientos) {
-
-        console.error(
-          "ERROR CARGANDO MOVIMIENTOS SLA:",
-          errorMovimientos
-        );
-
-        return;
-      }
-
-      const movimientosPorSiga =
-        new Map();
-
-      movimientos.forEach(
-        movimiento => {
-
-          const lista =
-            movimientosPorSiga.get(
-              Number(movimiento.siga_id)
-            ) || [];
-
-          lista.push(
-            movimiento
-          );
-
-          movimientosPorSiga.set(
-            Number(movimiento.siga_id),
-            lista
-          );
-
-        }
-      );
-
-      let dentroSLA = 0;
-      let porVencer = 0;
-      let vencidos = 0;
-      let enCampo = 0;
-
-      sigas.forEach(
-        siga => {
-
-          const horasRestantes =
-            calcularHorasRestantesSIGA(
-              siga.fecha_maxima_atencion,
-              movimientosPorSiga.get(
-                Number(siga.id)
-              ) || [],
-              siga.estado
-            );
-
-          // En Campo
-          if (
-            siga.estado !== "Cerrado" &&
-            siga.estado !== "Abierto-Verificación" &&
-            siga.estado !== "Diferido" &&
-            siga.tecnicos?.length > 0
-          ) {
-            enCampo++;
-          }
-
-          // Diferidos no cuentan
-          if (
-            siga.estado === "Diferido"
-          ) {
-            return;
-          }
-
-          // Cerrados tampoco
-          if (
-            siga.estado === "Cerrado"
-          ) {
-            return;
-          }
-
-          if (
-            horasRestantes === null ||
-            horasRestantes === undefined
-          ) {
-            return;
-          }
-
-          if (
-            horasRestantes > 1
-          ) {
-
-            dentroSLA++;
-
-          }
-          else if (
-            horasRestantes > 0 &&
-            horasRestantes <= 1
-          ) {
-
-            porVencer++;
-
-          }
-          else {
-
-            vencidos++;
-
-          }
-
-        }
-      );
-
-      setSigasDentroSLA(
-        dentroSLA
-      );
-
-      setSigasPorVencer(
-        porVencer
-      );
-
-      setSigasVencidos(
-        vencidos
-      );
-
-      setSigasEnCampo(
-        enCampo
-      );
-
-    } catch (error) {
-
-      console.error(
-        "ERROR KPI SIGA:",
-        error
-      );
-
-    }
-
-  }
 
   const cardStyle = {
     backgroundColor: "#ffffff",
@@ -573,9 +213,10 @@ function Dashboard({perfil}) {
 
   const navigate = useNavigate();
 
-  async function buscarGlobal() {
+  async function buscarGlobal(busqueda) {
+    const solicitud = ++solicitudBusqueda.current;
 
-    if (busquedaGlobal.trim().length < 3) {
+    if (busqueda.trim().length < 3) {
 
       setResultadosBusqueda([]);
 
@@ -585,7 +226,7 @@ function Dashboard({perfil}) {
     try {
 
       const texto =
-        busquedaGlobal
+        busqueda
           .trim()
           .toLowerCase();
 
@@ -659,8 +300,11 @@ function Dashboard({perfil}) {
               .includes(texto)
         );
 
-      setResultadosBusqueda([
+      if (solicitud !== solicitudBusqueda.current) {
+        return;
+      }
 
+      setResultadosBusqueda([
         ...ordenesFiltradas.map(
           orden => ({
             tipo: "ORDEN",
@@ -697,18 +341,16 @@ function Dashboard({perfil}) {
 
     } catch (error) {
 
-      console.error(
-        "ERROR EN BÚSQUEDA GLOBAL:",
-        error
-      );
+      if (solicitud === solicitudBusqueda.current) {
+        console.error(
+          "ERROR EN BÚSQUEDA GLOBAL:",
+          error
+        );
+      }
 
     }
 
   }
-
-  useEffect(() => {
-    buscarGlobal();
-  }, [busquedaGlobal]);
 
   return (
     <div className="dashboard-page">
@@ -728,11 +370,11 @@ function Dashboard({perfil}) {
           type="text"
           placeholder="🔍 Buscar OST, SIGA, línea o cliente..."
           value={busquedaGlobal}
-          onChange={(e) =>
-            setBusquedaGlobal(
-              e.target.value
-            )
-          }
+          onChange={(e) => {
+            const busqueda = e.target.value;
+            setBusquedaGlobal(busqueda);
+            buscarGlobal(busqueda);
+          }}
         />
       </div>
 
@@ -1248,229 +890,6 @@ function Dashboard({perfil}) {
           >{sigasVencidos}</h1>
         </div>
       </div>
-
-      {
-        mostrarVencenHoy && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-
-              <h3>
-                Órdenes que vencen hoy
-              </h3>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>OST</th>
-                    <th>Cliente</th>
-                    <th>Fecha Máxima</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {ordenesVencenHoy.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>
-                        {orden.numero_ost}
-                      </td>
-                      <td>
-                        {orden.cliente}
-                      </td>
-                      <td>
-                        {new Date(
-                          orden.fecha_maxima_atencion
-                        ).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <button
-                onClick={() =>
-                  setMostrarVencenHoy(false)
-                }
-              >
-                  Cerrar
-              </button>
-
-            </div>
-          </div>
-        )
-      }
-
-      {
-        mostrarReingresadas && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-
-              <h3>
-                Órdenes Reingresadas
-              </h3>
-
-              <table>
-
-                <thead>
-                  <tr>
-                    <th>OST</th>
-                    <th>Cliente</th>
-                    <th>Reingresos</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {ordenesReingresadas.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>{orden.numero_ost}</td>
-                      <td>{orden.cliente}</td>
-                      <td>{orden.cantidad_reingresos}</td>
-                    </tr>
-                  ))}
-                </tbody>
-
-              </table>
-
-              <button
-                onClick={() =>
-                  setMostrarReingresadas(false)
-                }
-              >
-                Cerrar
-              </button>
-
-            </div>
-          </div>
-        )
-      }
-
-      {
-        mostrarEnCampo && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-
-              <h3>
-                Órdenes En Campo
-              </h3>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>OST</th>
-                    <th>Cliente</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {ordenesEnCampo.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>{orden.numero_ost}</td>
-                      <td>{orden.cliente}</td>
-                      <td>En Campo</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <button
-                onClick={() =>
-                  setMostrarEnCampo(false)
-                }
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        mostrarPorVencer && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h3>Órdenes Por Vencer</h3>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>OST</th>
-                    <th>Cliente</th>
-                    <th>Días</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {ordenesPorVencer.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>{orden.numero_ost}</td>
-                      <td>{orden.cliente}</td>
-                      <td>
-                        {
-                          diasRestantes(
-                            orden.fecha_maxima_atencion
-                          )
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <button
-                onClick={() =>
-                  setMostrarPorVencer(false)
-                }
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        mostrarVencidas && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h3>Órdenes Vencidas</h3>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>OST</th>
-                    <th>Cliente</th>
-                    <th>Días Vencida</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {ordenesVencidas.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>{orden.numero_ost}</td>
-                      <td>{orden.cliente}</td>
-                      <td>
-                        {Math.abs(
-                          diasRestantes(
-                            orden.fecha_maxima_atencion
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <button
-                onClick={() =>
-                  setMostrarVencidas(false)
-                }
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        )
-      }
 
     </div>
 

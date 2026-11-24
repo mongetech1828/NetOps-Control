@@ -45,6 +45,10 @@ function MainLayout({
           <NavLink to="/tecnicos" className="sidebar-link">
             Técnicos
           </NavLink>
+
+          <NavLink to="/reporte-agentes" className="sidebar-link">
+            Reporte Agentes
+          </NavLink>
           
           <NavLink to="/reportes" className="sidebar-link">
             Reportes

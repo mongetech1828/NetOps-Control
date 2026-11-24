@@ -6,6 +6,7 @@ import Dashboard from "../pages/Dashboard";
 import Ordenes from "../pages/Ordenes";
 import SIGA from "../pages/SIGA";
 import Tecnicos from "../pages/Tecnicos";
+import ReporteAgentes from "../pages/ReporteAgentes";
 import Reportes from "../pages/Reportes";
 import Administracion from "../pages/Administracion";
 
@@ -38,6 +39,11 @@ function AppRoutes({ perfil, onLogout }) {
         <Route
           path="/tecnicos"
           element={<Tecnicos />}
+        />
+
+        <Route
+          path="/reporte-agentes"
+          element={<ReporteAgentes />}
         />
 
         <Route

@@ -320,6 +320,61 @@ function Ordenes() {
         return;
       }
 
+      const fechaCompromisoAnteriorInput =
+        formatearFechaHoraInput(
+          ordenActual.fecha_compromiso_cliente
+        );
+      const fechaCompromisoNuevaInput =
+        formData.fecha_compromiso_cliente || "";
+
+      if (
+        fechaCompromisoAnteriorInput !==
+        fechaCompromisoNuevaInput
+      ) {
+        const fechaCompromisoAnterior =
+          ordenActual.fecha_compromiso_cliente
+            ? formatearFechaCompromiso(
+                ordenActual.fecha_compromiso_cliente
+              )
+            : "sin fecha";
+        const fechaCompromisoNueva =
+          formData.fecha_compromiso_cliente
+            ? formatearFechaCompromiso(
+                formData.fecha_compromiso_cliente
+              )
+            : "sin fecha";
+        try {
+          const responseHistorialCompromiso = await fetch(
+            "/api/historial-orden",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                orden_id: Number(ordenEditando),
+                usuario_id: usuarioActual.id,
+                comentario:
+                  `Fecha compromiso cliente modificada de "${fechaCompromisoAnterior}" a "${fechaCompromisoNueva}" por ${usuarioActual.nombre}`
+              })
+            }
+          );
+          if (!responseHistorialCompromiso.ok) {
+            throw new Error(
+              `La API respondió ${responseHistorialCompromiso.status}.`
+            );
+          }
+        } catch (errorHistorial) {
+          console.error(
+            "ERROR GUARDANDO HISTORIAL DE FECHA COMPROMISO CLIENTE:",
+            errorHistorial
+          );
+          alert(
+            "La orden se actualizó, pero no se pudo registrar el cambio de fecha compromiso en el historial."
+          );
+        }
+      }
+
       const responseTecnicos = await fetch(
         `/api/orden-tecnicos/${ordenEditando}`
       );
@@ -360,11 +415,6 @@ function Ordenes() {
 
         return;
       }
-
-      const usuarioActual =
-        JSON.parse(
-          localStorage.getItem("usuario")
-        );
 
       const idsTecnicosModificados = [
         ...agregados,
@@ -579,6 +629,42 @@ function Ordenes() {
 
           console.error(
             "ERROR GUARDANDO HISTORIAL DE CREACIÓN"
+          );
+        }
+      }
+
+      if (
+        usuarioActual?.id &&
+        formData.fecha_compromiso_cliente
+      ) {
+        try {
+          const responseHistorialCompromiso = await fetch(
+            "/api/historial-orden",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                orden_id: data.id,
+                usuario_id: usuarioActual.id,
+                comentario:
+                  `Fecha compromiso cliente establecida en "${formatearFechaCompromiso(formData.fecha_compromiso_cliente)}" por ${usuarioActual.nombre}`
+              })
+            }
+          );
+          if (!responseHistorialCompromiso.ok) {
+            throw new Error(
+              `La API respondió ${responseHistorialCompromiso.status}.`
+            );
+          }
+        } catch (errorHistorial) {
+          console.error(
+            "ERROR GUARDANDO HISTORIAL DE FECHA COMPROMISO CLIENTE:",
+            errorHistorial
+          );
+          alert(
+            "La orden se creó, pero no se pudo registrar la fecha compromiso en el historial."
           );
         }
       }

@@ -1333,6 +1333,9 @@ function SIGA() {
         Evento_agil: siga.evento_agil,
         Cliente: siga.cliente,
         Servicio: siga.tipo_servicio,
+        Fecha_compromiso_cliente: siga.fecha_compromiso_cliente
+          ? formatearFechaHora(siga.fecha_compromiso_cliente)
+          : "-",
         Prioridad: siga.prioridad,
         Estado: siga.estado,
         Grupo: siga.grupo_gestion,

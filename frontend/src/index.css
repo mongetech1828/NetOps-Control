@@ -223,6 +223,10 @@ code {
   margin-top: 15px;
 }
 
+.dashboard-siga-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .dashboard-kpi-grid > div {
   border-color: #cbd5e1;
 }

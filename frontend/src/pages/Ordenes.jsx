@@ -1275,6 +1275,9 @@ function Ordenes() {
         if (filtroDashboard === "En Campo") {
           return orden.estado === "En campo";
         }
+        if (filtroDashboard === "Pendiente cliente") {
+          return orden.estado === "Pendiente cliente";
+        }
         if (filtroDashboard === "Reingresadas") {
           return orden.cantidad_reingresos > 0;
         }

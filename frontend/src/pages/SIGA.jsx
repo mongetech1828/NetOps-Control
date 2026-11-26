@@ -1161,6 +1161,10 @@ function SIGA() {
           );
         }
 
+        if (filtroDashboard === "SIGAs Diferidos") {
+          return siga.estado === "Diferido";
+        }
+
         if (filtroDashboard === "SIGAs Por vencer") {
           const horasRestantes =
             obtenerHorasRestantesActualesSIGA(siga);

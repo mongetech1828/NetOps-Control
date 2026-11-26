@@ -39,9 +39,14 @@ async function cargarSigasDashboard(onKpisLoaded) {
     let porVencer = 0;
     let vencidos = 0;
     let enCampo = 0;
+    let diferidos = 0;
     const ahora = new Date();
 
     sigas.forEach((siga) => {
+      if (siga.estado === "Diferido") {
+        diferidos += 1;
+      }
+
       const prioridad = prioridades.find(
         (item) => Number(item.id) === Number(siga.prioridad_id)
       );
@@ -75,7 +80,7 @@ async function cargarSigasDashboard(onKpisLoaded) {
       }
     });
 
-    onKpisLoaded({ dentroSLA, porVencer, vencidos, enCampo });
+    onKpisLoaded({ dentroSLA, porVencer, vencidos, enCampo, diferidos });
   } catch (error) {
     console.error("ERROR KPI SIGA:", error);
   }
@@ -90,10 +95,12 @@ function Dashboard({perfil}) {
   const [totalReingresadas, setTotalReingresadas] = useState (0);
   const [vencenHoy, setVencenHoy] = useState(0);
   const [enCampo, setEnCampo] = useState(0);
+  const [pendienteCliente, setPendienteCliente] = useState(0);
   const [sigasDentroSLA, setSigasDentroSLA] = useState(0);
   const [sigasEnCampo, setSigasEnCampo] = useState(0);
   const [sigasPorVencer, setSigasPorVencer] = useState(0);
   const [sigasVencidos, setSigasVencidos] = useState(0);
+  const [sigasDiferidos, setSigasDiferidos] = useState(0);
   const [busquedaGlobal, setBusquedaGlobal] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
   const solicitudBusqueda = useRef(0);
@@ -122,6 +129,7 @@ function Dashboard({perfil}) {
         let vencidas = 0;
         let reingresadas = 0;
         let enCampo = 0;
+        let pendienteCliente = 0;
 
         ordenesActivas.forEach((orden) => {
 
@@ -133,6 +141,10 @@ function Dashboard({perfil}) {
           // En Campo
           if (Number(orden.estado_id) === 7) {
             enCampo++;
+          }
+
+          if (orden.estado === "Pendiente cliente") {
+            pendienteCliente++;
           }
 
           // Fecha objetivo:
@@ -181,6 +193,7 @@ function Dashboard({perfil}) {
         setVencidas(vencidas);
         setTotalReingresadas(reingresadas);
         setEnCampo(enCampo);
+        setPendienteCliente(pendienteCliente);
 
       }
       catch (error) {
@@ -192,11 +205,12 @@ function Dashboard({perfil}) {
     }
 
     cargarKpis();
-    cargarSigasDashboard(({ dentroSLA, porVencer, vencidos, enCampo }) => {
+    cargarSigasDashboard(({ dentroSLA, porVencer, vencidos, enCampo, diferidos }) => {
       setSigasDentroSLA(dentroSLA);
       setSigasPorVencer(porVencer);
       setSigasVencidos(vencidos);
       setSigasEnCampo(enCampo);
+      setSigasDiferidos(diferidos);
     });
 
   }, []);
@@ -711,6 +725,45 @@ function Dashboard({perfil}) {
             }}
           >{enCampo}</h1>
         </div>
+
+        <div style={{
+            ...cardStyle,
+            borderLeft: "5px solid #f97316",
+            cursor: "pointer"
+          }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
+          onClick={() =>
+            navigate("/ordenes", {
+              state: {
+                filtroDashboard: "Pendiente cliente"
+              }
+            })
+          }
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >P. Cliente</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >{pendienteCliente}</h1>
+        </div>
       </div>
 
       <hr
@@ -731,7 +784,7 @@ function Dashboard({perfil}) {
       </h2>
 
       <div
-        className="dashboard-kpi-grid"
+        className="dashboard-kpi-grid dashboard-siga-kpi-grid"
       >
         <div style={{
             ...cardStyle,
@@ -888,6 +941,48 @@ function Dashboard({perfil}) {
               margin: "10px 0 0"
             }}
           >{sigasVencidos}</h1>
+        </div>
+
+        <div
+          style={{
+            ...cardStyle,
+            borderLeft: "5px solid #8b5cf6",
+            cursor: "pointer"
+          }}
+
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+          }}
+
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+          }}
+
+          onClick={() =>
+            navigate("/siga", {
+              state: {
+                filtroDashboard: "SIGAs Diferidos"
+              }
+            })
+          }
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              color: "#64748b"
+            }}
+          >Diferidos</h3>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              margin: "10px 0 0"
+            }}
+          >
+            {sigasDiferidos}
+          </h1>
         </div>
       </div>
 
